@@ -184,3 +184,57 @@ def test_internal_library_errors_become_tool_errors(monkeypatch):
     monkeypatch.setitem(tools.TOOLS, "differentiate", boom)
     with pytest.raises(ToolError, match="could not be completed"):
         run_tool("differentiate", {"expression": "x"})
+
+
+# --- found by the benchmark (eval/) ---------------------------------------------
+
+
+def test_second_lambert_w_branch_returned():
+    # Was: only x = -W0(-1/3) for e^x = 3x; the root 1.5121... (branch W_-1) was missing.
+    out = run_tool("solve_equation", {"equation": "exp(x) - 3x = 0"})
+    values = sorted(float(sp.N(s)) for s in out.data["solutions"])
+    assert values == pytest.approx([0.6190612867359451, 1.5121345516578424], rel=1e-12)
+    # SymPy cannot simplify exp(-W(z)) + 3W(z) to 0, so only numeric confirmation is possible.
+    assert verify("solve_equation", out).status in (VS.VERIFIED, VS.APPROXIMATE)
+
+
+def test_abs_equation_verifier_does_not_crash():
+    # Was: "unverified" because d/dx |x - 1| over complex x could not be lambdified.
+    out = run_tool("solve_equation", {"equation": "abs(x - 1) = 2"})
+    assert verify("solve_equation", out).status in (VS.VERIFIED, VS.APPROXIMATE)
+
+
+def test_limit_at_infinity_samples_positive_x():
+    # Was: x -> oo sampled negative x (direction "-" reused as a sign) and flagged correct answers.
+    out = run_tool("limit", {"expression": "sqrt(x^2 + x) - x", "point": "oo"})
+    assert out.data["value"] == sp.Rational(1, 2)
+    assert verify("limit", out).status == VS.APPROXIMATE
+
+
+def test_slowly_divergent_limit_accepted():
+    # Was: log(x) -> -oo at 0+ was "failed" because |f| never exceeded 1e3 at the sample points.
+    out = run_tool("limit", {"expression": "log(x)", "point": "0", "direction": "+"})
+    assert verify("limit", out).status == VS.APPROXIMATE
+    out.data["value"] = sp.oo
+    assert verify("limit", out).status == VS.FAILED
+
+
+def test_cancellation_prone_limit_verified():
+    out = run_tool("limit", {"expression": "(1 - cos(x))/x^2", "point": "0"})
+    assert verify("limit", out).status == VS.APPROXIMATE
+
+
+def test_english_words_are_not_variables():
+    # Was: "Find x if 4x - 7 = 9" parsed "if" as i*f and returned x = ±2*sqrt(-I/f).
+    from app.agents.graph import run_solver
+
+    state = run_solver("Find x if 4x - 7 = 9")
+    assert state["status"] == "error" and "if" in state["error"]
+
+
+def test_determine_does_not_trigger_determinant():
+    # Was: "Determine the rank of ..." computed (and verified) the determinant.
+    from app.agents.rule_planner import plan_with_rules
+
+    assert plan_with_rules("Determine the rank of the matrix [[1, 2], [2, 4]]").args["operation"] == "rank"
+    assert plan_with_rules("det of [[1, 2], [3, 4]]").args["operation"] == "determinant"

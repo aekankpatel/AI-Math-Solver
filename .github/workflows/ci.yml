@@ -24,10 +24,21 @@ jobs:
       - run: pip install -r requirements-dev.txt
       - name: Lint
         run: |
-          ruff check app tests
-          ruff format --check app tests
+          ruff check app tests eval
+          ruff format --check app tests eval
       - name: Test (offline, no LLM key)
         run: pytest -v
+      - name: Benchmark (deterministic modes, no network)
+        run: |
+          python -m eval.ground_truth
+          python -m eval.run --mode oracle
+          python -m eval.run --mode rules
+      - name: Upload benchmark reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-reports
+          path: backend/eval/reports/
 
   frontend:
     runs-on: ubuntu-latest

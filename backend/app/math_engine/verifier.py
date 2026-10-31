@@ -114,7 +114,11 @@ def _verify_equation(out: ToolOutput) -> Verification:
     checks: list[VerificationCheck] = []
     exact_all = True
     f = _lambdify(expr, var)
-    df = _lambdify(sp.diff(expr, var), var) if expr.free_symbols == {var} else None
+
+    def df(z: complex) -> complex:  # central difference: robust for |x|, piecewise, etc.
+        h = 1e-6 * max(1.0, abs(z))
+        return (f(z + h) - f(z - h)) / (2 * h)
+
     for s in sols:
         residual = expr.subs(var, s)
         exact = _symbolic_zero(residual) if not out.approximate else None
@@ -123,7 +127,8 @@ def _verify_equation(out: ToolOutput) -> Verification:
             r = f(z)
             # A genuine zero has a tiny Newton step |f/f'|, not merely a small |f|
             # (rejects "roots" where f only decays towards 0, e.g. 1/(x-1) at x = -1e7).
-            step = abs(r / df(z)) if df is not None and df(z) != 0 else 0.0
+            slope = df(z)
+            step = abs(r / slope) if _finite(slope) and slope != 0 else 0.0
         except Exception:
             z, r, step = complex("nan"), complex("nan"), float("inf")
         numeric_ok = _finite(r) and abs(r) < 1e-6 * max(1.0, abs(z)) and step < 1e-6 * max(1.0, abs(z))
@@ -487,35 +492,42 @@ def _divergence_check(
 
 
 def _verify_limit(out: ToolOutput) -> Verification:
+    """Evaluate f with 80-digit mpmath arithmetic along x_k -> point (avoids the
+    cancellation that double precision suffers in forms like sqrt(x^2+x) - x)."""
     expr, var, pt, value = out.data["expr"], out.data["var"], out.data["point"], out.data["value"]
     if expr.free_symbols - {var}:
         return Verification(status=VerificationStatus.UNVERIFIED, summary="Contains other symbols.")
-    f = _lambdify(sp.simplify(expr), var)
+    f = sp.lambdify(var, expr, modules="mpmath")
     checks = []
-    sides = {"+": [1], "-": [-1], "+-": [1, -1]}[out.data["direction"]]
-    target = complex(sp.N(value)) if value.is_finite else None
-    for side in sides:
+    exponents = (4, 8, 12, 16)
+    with mp.workdps(80):
         if pt.is_infinite:
-            xs = [side * 10**k for k in (3, 4, 5)] if pt == sp.oo else [-(10**k) for k in (3, 4, 5)]
+            sign_pt = 1 if pt == sp.oo else -1
+            paths = {"→∞" if sign_pt > 0 else "→-∞": [sign_pt * mp.mpf(10) ** k for k in exponents]}
         else:
-            p = float(pt)
-            xs = [p + side * 10 ** (-k) for k in (3, 4, 5)]
-        try:
-            ys = [f(x) for x in xs]
-        except Exception:
-            continue
-        if target is not None:
-            ok = all(_finite(y) for y in ys) and abs(ys[-1] - target) < 1e-3 * max(1, abs(target))
-            detail = f"f → {ys[-1].real:.8g} (side {'+' if side > 0 else '-'})"
-        else:
-            sign = 1 if value == sp.oo else -1
-            ok = (
-                all(_finite(y) and abs(y.imag) < 1e-9 for y in ys)
-                and ys[-1].real * sign > abs(ys[0].real)
-                and ys[-1].real * sign > 1e3
+            p = mp.mpf(str(sp.N(pt, 50)))
+            sides = {"+": [1], "-": [-1], "+-": [1, -1]}[out.data["direction"]]
+            paths = {("+" if s > 0 else "-"): [p + s * mp.mpf(10) ** -k for k in exponents] for s in sides}
+        for side, xs in paths.items():
+            try:
+                ys = [mp.mpc(f(x)) for x in xs]
+            except Exception:
+                continue
+            real = all(abs(y.imag) < mp.mpf(10) ** -30 for y in ys)
+            if value.is_finite:
+                target = mp.mpc(complex(sp.N(value, 30)))
+                err = abs(ys[-1] - target)
+                ok = err < 1e-8 * max(1, abs(target))
+                detail = f"side {side}: f = {mp.nstr(ys[-1], 12)} (|error| = {mp.nstr(err, 3)})"
+            else:
+                sign = 1 if value == sp.oo else -1
+                inc = [sign * (b.real - a.real) for a, b in zip(ys, ys[1:], strict=False)]
+                # divergence: keeps moving in the claimed direction by non-shrinking steps
+                ok = real and all(d > 0 for d in inc) and inc[-1] >= 0.5 * inc[0]
+                detail = f"side {side}: f = " + ", ".join(mp.nstr(y.real, 4) for y in ys)
+            checks.append(
+                VerificationCheck(method="numeric approach (80-digit mpmath)", passed=bool(ok), detail=detail)
             )
-            detail = f"f grows towards {'+' if sign > 0 else '-'}∞: {ys[0].real:.3g} → {ys[-1].real:.3g}"
-        checks.append(VerificationCheck(method="numeric approach", passed=bool(ok), detail=detail))
     return _finish(checks, False, False)
 
 

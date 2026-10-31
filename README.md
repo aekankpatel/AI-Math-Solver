@@ -148,7 +148,7 @@ cd backend && pytest
 cd frontend && npm test
 ```
 
-The backend suite (142 tests) covers parser security, the correctness of every tool against known answers,
+The backend suite (183 tests, including regression tests for every bug the audit found and benchmark floors) covers parser security, the correctness of every tool against known answers,
 verifier acceptance *and* failure detection, the rule planner, the LangGraph workflow with a fake LLM
 (including fallback when the LLM's plan is invalid or the provider is down), and the HTTP API.
 It runs fully offline. The frontend suite uses Vitest and Testing Library.
@@ -156,12 +156,72 @@ It runs fully offline. The frontend suite uses Vitest and Testing Library.
 CI (`.github/workflows/ci.yml`) runs ruff, pytest, oxlint, vitest and the production build. It then
 builds both Docker images and smoke-tests the running stack.
 
+## Evaluation benchmark
+
+`backend/eval/` contains a reproducible benchmark of **213 items**:
+
+- **181 answerable problems** covering all 12 tools: 150 in the development set plus 31 held-out paraphrases.
+- **34 problems that should be refused**: 13 unsolvable or invalid edge cases, 8 ambiguous inputs and 8 unsupported or unsafe requests. Five of these are tool-level edge cases that don't run in `oracle` mode.
+- **34 deliberately incorrect solutions**. Each takes a correct tool output and corrupts it, for example with a wrong root, a missing complex root, an extraneous root, a misapplied chain rule, a transposed inverse, or a population standard deviation reported as the sample one.
+
+Ground truth is written by hand from closed forms and definitions. It is not produced by the app or by an LLM.
+`python -m eval.ground_truth` checks every truth independently with mpmath, NumPy and SciPy, and imports no
+application code. A test also confirms that the validator rejects deliberately wrong truths.
+
+```bash
+cd backend && python -m eval.ground_truth
+```
+
+```bash
+python -m eval.run --mode oracle   # math engine only: canonical tool arguments
+```
+
+```bash
+python -m eval.run --mode rules    # full LangGraph pipeline with the deterministic planner
+```
+
+```bash
+GROQ_API_KEY=... python -m eval.run --mode groq --allow-network   # real Groq calls, rate-limited
+```
+
+`groq` mode refuses to run without both a key and `--allow-network`. Reports are written to
+`backend/eval/reports/<mode>.{json,md}`.
+
+**Results** (committed in `eval/reports/`, Python 3.13 / SymPy 1.14):
+
+| Metric | oracle | rules |
+|---|---|---|
+| Final-answer accuracy, development set (150) | 100% | 100% |
+| Final-answer accuracy, held-out paraphrases (31) | 100% | 51.6% (all misses are refusals) |
+| Tool-selection accuracy | n/a | 100% dev / 67.7% held-out |
+| Refusal accuracy (edge / ambiguous / unsupported) | 100% | 100% |
+| Verified precision / recall | 100% / 87.9% | 100% / 87.5% |
+| False verification rate | 0% | 0% |
+| Tampered solutions detected (`failed`) | 34/34 | 34/34 |
+| Wrong-answer rate / crash rate | 0% / 0% | 0% / 0% |
+| Latency p50 / p95 | 6 ms / 55 ms | 9 ms / 63 ms |
+
+How to read these numbers:
+
+- **Optimistic development set.** The rule planner and the development-set wording were written by the same
+  author, so 100% there is optimistic. The held-out paraphrases are the honest measure of how the planner copes with free text.
+- **Planner fixes on the held-out set.** On the first held-out run (`rules_first_run_before_fixes.md`), accuracy was 48.4% and there were 2 silent wrong answers.
+  "if" was parsed as `i·f`, and "Determine the rank" matched "det", so the determinant was computed and verified. Both are fixed.
+  No other planner change was made to fit the held-out set.
+- **Verification recall below 100%.** Correct answers that can only be checked numerically are labelled
+  `approximate`, not `verified`. These are limits, higher-order derivatives, numeric roots and LambertW roots.
+- **Verification checks computation, not interpretation.** If the planner misreads the question,
+  the verifier can still confirm the math of the misread problem. The UI therefore always shows the tool and arguments that were used.
+
 ## Known limitations / roadmap
 
 - No inequalities, ODEs, series or multivariable calculus yet. Requests for these are reported as unsupported.
 - Sessions are kept in memory and are lost on restart. A shared store such as Redis would be needed for more than one replica.
 - The offline rule planner understands common phrasings only. Free-form word problems need the LLM planner.
 - LLM-backed planning and explanations are covered by mocked tests only. CI does not call Groq.
+  The `groq` benchmark mode exists, but no Groq results have been measured yet.
+- The deterministic planner handles about half of free-form phrasings (held-out set). It refuses the rest rather than guessing.
 - Approximate numeric roots come from multi-start Newton search on [-10, 10]. Roots outside that range can be missed.
   The verifier's [-50, 50] sweep then reports `failed`.
-- An automated evaluation set (a benchmark of word problems with an accuracy report) is planned next.
+- Periodic equations report real solutions only. The period may not be the minimal one, for example 2π for sin²x.
+- Groq-mode benchmark results still need to be measured with a real key. More word-problem coverage is also needed.

@@ -121,6 +121,71 @@ _FORBIDDEN_WORDS = {
 }
 
 
+# Short English words that would otherwise be split into products of symbols.
+_ENGLISH_WORDS = {
+    "if",
+    "is",
+    "at",
+    "of",
+    "to",
+    "the",
+    "and",
+    "or",
+    "in",
+    "on",
+    "be",
+    "as",
+    "by",
+    "it",
+    "an",
+    "so",
+    "we",
+    "me",
+    "my",
+    "do",
+    "for",
+    "all",
+    "are",
+    "can",
+    "get",
+    "has",
+    "its",
+    "let",
+    "not",
+    "now",
+    "say",
+    "way",
+    "who",
+    "why",
+    "how",
+    "use",
+    "new",
+    "you",
+    "any",
+    "one",
+    "two",
+    "six",
+    "ten",
+    "out",
+    "off",
+    "per",
+    "via",
+    "set",
+    "put",
+    "add",
+    "sum",
+    "max",
+    "min",
+    "mod",
+    "avg",
+    "std",
+    "var",
+    "nor",
+    "but",
+    "yet",
+}
+
+
 def _symbol_like(name: str) -> bool:
     """Short identifiers (``x``, ``y1``, ``ab``) or greek letter names are symbols."""
     return bool(re.fullmatch(r"[A-Za-z][0-9]?", name)) or name in GREEK_SYMBOLS
@@ -141,6 +206,9 @@ def _check_identifier(match: re.Match[str]) -> str:
         rest = ident[len(fn) :]
         if ident.startswith(fn) and rest and _symbol_like(rest):
             return f"{fn} {rest}"
+    # Never reinterpret English words as products of variables ("if" -> i*f).
+    if ident.lower() in _ENGLISH_WORDS:
+        raise ExpressionError(f"Unexpected word {ident!r} in the expression; please rephrase.")
     # "xy" -> "x*y" (implicit product of single-letter variables)
     if ident.isalpha() and len(ident) <= 3:
         return "*".join(ident)

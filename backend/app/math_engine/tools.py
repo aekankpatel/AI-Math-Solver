@@ -189,7 +189,7 @@ def solve_equation(equation: str, variable: str | None = None) -> ToolOutput:
                 "from several starting points in [-10, 10]. Roots outside that range may be missed.",
             )
         )
-    solutions = _dedupe(solutions)
+    solutions = _dedupe(solutions + _other_lambertw_branches(solutions))
     real = [s for s in solutions if s.is_real]
     if complex_set is not None and not isinstance(complex_set, sp.FiniteSet) and not approximate:
         if isinstance(complex_set, (sp.ImageSet, sp.Union)):
@@ -216,6 +216,21 @@ def solve_equation(equation: str, variable: str | None = None) -> ToolOutput:
         approximate=approximate,
         data={"expr": expr, "var": var, "solutions": solutions, "real_solutions": real},
     )
+
+
+def _other_lambertw_branches(solutions: list[sp.Basic]) -> list[sp.Basic]:
+    """SymPy's solve returns only the principal branch W0 of Lambert W. For a real
+    argument z in (-1/e, 0) the branch W_{-1} is also real and gives another real
+    solution (e.g. e^x = 3x has x = -W0(-1/3) and x = -W_{-1}(-1/3))."""
+    extra = []
+    for s in solutions:
+        if not isinstance(s, sp.Basic):
+            continue
+        for w in s.atoms(sp.LambertW):
+            z = w.args[0]
+            if len(w.args) == 1 and z.is_real and z.is_number and -1 / sp.E < z < 0:
+                extra.append(s.subs(w, sp.LambertW(z, -1)))
+    return extra
 
 
 def _safe_solveset(expr: sp.Expr, var: sp.Symbol, domain: sp.Set) -> sp.Set | None:

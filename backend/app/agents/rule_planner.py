@@ -130,7 +130,17 @@ def _plan_matrix(text: str, low: str) -> ToolCall | None:
         ("times", "multiply"),
         ("*", "multiply"),
     ]
-    op = next((o for k, o in ops if k in low), None)
+
+    # Whole-word matching: "determine the rank" must not match "det".
+    def has(keyword: str) -> bool:
+        return (
+            keyword == "*"
+            and "*" in low
+            or bool(re.search(rf"\b{re.escape(keyword)}", low))
+            and not (keyword == "det" and re.search(r"\bdetermin(e|ing)\b", low))
+        )
+
+    op = next((o for k, o in ops if has(k)), None)
     args: dict = {"matrix": mats[0]}
     if op == "multiply" or (op is None and len(mats) >= 2):
         if len(mats) < 2:
