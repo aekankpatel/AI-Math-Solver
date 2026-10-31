@@ -23,6 +23,7 @@ from sympy.parsing.sympy_parser import (
     convert_xor,
     implicit_multiplication_application,
     parse_expr,
+    rationalize,
     standard_transformations,
 )
 
@@ -177,7 +178,9 @@ def validate_expression_text(text: str) -> str:
     return cleaned
 
 
-_TRANSFORMS = standard_transformations + (convert_xor, implicit_multiplication_application)
+# ``rationalize`` turns decimal literals into exact rationals (0.1 -> 1/10) so that
+# all downstream arithmetic is exact instead of binary floating point.
+_TRANSFORMS = standard_transformations + (convert_xor, implicit_multiplication_application, rationalize)
 
 
 @lru_cache(maxsize=1)

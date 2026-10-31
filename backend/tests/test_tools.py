@@ -8,6 +8,7 @@ import sympy as sp
 from app.math_engine.tools import ToolError, run_tool
 
 x = sp.Symbol("x")
+xr = sp.Symbol("x", real=True)  # calculus tools work over the reals
 
 
 def solutions(out):
@@ -64,11 +65,11 @@ class TestAlgebra:
 class TestCalculus:
     def test_product_rule(self):
         out = run_tool("differentiate", {"expression": "x^3*sin(x)"})
-        assert sp.simplify(out.data["result"] - (3 * x**2 * sp.sin(x) + x**3 * sp.cos(x))) == 0
+        assert sp.simplify(out.data["result"] - (3 * xr**2 * sp.sin(xr) + xr**3 * sp.cos(xr))) == 0
 
     def test_higher_order_and_point(self):
         out = run_tool("differentiate", {"expression": "x^4", "order": 2, "point": "2"})
-        assert out.data["result"] == 12 * x**2
+        assert out.data["result"] == 12 * xr**2
         assert out.data["value"] == 48
 
     def test_invalid_order(self):
@@ -92,7 +93,7 @@ class TestIntegrals:
 
     def test_indefinite(self):
         out = run_tool("integrate", {"expression": "x*exp(x)"})
-        assert sp.simplify(sp.diff(out.data["antiderivative"], x) - x * sp.exp(x)) == 0
+        assert sp.simplify(sp.diff(out.data["antiderivative"], xr) - xr * sp.exp(xr)) == 0
         assert out.answer_text.endswith("+ C")
 
     def test_gaussian(self):

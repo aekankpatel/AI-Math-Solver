@@ -10,6 +10,7 @@ needed by the independent verifier and the visualiser.
 from __future__ import annotations
 
 import concurrent.futures
+import inspect
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -75,6 +76,13 @@ def _pick_variable(expr: sp.Basic, variable: str | None) -> sp.Symbol:
     )
 
 
+def _as_real(expr: sp.Expr, var: sp.Symbol) -> tuple[sp.Expr, sp.Symbol]:
+    """Calculus here is real calculus: give the variable a real assumption so that
+    e.g. d/dx |x| = sign(x) instead of an expression in re(x) and im(x)."""
+    real_var = sp.Symbol(var.name, real=True)
+    return expr.subs(var, real_var), real_var
+
+
 def _fmt(value: Any) -> str:
     return sp.sstr(value)
 
@@ -127,24 +135,71 @@ def solve_equation(equation: str, variable: str | None = None) -> ToolOutput:
                 )
             )
 
-    try:
-        solutions = _with_timeout(lambda: sp.solve(expr, var), "Symbolic solve")
-    except ToolError:
-        solutions = []
+    # 1) Exact emptiness check: e.g. 1/(x - 1) = 0 has no solution at all.
+    complex_set = _safe_solveset(expr, var, sp.S.Complexes)
+    if complex_set is sp.S.EmptySet:
+        raise ToolError("The equation has no solutions (the solution set is empty).")
+
+    # 2) Periodic equations (sin x = 0, tan x = 1): report the general solution.
+    periodic = _periodic_solutions(expr, var)
+    if periodic is not None:
+        bases, period = periodic
+        k = sp.Symbol("k", integer=True)
+        general = [b + period * k for b in bases]
+        steps.append(
+            Step(
+                title="Use periodicity",
+                detail=f"f is periodic with period {_fmt(period)}: solve on one period, then add "
+                "integer multiples of the period. Only real solutions are listed.",
+            )
+        )
+        latex = ", ".join(f"{sp.latex(var)} = {sp.latex(g)}" for g in general) + r",\ k \in \mathbb{Z}"
+        steps.append(Step(title="General solution", latex=latex))
+        return ToolOutput(
+            answer_text=", ".join(f"{var} = {_fmt(g)}" for g in general) + " (k any integer)",
+            answer_latex=latex,
+            steps=steps,
+            data={
+                "expr": expr,
+                "var": var,
+                "solutions": bases,
+                "real_solutions": bases,
+                "period": period,
+            },
+        )
+
+    # 3) Symbolic solve; retry with a real variable (helps |x| = 3, real roots of odd powers).
+    approximate = False
+    solutions = _symbolic_solve(expr, var)
+    if not solutions:
+        real_var = sp.Symbol(var.name, real=True)
+        solutions = _symbolic_solve(expr.subs(var, real_var), real_var)
+        if solutions:
+            solutions = [sp.sympify(s).subs(real_var, var) for s in solutions]
+            steps.append(Step(title="Solve over the real numbers", detail="No complex closed form; real solutions."))
     if not solutions:
         solutions = _numeric_roots(expr, var)
         if not solutions:
-            raise ToolError("No solutions found symbolically or numerically.")
+            raise ToolError("No solutions were found symbolically or numerically.")
         approximate = True
         steps.append(
             Step(
                 title="Solve numerically",
                 detail="No closed form was found; roots were located with Newton's method "
-                "from several starting points.",
+                "from several starting points in [-10, 10]. Roots outside that range may be missed.",
             )
         )
     solutions = _dedupe(solutions)
     real = [s for s in solutions if s.is_real]
+    if complex_set is not None and not isinstance(complex_set, sp.FiniteSet) and not approximate:
+        if isinstance(complex_set, (sp.ImageSet, sp.Union)):
+            steps.append(
+                Step(
+                    title="Note: infinitely many complex solutions",
+                    detail="Only the principal solutions are listed; the full complex solution set is shown below.",
+                    latex=sp.latex(complex_set),
+                )
+            )
     steps.append(
         Step(
             title="Solutions",
@@ -163,6 +218,39 @@ def solve_equation(equation: str, variable: str | None = None) -> ToolOutput:
     )
 
 
+def _safe_solveset(expr: sp.Expr, var: sp.Symbol, domain: sp.Set) -> sp.Set | None:
+    try:
+        return _with_timeout(lambda: sp.solveset(expr, var, domain), "solveset")
+    except ToolError:
+        return None
+
+
+def _symbolic_solve(expr: sp.Expr, var: sp.Symbol) -> list[sp.Basic]:
+    try:
+        result = _with_timeout(lambda: sp.solve(expr, var), "Symbolic solve")
+    except ToolError:
+        return []
+    return [r for r in result if not (isinstance(r, sp.Basic) and r.has(sp.nan, sp.zoo))]
+
+
+def _periodic_solutions(expr: sp.Expr, var: sp.Symbol) -> tuple[list[sp.Basic], sp.Expr] | None:
+    """Real solutions on one period [0, T) if ``expr`` is periodic in ``var``."""
+    if expr.free_symbols != {var} or expr.is_polynomial(var):
+        return None
+    try:
+        period = _with_timeout(lambda: sp.periodicity(expr, var), "Periodicity")
+    except ToolError:
+        return None
+    if period is None or period == 0 or not period.is_positive:
+        return None
+    one_period = _safe_solveset(expr, var, sp.Interval.Ropen(0, period))
+    if one_period is sp.S.EmptySet:
+        raise ToolError("The equation has no real solutions.")
+    if not isinstance(one_period, sp.FiniteSet) or not one_period:
+        return None
+    return sorted(one_period, key=lambda v: float(sp.N(v))), period
+
+
 def _numeric_note(values: list[sp.Basic]) -> str:
     inexact = [v for v in values if not v.is_Integer]
     if not inexact:
@@ -179,16 +267,28 @@ def _dedupe(values: list[sp.Basic]) -> list[sp.Basic]:
 
 
 def _numeric_roots(expr: sp.Expr, var: sp.Symbol) -> list[sp.Basic]:
+    """Multi-start Newton search. A candidate is accepted only if it is a genuine
+    zero: tiny residual AND a tiny Newton step |f/f'| (this rejects points where
+    f merely decays towards 0, e.g. 1/(x - 1) for large |x|)."""
+    if expr.free_symbols != {var}:
+        return []
+    f = sp.lambdify(var, expr, modules=["mpmath"])
+    df = sp.lambdify(var, sp.diff(expr, var), modules=["mpmath"])
     roots: list[sp.Basic] = []
     for start in np.linspace(-10, 10, 21):
         try:
-            r = sp.nsolve(expr, var, float(start), tol=1e-12, prec=20)
+            r = sp.nsolve(expr, var, float(start), tol=1e-14, prec=30)
+            fr, dfr = complex(f(r)), complex(df(r))
         except Exception:
             continue
-        r = sp.Float(sp.re(r), 12) if abs(sp.im(r)) < 1e-10 else r
+        if abs(r) > 1e4 or abs(fr) > 1e-10:
+            continue
+        if dfr != 0 and abs(fr / dfr) > 1e-8 * max(1.0, abs(complex(r))):
+            continue
+        r = sp.Float(sp.re(r), 15) if abs(sp.im(r)) < 1e-12 else sp.N(r, 15)
         if not any(abs(complex(r) - complex(o)) < 1e-8 for o in roots):
             roots.append(r)
-    return roots
+    return sorted(roots, key=lambda v: (sp.re(v), sp.im(v)))
 
 
 def solve_system(equations: list[str], variables: list[str] | None = None) -> ToolOutput:
@@ -292,6 +392,7 @@ def _rules_used(expr: sp.Expr) -> list[str]:
 def differentiate(expression: str, variable: str | None = None, order: int = 1, point: str | None = None) -> ToolOutput:
     expr = parse_expression(expression)
     var = _pick_variable(expr, variable)
+    expr, var = _as_real(expr, var)
     order = int(order)
     if not 1 <= order <= 10:
         raise ToolError("Derivative order must be between 1 and 10.")
@@ -345,6 +446,7 @@ def integrate(
 ) -> ToolOutput:
     expr = parse_expression(expression)
     var = _pick_variable(expr, variable)
+    expr, var = _as_real(expr, var)
     definite = lower is not None and upper is not None
     if (lower is None) != (upper is None):
         raise ToolError("A definite integral needs both a lower and an upper limit.")
@@ -380,11 +482,44 @@ def integrate(
     a, b = parse_expression(str(lower)), parse_expression(str(upper))
     data.update(lower=a, upper=b)
     approximate = False
-    value = _with_timeout(lambda: sp.integrate(expr, (var, a, b)), "Definite integration")
-    if value.has(sp.Integral) or value.has(sp.nan):
-        value = sp.N(sp.Integral(expr, (var, a, b)), 12)
+    if a.free_symbols or b.free_symbols:
+        raise ToolError("Integration limits must be numbers.")
+    if (b - a).is_negative:
+        steps.append(Step(title="Reversed limits", detail="The lower limit exceeds the upper one, so the sign flips."))
+    singular = _interior_singularities(expr, var, a, b)
+    data["singularities"] = singular
+    try:
+        value = _with_timeout(lambda: sp.integrate(expr, (var, a, b)), "Definite integration")
+    except ToolError:
+        value = sp.nan
+    if value.has(sp.nan, sp.zoo) or (value.is_infinite and value not in (sp.oo, -sp.oo)):
+        if singular:
+            raise ToolError(
+                "The integral diverges: the integrand has a non-integrable singularity at "
+                + ", ".join(f"{var} = {_fmt(p)}" for p in singular)
+                + " inside the interval."
+            )
+        value = sp.Integral(expr, (var, a, b))
+    if value.has(sp.Integral):
+        try:
+            numeric = sp.N(sp.Integral(expr, (var, a, b)), 15)
+        except Exception as exc:
+            raise ToolError("The integral could not be evaluated, even numerically.") from exc
+        if not numeric.is_number or not numeric.is_finite:
+            raise ToolError("The integral could not be evaluated: it appears to diverge.")
+        value = numeric
         approximate = True
         steps.append(Step(title="Evaluate numerically", detail="No closed form; adaptive quadrature."))
+    elif value.is_infinite:
+        data["divergent"] = True
+        steps.append(
+            Step(
+                title="The integral diverges",
+                detail="The area grows without bound near "
+                + (", ".join(f"{var} = {_fmt(p)}" for p in singular) if singular else "an endpoint")
+                + ".",
+            )
+        )
     else:
         if has_closed_form and a.is_finite and b.is_finite:
             steps.append(
@@ -403,24 +538,42 @@ def integrate(
         )
     )
     data["value"] = value
-    return ToolOutput(
-        answer_text=_fmt(value),
-        answer_latex=sp.latex(value),
-        steps=steps,
-        data=data,
-        approximate=approximate,
-    )
+    text = f"diverges ({_fmt(value)})" if value.is_infinite else _fmt(value)
+    latex = sp.latex(value) + (r"\ \text{(diverges)}" if value.is_infinite else "")
+    return ToolOutput(answer_text=text, answer_latex=latex, steps=steps, data=data, approximate=approximate)
+
+
+def _interior_singularities(expr: sp.Expr, var: sp.Symbol, a: sp.Expr, b: sp.Expr) -> list[sp.Basic]:
+    """Points in the closed integration interval where the integrand is singular."""
+    lo, hi = (a, b) if not (b - a).is_negative else (b, a)
+    try:
+        sing = _with_timeout(lambda: sp.singularities(expr, var, sp.Interval(lo, hi)), "Singularities")
+    except ToolError:
+        return []
+    return sorted(sing, key=lambda v: float(sp.N(v))) if isinstance(sing, sp.FiniteSet) else []
 
 
 def limit(expression: str, variable: str | None = None, point: str = "0", direction: str = "+-") -> ToolOutput:
     expr = parse_expression(expression)
     var = _pick_variable(expr, variable)
+    expr, var = _as_real(expr, var)
     pt = parse_expression(str(point))
     if direction not in ("+", "-", "+-"):
         raise ToolError("direction must be '+', '-' or '+-'.")
     if pt.is_infinite:
         direction = "-" if pt == sp.oo else "+"
-    value = _with_timeout(lambda: sp.limit(expr, var, pt, dir=direction), "Limit")
+    try:
+        value = _with_timeout(lambda: sp.limit(expr, var, pt, dir=direction), "Limit")
+    except ToolError as exc:
+        if "does not exist" in str(exc) or "left hand limit" in str(exc):
+            raise ToolError(_limit_dne_message(expr, var, pt)) from exc
+        raise
+    if isinstance(value, sp.AccumBounds):
+        raise ToolError(
+            f"The limit does not exist: the function oscillates between {_fmt(value.min)} and {_fmt(value.max)}."
+        )
+    if value.has(sp.zoo, sp.nan) or (value.is_infinite and value not in (sp.oo, -sp.oo)):
+        raise ToolError(_limit_dne_message(expr, var, pt))
     steps = [
         Step(title="Limit", latex=rf"\lim_{{{sp.latex(var)} \to {sp.latex(pt)}}} {sp.latex(expr)}"),
     ]
@@ -447,6 +600,18 @@ def limit(expression: str, variable: str | None = None, point: str = "0", direct
         steps=steps,
         data={"expr": expr, "var": var, "point": pt, "direction": direction, "value": value},
     )
+
+
+def _limit_dne_message(expr: sp.Expr, var: sp.Symbol, pt: sp.Expr) -> str:
+    try:
+        left = sp.limit(expr, var, pt, dir="-")
+        right = sp.limit(expr, var, pt, dir="+")
+        return (
+            f"The two-sided limit does not exist: the left-hand limit is {_fmt(left)} and the right-hand limit "
+            f"is {_fmt(right)}."
+        )
+    except Exception:
+        return "The limit does not exist."
 
 
 # --------------------------------------------------------------------------- linear algebra
@@ -672,6 +837,8 @@ def probability_distribution(
     x2v = _p(x2, "x2") if x2 is not None else None
     if query == "between" and x2v is None:
         raise ToolError("'between' needs both x and x2.")
+    if query == "between" and (x2v - xv).is_negative:
+        raise ToolError(f"Invalid interval: the lower bound {xv} is greater than the upper bound {x2v}.")
     k = sp.Symbol("k", integer=True)
     t = sp.Symbol("t", real=True)
     steps: list[Step] = []
@@ -818,18 +985,26 @@ TOOLS: dict[str, Callable[..., ToolOutput]] = {
 
 
 def run_tool(name: str, args: dict[str, Any]) -> ToolOutput:
-    """Dispatch to a whitelisted tool; unknown tools or arguments are rejected."""
+    """Dispatch to a whitelisted tool; unknown tools or arguments are rejected.
+
+    Every failure surfaces as ``ToolError``/``ExpressionError`` so a bad input
+    can never crash the workflow.
+    """
     if name not in TOOLS:
         raise ToolError(f"Unknown tool {name!r}.")
     fn = TOOLS[name]
-    import inspect
-
-    allowed = set(inspect.signature(fn).parameters)
-    unknown = set(args) - allowed
+    sig = inspect.signature(fn)
+    unknown = set(args) - set(sig.parameters)
     if unknown:
         raise ToolError(f"Unexpected arguments for {name}: {sorted(unknown)}")
     clean = {k: v for k, v in args.items() if v is not None}
     try:
-        return fn(**clean)
+        sig.bind(**clean)
     except TypeError as exc:
         raise ToolError(f"Invalid arguments for {name}: {exc}") from exc
+    try:
+        return fn(**clean)
+    except (ToolError, ExpressionError):
+        raise
+    except Exception as exc:  # unexpected library error: report, don't crash
+        raise ToolError(f"{name} could not be completed: {type(exc).__name__}: {exc}"[:300]) from exc

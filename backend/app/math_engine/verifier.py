@@ -26,9 +26,11 @@ from __future__ import annotations
 
 import math
 import random
+import warnings
 from collections.abc import Callable
 from typing import Any
 
+import mpmath as mp
 import numpy as np
 import sympy as sp
 from scipy import integrate as sci_integrate
@@ -42,6 +44,10 @@ ABS_TOL = 1e-8
 
 
 def _close(a: complex | float, b: complex | float, rel: float = REL_TOL, abs_: float = ABS_TOL) -> bool:
+    a, b = complex(a), complex(b)
+    if not (_finite(a) and _finite(b)):
+        # inf - inf is nan and |inf| <= rel*inf is True: never compare infinities numerically.
+        return _finite(a) == _finite(b) and a == b
     return abs(a - b) <= max(abs_, rel * max(abs(a), abs(b)))
 
 
@@ -104,17 +110,23 @@ def _finish(
 
 def _verify_equation(out: ToolOutput) -> Verification:
     expr, var, sols = out.data["expr"], out.data["var"], out.data["solutions"]
+    period = out.data.get("period")
     checks: list[VerificationCheck] = []
     exact_all = True
     f = _lambdify(expr, var)
+    df = _lambdify(sp.diff(expr, var), var) if expr.free_symbols == {var} else None
     for s in sols:
         residual = expr.subs(var, s)
         exact = _symbolic_zero(residual) if not out.approximate else None
         try:
-            r = f(complex(sp.N(s, 30)))
+            z = complex(sp.N(s, 30))
+            r = f(z)
+            # A genuine zero has a tiny Newton step |f/f'|, not merely a small |f|
+            # (rejects "roots" where f only decays towards 0, e.g. 1/(x-1) at x = -1e7).
+            step = abs(r / df(z)) if df is not None and df(z) != 0 else 0.0
         except Exception:
-            r = complex("nan")
-        numeric_ok = _finite(r) and abs(r) < 1e-6 * max(1.0, abs(complex(sp.N(s))))
+            z, r, step = complex("nan"), complex("nan"), float("inf")
+        numeric_ok = _finite(r) and abs(r) < 1e-6 * max(1.0, abs(z)) and step < 1e-6 * max(1.0, abs(z))
         if exact:
             checks.append(
                 VerificationCheck(
@@ -125,27 +137,74 @@ def _verify_equation(out: ToolOutput) -> Verification:
             exact_all = False
             checks.append(
                 VerificationCheck(
-                    method="substitution (numeric)",
-                    passed=numeric_ok,
-                    detail=f"|f({sp.N(s, 8)})| = {abs(r):.2e}",
+                    method="substitution (numeric, residual and Newton step)",
+                    passed=bool(numeric_ok),
+                    detail=f"|f({sp.N(s, 8)})| = {abs(r):.2e}, |f/f'| = {step:.2e}",
                 )
             )
-    # Independent root count: look for real sign changes on [-50, 50] and
-    # make sure every real root found by brentq is among the solutions.
+    claimed = [complex(sp.N(s)) for s in sols]
+
+    def accounted(root: complex) -> bool:
+        for c in claimed:
+            if period is not None:
+                t = float(sp.N(period))
+                k = round((root.real - c.real) / t)
+                if abs(c.imag) < 1e-9 and _close(root, c + k * t, 1e-5, 1e-6):
+                    return True
+            elif _close(root, c, 1e-5, 1e-6):
+                return True
+        return False
+
+    # Independent real-root search: sign changes on [-50, 50] refined with brentq.
     real_found = _brentq_roots(f)
     if real_found is not None:
-        claimed = [complex(sp.N(s)) for s in sols]
-        missing = [r for r in real_found if not any(_close(r, c, 1e-5, 1e-6) for c in claimed)]
+        missing = [r for r in real_found if not accounted(complex(r))]
         checks.append(
             VerificationCheck(
                 method="independent root search (scipy brentq on [-50, 50])",
                 passed=not missing,
                 detail="all sign-change roots accounted for"
                 if not missing
-                else f"solver missed real root(s) near {', '.join(f'{m.real:.6g}' for m in missing)}",
+                else f"solver missed real root(s) near {', '.join(f'{m:.6g}' for m in missing[:5])}",
             )
         )
+    poly_check = _polynomial_root_check(expr, var, claimed)
+    if poly_check is not None:
+        checks.append(poly_check)
     return _finish(checks, exact_all, out.approximate)
+
+
+def _polynomial_root_check(expr: sp.Expr, var: sp.Symbol, claimed: list[complex]) -> VerificationCheck | None:
+    """For polynomials, compare against *all* complex roots from numpy.roots
+    (companion-matrix eigenvalues) of the square-free part: catches missing
+    complex roots and extra values that brentq cannot see."""
+    try:
+        num, _den = sp.fraction(sp.together(expr))
+        if num.free_symbols != {var} or not num.is_polynomial(var):
+            return None
+        poly = sp.Poly(num, var)
+        if poly.degree() < 1 or poly.degree() > 30:
+            return None
+        sqf = sp.Poly(sp.quo(poly, sp.gcd(poly, poly.diff(var))), var)
+        coeffs = [complex(sp.N(c)) for c in sqf.all_coeffs()]
+    except Exception:
+        return None
+    roots = np.roots(coeffs)
+    # roots of the numerator that are poles of the full expression are excluded
+    f = _lambdify(expr, var)
+    roots = [r for r in roots if _finite(f(complex(r)))]
+    missing = [r for r in roots if not any(_close(r, c, 1e-6, 1e-7) for c in claimed)]
+    extra = [c for c in claimed if not any(_close(r, c, 1e-6, 1e-7) for r in roots)]
+    detail = f"{len(roots)} distinct root(s) expected"
+    if missing:
+        detail += "; missing " + ", ".join(f"{m:.6g}" for m in missing[:5])
+    if extra:
+        detail += "; not a root: " + ", ".join(f"{e:.6g}" for e in extra[:5])
+    return VerificationCheck(
+        method="complete root set (numpy.roots on square-free polynomial)",
+        passed=not missing and not extra,
+        detail=detail,
+    )
 
 
 def _brentq_roots(f: Callable[[float], complex]) -> list[float] | None:
@@ -322,26 +381,109 @@ def _verify_integral(out: ToolOutput) -> Verification:
                 )
             )
 
-    if "value" in out.data:
-        a, b = out.data["lower"], out.data["upper"]
-        if not (expr.free_symbols - {var}):
-            f = _lambdify(expr, var)
-            try:
-                lo = -np.inf if a == -sp.oo else float(a)
-                hi = np.inf if b == sp.oo else float(b)
-                num, err = sci_integrate.quad(lambda x: f(x).real, lo, hi, limit=200)
-                claimed = complex(sp.N(out.data["value"]))
-                ok = _close(num, claimed, 1e-6, max(1e-8, 10 * err))
-                checks.append(
-                    VerificationCheck(
-                        method="scipy.integrate.quad",
-                        passed=ok,
-                        detail=f"quad = {num:.10g} (±{err:.1e}), solver = {claimed.real:.10g}",
-                    )
-                )
-            except Exception:
-                pass  # quadrature not applicable (e.g. symbolic limits); other checks still apply
+    if "value" not in out.data:
+        return _finish(checks, exact, out.approximate)
+    if expr.free_symbols - {var}:
+        return Verification(status=VerificationStatus.UNVERIFIED, checks=checks, summary="Contains other symbols.")
+    value = out.data["value"]
+    f = _lambdify(expr, var)
+    a, b = out.data["lower"], out.data["upper"]
+    sing = [float(sp.N(p)) for p in out.data.get("singularities", [])]
+    if value.is_infinite:
+        checks.append(_divergence_check(f, a, b, sing, 1 if value == sp.oo else -1))
+        return _finish(checks, False, True)
+    numeric = _reliable_quadrature(f, a, b, sing)
+    if numeric is None:
+        return Verification(
+            status=VerificationStatus.UNVERIFIED,
+            checks=checks,
+            summary="The definite value could not be confirmed: numerical quadrature did not converge reliably.",
+        )
+    num, method = numeric
+    claimed = complex(sp.N(value))
+    checks.append(
+        VerificationCheck(
+            method=method,
+            passed=_close(num, claimed, 1e-7, 1e-9),
+            detail=f"numeric = {num:.12g}, solver = {claimed.real:.12g}",
+        )
+    )
     return _finish(checks, exact, out.approximate)
+
+
+def _bounds(a: sp.Expr, b: sp.Expr) -> tuple[float, float]:
+    lo = -np.inf if a == -sp.oo else np.inf if a == sp.oo else float(a)
+    hi = np.inf if b == sp.oo else -np.inf if b == -sp.oo else float(b)
+    return lo, hi
+
+
+def _reliable_quadrature(
+    f: Callable[[float], complex], a: sp.Expr, b: sp.Expr, sing: list[float]
+) -> tuple[float, str] | None:
+    """Definite integral by SciPy quad, falling back to mpmath tanh-sinh. Returns
+    None unless one of them reports a small error estimate without warnings."""
+    lo, hi = _bounds(a, b)
+    inner = sorted(p for p in sing if min(lo, hi) < p < max(lo, hi))
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            kw = {"points": inner} if inner and np.isfinite(lo) and np.isfinite(hi) else {}
+            if inner and not kw:
+                raise ValueError("singular point with infinite bound")
+            num, err = sci_integrate.quad(lambda x: f(x).real, lo, hi, limit=400, **kw)
+        if np.isfinite(num) and err <= 1e-8 * max(1.0, abs(num)):
+            return float(num), "scipy.integrate.quad"
+    except Exception:
+        pass
+    try:
+        mp.mp.dps = 30
+        nodes = [mp.mpf(lo) if np.isfinite(lo) else (mp.inf if lo > 0 else -mp.inf)]
+        nodes += [mp.mpf(p) for p in inner]
+        nodes += [mp.mpf(hi) if np.isfinite(hi) else (mp.inf if hi > 0 else -mp.inf)]
+        val, err = mp.quad(lambda t: mp.re(mp.mpc(f(float(t)))), nodes, error=True, maxdegree=8)
+        if mp.isfinite(val) and err <= 1e-9 * max(1, abs(val)):
+            return float(val), "mpmath.quad (tanh-sinh)"
+    except Exception:
+        pass
+    return None
+
+
+def _divergence_check(
+    f: Callable[[float], complex], a: sp.Expr, b: sp.Expr, sing: list[float], sign: int
+) -> VerificationCheck:
+    """Integrate over the interval with shrinking neighbourhoods of the singular
+    points removed (and growing truncations of infinite bounds). A divergent
+    integral keeps growing by non-shrinking increments with the claimed sign."""
+    lo, hi = _bounds(a, b)
+    flip = -1 if lo > hi else 1
+    lo, hi = min(lo, hi), max(lo, hi)
+    bad = sorted({p for p in sing if lo <= p <= hi})
+    values = []
+    for eps in (1e-2, 1e-4, 1e-6, 1e-8):
+        left = lo if np.isfinite(lo) else -1 / eps
+        right = hi if np.isfinite(hi) else 1 / eps
+        cuts = [left]
+        for p in bad:
+            cuts += [p - eps, p + eps]
+        cuts.append(right)
+        total = 0.0
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                for i in range(0, len(cuts), 2):
+                    x0, x1 = max(cuts[i], left), min(cuts[i + 1], right)
+                    if x1 > x0:
+                        total += sci_integrate.quad(lambda x: f(x).real, x0, x1, limit=400)[0]
+        except Exception:
+            return VerificationCheck(method="truncated-integral growth", passed=False, detail="evaluation failed")
+        values.append(flip * total)
+    inc = np.diff(values)
+    ok = all(d * sign > 0 for d in inc) and abs(inc[-1]) >= 0.5 * abs(inc[0])
+    return VerificationCheck(
+        method="truncated-integral growth (divergence test)",
+        passed=bool(ok),
+        detail="truncated values " + ", ".join(f"{v:.4g}" for v in values),
+    )
 
 
 def _verify_limit(out: ToolOutput) -> Verification:
@@ -366,8 +508,13 @@ def _verify_limit(out: ToolOutput) -> Verification:
             ok = all(_finite(y) for y in ys) and abs(ys[-1] - target) < 1e-3 * max(1, abs(target))
             detail = f"f → {ys[-1].real:.8g} (side {'+' if side > 0 else '-'})"
         else:
-            ok = abs(ys[-1]) > abs(ys[0]) and abs(ys[-1]) > 1e3
-            detail = f"|f| grows: {abs(ys[0]):.3g} → {abs(ys[-1]):.3g}"
+            sign = 1 if value == sp.oo else -1
+            ok = (
+                all(_finite(y) and abs(y.imag) < 1e-9 for y in ys)
+                and ys[-1].real * sign > abs(ys[0].real)
+                and ys[-1].real * sign > 1e3
+            )
+            detail = f"f grows towards {'+' if sign > 0 else '-'}∞: {ys[0].real:.3g} → {ys[-1].real:.3g}"
         checks.append(VerificationCheck(method="numeric approach", passed=bool(ok), detail=detail))
     return _finish(checks, False, False)
 
