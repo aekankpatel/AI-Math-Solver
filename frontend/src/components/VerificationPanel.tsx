@@ -1,0 +1,39 @@
+import type { Verification, VerificationStatus } from '../types'
+
+const LABELS: Record<VerificationStatus, { label: string; icon: string; hint: string }> = {
+  verified: { label: 'Verified', icon: '✓', hint: 'Independently confirmed by an exact check' },
+  approximate: { label: 'Approximate', icon: '≈', hint: 'Confirmed numerically within tolerance' },
+  unverified: { label: 'Unverified', icon: '?', hint: 'No independent check was possible' },
+  failed: { label: 'Verification failed', icon: '✕', hint: 'An independent check disagreed — do not trust this result' },
+}
+
+export function VerificationBadge({ status }: { status: VerificationStatus }) {
+  const meta = LABELS[status]
+  return (
+    <span className={`badge badge-${status}`} title={meta.hint} data-testid="verification-badge">
+      <span aria-hidden>{meta.icon}</span> {meta.label}
+    </span>
+  )
+}
+
+export function VerificationPanel({ verification }: { verification: Verification }) {
+  return (
+    <details className="panel verification" open={verification.status === 'failed'}>
+      <summary>
+        <VerificationBadge status={verification.status} />
+        <span className="muted">{verification.summary}</span>
+      </summary>
+      <ul className="checks">
+        {verification.checks.map((c, i) => (
+          <li key={i} className={c.passed ? 'pass' : 'fail'}>
+            <span className="check-icon" aria-label={c.passed ? 'passed' : 'failed'}>
+              {c.passed ? '✓' : '✕'}
+            </span>
+            <span className="check-method">{c.method}</span>
+            {c.detail && <span className="check-detail">{c.detail}</span>}
+          </li>
+        ))}
+      </ul>
+    </details>
+  )
+}
