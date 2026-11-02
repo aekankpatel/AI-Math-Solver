@@ -6,18 +6,43 @@ its deterministic rule-based planner and template explanations.
 
 from __future__ import annotations
 
+import threading
 from functools import lru_cache
 from typing import Any
 
 from app.config import get_settings
 
+# Latest x-ratelimit-* response headers from Groq (limits and remaining quota; no credentials).
+# Groq: *-requests = requests per DAY, *-tokens = tokens per MINUTE.
+_RATE_LOCK = threading.Lock()
+RATE_LIMITS: dict[str, str] = {}
+
+
+def _capture_rate_limits(response: Any) -> None:
+    headers = {
+        k.lower(): v for k, v in response.headers.items() if k.lower().startswith(("x-ratelimit", "retry-after"))
+    }
+    if headers:
+        with _RATE_LOCK:
+            RATE_LIMITS.update(headers)
+
+
+def rate_limits() -> dict[str, str]:
+    with _RATE_LOCK:
+        return dict(RATE_LIMITS)
+
 
 @lru_cache(maxsize=4)
 def _build(model: str, temperature: float, timeout: float, retries: int, key: str) -> Any:
+    import httpx
     from langchain_groq import ChatGroq
 
-    # The Groq SDK retries 408/409/429/5xx with exponential backoff and honours Retry-After.
-    return ChatGroq(model=model, temperature=temperature, timeout=timeout, max_retries=retries, api_key=key)
+    # httpx honours HTTPS_PROXY and the CA bundle from the environment (trust_env); the response hook
+    # only records rate-limit headers. The Groq SDK retries 408/409/429/5xx and honours Retry-After.
+    client = httpx.Client(timeout=timeout, event_hooks={"response": [_capture_rate_limits]})
+    return ChatGroq(
+        model=model, temperature=temperature, timeout=timeout, max_retries=retries, api_key=key, http_client=client
+    )
 
 
 # Sent instead of a key when GROQ_AUTH=proxy. Not a secret: the egress proxy replaces

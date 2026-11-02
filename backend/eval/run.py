@@ -15,6 +15,7 @@ import argparse
 import json
 import os
 import platform
+import re
 import statistics
 import sys
 import time
@@ -194,6 +195,40 @@ def _run_case(case: dict[str, Any], mode: str) -> dict[str, Any]:
         else:
             rec["correct"], rec["detail"] = False, "answered a problem that should have been refused"
     return rec
+
+
+def _quota_check(rec: dict[str, Any], seen: dict[str, str], tpm: float) -> tuple[str | None, float]:
+    """Inspect Groq's rate-limit headers after a call. Returns (stop reason or None, allowed TPM).
+
+    Groq headers: x-ratelimit-limit/remaining-requests = requests per DAY,
+    x-ratelimit-limit/remaining-tokens = tokens per MINUTE. The daily token cap is not in the headers;
+    it only appears as a 429 whose message mentions a per-day limit.
+    """
+    from app.agents.llm import rate_limits
+
+    seen.update(rate_limits())
+    allowed = tpm
+    try:
+        allowed = min(tpm, float(seen["x-ratelimit-limit-tokens"]))
+    except (KeyError, ValueError):
+        pass
+    err = (rec.get("llm_error") or "").lower()
+    if "429" in err or "rate limit" in err or "rate_limit" in err:
+        if "per day" in err or "tpd" in err or "rpd" in err:
+            hint = re.search(r"try again in ([\w.]+)", err)
+            return (
+                f"daily Groq quota reached ({'resets in ' + hint.group(1) if hint else 'see the Groq console'}); "
+                "progress is cached - re-run the same command after the reset to resume"
+            ), allowed
+    try:
+        if int(seen["x-ratelimit-remaining-requests"]) <= 0:
+            return (
+                f"daily request quota exhausted (resets in {seen.get('x-ratelimit-reset-requests', '?')}); "
+                "re-run the same command after the reset to resume"
+            ), allowed
+    except (KeyError, ValueError):
+        pass
+    return None, allowed
 
 
 def _llm_accounting(state: dict[str, Any]) -> dict[str, Any]:
@@ -728,6 +763,8 @@ def main(argv: list[str] | None = None) -> int:
         REPORT_DIR.mkdir(exist_ok=True)
         progress.write_text("")
     consecutive_errors = 0
+    account_limits: dict[str, str] = {}
+    effective_tpm = args.tpm
     try:
         for idx, case in enumerate(cases, 1):
             cached = False
@@ -754,6 +791,15 @@ def main(argv: list[str] | None = None) -> int:
                 with progress.open("a") as fh:
                     fh.write(json.dumps(rec, default=str) + "\n")
             consecutive_errors = consecutive_errors + 1 if rec.get("llm") == "error" else 0
+            if args.mode == "groq" and not args.replay:
+                stop, tpm_now = _quota_check(rec, account_limits, args.tpm)
+                if tpm_now < effective_tpm:
+                    print(f"account token limit is {tpm_now:g}/min: lowering pacing from {effective_tpm:g}", flush=True)
+                    effective_tpm = tpm_now
+                if stop:
+                    incomplete = stop
+                    print(incomplete, file=sys.stderr)
+                    break
             if args.mode == "groq" and consecutive_errors >= args.max_consecutive_errors:
                 incomplete = (
                     f"stopped after {consecutive_errors} consecutive LLM errors (last: {rec.get('llm_error')}); "
@@ -763,7 +809,7 @@ def main(argv: list[str] | None = None) -> int:
                 break
             if pace and not cached:
                 used = (rec.get("llm_usage") or {}).get("total_tokens") or per_call
-                wait = max(60.0 / args.rpm, used * 60.0 / args.tpm)  # pace on the tokens actually used
+                wait = max(60.0 / args.rpm, used * 60.0 / effective_tpm)  # pace on the tokens actually used
                 time.sleep(max(0.0, wait - (time.perf_counter() - t_call)))
     except KeyboardInterrupt:
         incomplete = "interrupted; re-run the same command to resume (cached planner responses are reused)"
@@ -780,7 +826,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.mode == "groq":
         from app.agents.llm_planner import PROMPT_VERSION
 
-        summary["environment"].update(model=model_name, prompt_version=PROMPT_VERSION, replay=args.replay)
+        summary["environment"].update(
+            model=model_name,
+            prompt_version=PROMPT_VERSION,
+            replay=args.replay,
+            pacing={"rpm": args.rpm, "tpm_requested": args.tpm, "tpm_used": effective_tpm},
+            account_rate_limits=account_limits or None,
+        )
         summary["llm_planner"] = _llm_summary(records)
 
     print(to_markdown(summary, records, tamper, intent_tamper).split("## Latency")[0])

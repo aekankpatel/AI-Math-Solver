@@ -597,3 +597,51 @@ def test_gpt_oss_style_outputs_through_the_graph(monkeypatch, problem, output, e
     if expect_llm != "accepted":
         assert all(args != output.get("args") for _, args in tools_run)
         assert state.get("tool_call") is None or state["tool_call"].source != "llm"
+
+
+# ---- account quota handling
+
+
+def test_quota_check_lowers_tpm_and_stops_on_daily_limits(monkeypatch):
+    from app.agents import llm as llm_mod
+    from eval.run import _quota_check
+
+    monkeypatch.setattr(
+        llm_mod, "RATE_LIMITS", {"x-ratelimit-limit-tokens": "5000", "x-ratelimit-remaining-requests": "120"}
+    )
+    seen = {}
+    stop, tpm = _quota_check({}, seen, 6000)
+    assert stop is None and tpm == 5000 and seen["x-ratelimit-limit-tokens"] == "5000"
+    stop, _ = _quota_check(
+        {
+            "llm_error": "RateLimitError: Error code: 429 - Limit 200000, Used 199000 tokens per day "
+            "(TPD). Please try again in 7m12s."
+        },
+        {},
+        6000,
+    )
+    assert "daily Groq quota" in stop and "7m12s" in stop
+    monkeypatch.setattr(
+        llm_mod, "RATE_LIMITS", {"x-ratelimit-remaining-requests": "0", "x-ratelimit-reset-requests": "2h"}
+    )
+    stop, _ = _quota_check({}, {}, 6000)
+    assert "daily request quota exhausted" in stop and "2h" in stop
+
+
+def test_rate_limit_headers_are_captured_without_credentials():
+    import httpx
+
+    from app.agents import llm as llm_mod
+
+    llm_mod.RATE_LIMITS.clear()
+    resp = httpx.Response(
+        200,
+        headers={
+            "x-ratelimit-limit-tokens": "8000",
+            "authorization": "Bearer secret",
+            "x-ratelimit-remaining-requests": "999",
+        },
+    )
+    llm_mod._capture_rate_limits(resp)
+    assert llm_mod.rate_limits() == {"x-ratelimit-limit-tokens": "8000", "x-ratelimit-remaining-requests": "999"}
+    llm_mod.RATE_LIMITS.clear()
