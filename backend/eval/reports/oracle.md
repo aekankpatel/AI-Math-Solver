@@ -57,7 +57,7 @@ Intent status on incorrect answers: `{}`
 
 ## Latency and robustness
 
-Latency mean / p50 / p95 / max: 34.9 / 14.0 / 86.8 / 1125.2 ms. Crashes: 0.0% (0/279).
+Latency mean / p50 / p95 / max: 33.1 / 12.4 / 90.3 / 1359.0 ms. Crashes: 0.0% (0/279).
 
 ## Accuracy by category
 

@@ -573,6 +573,157 @@ class _Ctx:
             self.fixes.update(fix)
 
 
+# --------------------------------------------------------------------------- plan validation
+
+_TOOL_CATEGORY = {
+    "solve_equation": "algebra",
+    "solve_system": "algebra",
+    "simplify_expression": "algebra",
+    "factor_expression": "algebra",
+    "expand_expression": "algebra",
+    "differentiate": "calculus",
+    "limit": "calculus",
+    "integrate": "integrals",
+    "matrix_operation": "linear_algebra",
+    "descriptive_statistics": "probability_statistics",
+    "probability_distribution": "probability_statistics",
+    "combinatorics": "probability_statistics",
+}
+_ENUMS = {
+    "operation": {
+        "matrix_operation": ("determinant", "inverse", "eigenvalues", "rank", "transpose", "multiply", "solve", "rref"),
+        "combinatorics": ("combinations", "permutations", "factorial"),
+    },
+    "distribution": ("binomial", "poisson", "normal", "uniform", "exponential"),
+    "query": ("pmf", "pdf", "cdf", "greater", "between"),
+    "direction": ("+", "-", "+-"),
+    "domain": ("complex", "real", "positive"),
+}
+_REQUIRED_EXTRA = {  # arguments a tool needs for a given operation / query
+    ("matrix_operation", "multiply"): ("other",),
+    ("matrix_operation", "solve"): ("vector",),
+    ("probability_distribution", "between"): ("x2",),
+}
+
+
+def _is_number_like(v: Any) -> bool:
+    if isinstance(v, bool):
+        return False
+    if isinstance(v, (int, float)):
+        return True
+    return isinstance(v, str) and _scalar(v) is not None
+
+
+def validate_plan(call: ToolCall) -> list[str]:
+    """Structural problems with a plan (independent of the question). An LLM plan
+    that fails here is rejected, never 'repaired' by guessing."""
+    import inspect
+
+    from app.math_engine.tools import TOOLS
+
+    errors: list[str] = []
+    a = call.args
+    sig = inspect.signature(TOOLS[call.tool])
+    for name, param in sig.parameters.items():
+        if param.default is inspect.Parameter.empty and a.get(name) in (None, "", [], {}):
+            errors.append(f"missing required argument '{name}'")
+    unknown = set(a) - set(sig.parameters)
+    if unknown:
+        errors.append(f"unexpected arguments {sorted(unknown)}")
+    for key in ("expression", "equation"):
+        if key in a and not isinstance(a[key], str):
+            errors.append(f"'{key}' must be text")
+    if "equations" in a and not (isinstance(a["equations"], list) and all(isinstance(e, str) for e in a["equations"])):
+        errors.append("'equations' must be a list of equations")
+    # every expression must pass the same safe parser the tools use (nothing is evaluated here)
+    texts = [(k, a[k]) for k in ("expression", "equation") if isinstance(a.get(k), str)]
+    texts += [("equations", e) for e in a.get("equations") or [] if isinstance(e, str)]
+    for key, text in texts:
+        try:
+            (parse_equation if "=" in text else parse_expression)(text)
+        except ExpressionError as exc:
+            errors.append(f"'{key}' is not a valid mathematical expression ({exc})")
+    for key in ("point", "lower", "upper", "x", "x2", "n", "k"):
+        if a.get(key) is not None and not (_is_number_like(a[key]) or isinstance(a[key], str)):
+            errors.append(f"'{key}' must be a number")
+    for key in ("x", "x2", "n", "k"):
+        if isinstance(a.get(key), str) and not _is_number_like(a[key]):
+            errors.append(f"'{key}' = {a[key]!r} is not a number")
+    if (
+        "order" in a
+        and a["order"] is not None
+        and not (isinstance(a["order"], int) and not isinstance(a["order"], bool))
+    ):
+        errors.append("'order' must be an integer")
+    if ("lower" in a) != ("upper" in a):
+        errors.append("a definite integral needs both 'lower' and 'upper'")
+    for key in ("matrix", "other"):
+        if key in a and not (isinstance(a[key], list) and a[key] and all(isinstance(r, list) and r for r in a[key])):
+            errors.append(f"'{key}' must be a non-empty list of rows")
+    if "vector" in a and not isinstance(a["vector"], list):
+        errors.append("'vector' must be a list")
+    if "data" in a and not (isinstance(a["data"], list) and all(_is_number_like(v) for v in a["data"])):
+        errors.append("'data' must be a list of numbers")
+    if "params" in a:
+        if not isinstance(a["params"], dict):
+            errors.append("'params' must be an object")
+        else:
+            bad = [k for k, v in a["params"].items() if not _is_number_like(v)]
+            if bad:
+                errors.append(f"distribution parameters must be numbers: {bad}")
+    for key, allowed in _ENUMS.items():
+        if key in a and a[key] is not None:
+            options = allowed.get(call.tool, ()) if isinstance(allowed, dict) else allowed
+            if options and a[key] not in options:
+                errors.append(f"{key} = {a[key]!r} is not one of {', '.join(options)}")
+    for (tool, value), needed in _REQUIRED_EXTRA.items():
+        if call.tool == tool and value in (a.get("operation"), a.get("query")):
+            errors += [f"'{value}' needs argument '{n}'" for n in needed if a.get(n) in (None, [], "")]
+    return errors
+
+
+def _self_consistency(call: ToolCall) -> list[str]:
+    """Contradictions inside an LLM plan: its category vs its tool, and its own
+    restatement vs its arguments. The question text is not used here."""
+    problems: list[str] = []
+    if call.source == "llm" and call.category.value not in (_TOOL_CATEGORY[call.tool], "unsupported"):
+        problems.append(f"the plan's category '{call.category.value}' contradicts its tool '{call.tool}'")
+    if call.interpretation:
+        told = extract_intent(call.interpretation)
+        task = _call_task(call)
+        if (
+            told.task
+            and told.task not in ("solve", "matrix")
+            and told.task != task
+            and not task.startswith(f"{told.task}")
+        ):
+            problems.append(f"the plan's own interpretation describes '{told.task}' but its arguments compute '{task}'")
+        order = int(call.args.get("order") or 1) if call.tool == "differentiate" else None
+        if order is not None and told.order and told.order != order:
+            problems.append(f"the interpretation says order {told.order} but the arguments use order {order}")
+    return problems
+
+
+def _rejected(call: ToolCall, name: str, details: list[str]) -> tuple[IntentVerification, dict[str, Any]]:
+    detail = "; ".join(details)
+    return (
+        IntentVerification(
+            status=IntentStatus.MISMATCH,
+            interpretation=_safe_describe(call),
+            checks=[IntentCheck(name=name, passed=False, detail=detail, severity="error")],
+            clarification=f"The plan was rejected: {detail}.",
+        ),
+        {},
+    )
+
+
+def _safe_describe(call: ToolCall) -> str:
+    try:
+        return describe(call)
+    except Exception:
+        return call.tool
+
+
 def check_intent(
     problem: str,
     call: ToolCall,
@@ -581,9 +732,36 @@ def check_intent(
 ) -> tuple[IntentVerification, dict[str, Any]]:
     """Check that ``call`` faithfully answers ``problem``.
 
+    Order: (1) structural validation, (2) internal consistency of the plan,
+    (3) alignment with the question. The check fails closed: any malformed
+    plan or internal error yields MISMATCH, never acceptance.
+
     Returns the verification and a dict of safe argument fixes (slots that the
     question states explicitly but the plan omitted or changed).
     """
+    # LLM self-reports travel with the plan; they can only lower trust, so never drop them
+    if declared_ambiguities is None:
+        declared_ambiguities = list(call.ambiguities)
+    if declared_assumptions is None:
+        declared_assumptions = list(call.assumptions)
+    errors = validate_plan(call)
+    if errors:
+        return _rejected(call, "plan is well-formed", errors)
+    contradictions = _self_consistency(call)
+    if contradictions:
+        return _rejected(call, "plan is self-consistent", contradictions)
+    try:
+        return _check_alignment(problem, call, declared_ambiguities, declared_assumptions)
+    except Exception as exc:  # fail closed
+        return _rejected(call, "intent check completed", [f"internal error ({type(exc).__name__})"])
+
+
+def _check_alignment(
+    problem: str,
+    call: ToolCall,
+    declared_ambiguities: list[str] | None,
+    declared_assumptions: list[str] | None,
+) -> tuple[IntentVerification, dict[str, Any]]:
     it = extract_intent(problem)
     ctx = _Ctx()
     task = _call_task(call)

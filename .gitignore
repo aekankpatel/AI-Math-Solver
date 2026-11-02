@@ -19,3 +19,6 @@ dist/
 .DS_Store
 .idea/
 .vscode/
+
+# benchmark run progress (deleted after a completed run)
+*.progress.jsonl

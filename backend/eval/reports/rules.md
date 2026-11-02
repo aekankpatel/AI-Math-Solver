@@ -41,7 +41,7 @@ Scope: answers produced on benchmark problems; 'fully verified' = math verified 
 | Fully-verified recall | 67.4% (176/261) |
 | Incorrect answers presented as fully verified | n/a |
 | Incorrect answers whose math was `verified` (misinterpretations) | n/a |
-| Clarification requests | 7.1% (22/308) |
+| Clarification requests | 8.1% (25/308) |
 
 Intent status on correct answers: `{'confirmed': 197, 'assumed': 64}`  
 Intent status on incorrect answers: `{}`
@@ -57,7 +57,7 @@ Intent status on incorrect answers: `{}`
 
 ## Latency and robustness
 
-Latency mean / p50 / p95 / max: 41.9 / 22.2 / 95.8 / 1073.0 ms. Crashes: 0.0% (0/308).
+Latency mean / p50 / p95 / max: 38.2 / 20.5 / 94.3 / 1142.1 ms. Crashes: 0.0% (0/308).
 
 ## Accuracy by category
 

@@ -247,30 +247,68 @@ How these numbers were produced, and what they don't show:
 
 ### Groq planner evaluation (prepared, not run)
 
-No Groq results have been measured: no API key was available, and real calls need explicit approval.
+No Groq results have been measured yet. Each command below that contacts Groq needs `--allow-network`.
 
-Preview the run without sending anything:
+**Credentials.** Choose one:
 
-```bash
-python -m eval.run --mode groq --dry-run
-```
+- Local development: `GROQ_API_KEY`.
+- Cloud environments whose egress proxy injects a network secret for `api.groq.com` (Bearer token, path prefix `/openai/v1/`): set
+  `GROQ_AUTH=proxy`. The SDK then sends a fixed placeholder, and the egress proxy injects the real key, which
+  never enters this process.
 
-Run it for real (needs `GROQ_API_KEY` and explicit permission):
+**Order of operations**, all run from `backend/`:
 
-```bash
-GROQ_API_KEY=... python -m eval.run --mode groq --allow-network --rpm 20
-```
+1. Check authentication with a single request, `GET /openai/v1/models`, which uses no tokens:
 
-Re-score later from cached responses, with no key and no network:
+   ```bash
+   GROQ_AUTH=proxy python -m eval.groq_check --allow-network
+   ```
 
-```bash
-python -m eval.run --mode groq --replay
-```
+2. Preview the 25-question smoke test (sends nothing):
 
-- The dry run reports 308 planner calls, about 15 minutes at 20 requests per minute.
-- Planner responses are cached in `eval/reports/groq_cache.jsonl`, keyed by prompt version, model and problem, so a run can be re-scored and audited.
-- Explanations use templates unless `--llm-explanations` is passed, so only the planner is evaluated.
-- LLM plans go through the same intent verification. When an LLM reading fails it, the workflow tries the offline plans, and asks for clarification if none fits.
+   ```bash
+   GROQ_AUTH=proxy python -m eval.run --mode groq --subset smoke --dry-run
+   ```
+
+3. Run the smoke test (25 planner calls, about 9 minutes at the default pacing):
+
+   ```bash
+   GROQ_AUTH=proxy python -m eval.run --mode groq --subset smoke --allow-network
+   ```
+
+4. Run the full benchmark (308 planner calls, about 2 hours at the default pacing):
+
+   ```bash
+   GROQ_AUTH=proxy python -m eval.run --mode groq --allow-network
+   ```
+
+5. Re-score from cached responses at any time, with no network:
+
+   ```bash
+   python -m eval.run --mode groq --replay
+   ```
+
+When running locally, replace `GROQ_AUTH=proxy` with `GROQ_API_KEY=...`.
+
+**How a run behaves:**
+
+- **Smoke subset** (`eval/smoke.py`): 25 existing benchmark questions picked by ID. It covers all 12 tools and all four splits,
+  natural wording and misreading traps, plus 6 inputs that should be refused. The questions are referenced, never copied or
+  changed. Its results are reported as a subset and must not be quoted as benchmark accuracy.
+- **Pacing:** each planner call is about 2,150 tokens. The runner waits between uncached calls to stay within `--rpm` (default 20)
+  and `--tpm` (default 6,000 tokens/min, conservative for the free tier). Raise both if your Groq limits allow.
+- **Retries:** the Groq SDK retries 429 and 5xx responses `--retries` times (default 5), honouring `Retry-After`.
+- **Resume:** planner responses are cached in `eval/reports/groq_cache.jsonl`, keyed by prompt version, model and question.
+  Failed calls are never cached. Re-running the same command resumes, and cached questions cost nothing.
+  Progress is written to `<name>.progress.jsonl` as the run goes.
+- **Early stop:** after `--max-consecutive-errors` failed calls in a row (default 5), the run stops and writes a report marked incomplete.
+- **Honest accounting:** if an LLM call fails, the app falls back to the offline planners, and the report records it as an
+  `error`, not as an LLM result. The report separates end-to-end accuracy from LLM-only figures: plans accepted by the intent
+  check, the accuracy of those accepted plans, plans rejected in favour of a faithful offline plan, plans rejected with a
+  clarification request, plans the LLM itself refused, and call errors.
+- **Independence:** the intent check uses only the question text. Missing, malformed or contradictory LLM plans are rejected before
+  any tool runs, for example wrong types, bad enum values, a category that contradicts the tool, or an interpretation that
+  contradicts the arguments. The LLM's own assumptions and ambiguities can only lower trust.
 
 ## Known limitations / roadmap
 

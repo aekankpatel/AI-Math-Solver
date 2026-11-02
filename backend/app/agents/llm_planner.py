@@ -133,6 +133,10 @@ class LLMPlanUnsupported(ValueError):
     """The LLM judged the problem unsupported or ambiguous."""
 
 
+class LLMPlanError(RuntimeError):
+    """The LLM call failed or returned no usable structured plan."""
+
+
 def plan_output_to_tool_call(out: PlannerOutput) -> ToolCall:
     if not out.supported or out.tool == "none":
         raise LLMPlanUnsupported(out.clarification or "The problem is not supported.")
@@ -193,8 +197,16 @@ def plan_with_llm(problem: str, context: str | None = None) -> ToolCall | None:
         return plan_output_to_tool_call(PlannerOutput.model_validate(cached))
     structured = model.with_structured_output(PlannerOutput)
     user = problem if not context else f"Previous context:\n{context}\n\nNew request: {problem}"
-    result = structured.invoke([("system", PLANNER_SYSTEM_PROMPT), ("human", user)])
+    try:
+        result = structured.invoke([("system", PLANNER_SYSTEM_PROMPT), ("human", user)])
+    except Exception as exc:  # network, rate limit after retries, malformed tool call (400), parse error
+        raise LLMPlanError(f"{type(exc).__name__}: {str(exc)[:200]}") from exc
+    if result is None:  # the model answered in prose instead of calling the planning tool
+        raise LLMPlanError("the model returned no structured plan")
     if not isinstance(result, PlannerOutput):
-        result = PlannerOutput.model_validate(result)
+        try:
+            result = PlannerOutput.model_validate(result)
+        except Exception as exc:
+            raise LLMPlanError(f"invalid structured output: {str(exc)[:200]}") from exc
     _cache_put(key, problem, result.model_dump())
     return plan_output_to_tool_call(result)

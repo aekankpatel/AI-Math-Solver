@@ -66,6 +66,8 @@ class SolverState(TypedDict, total=False):
     status: str
     error: str | None
     llm_used: bool
+    llm_plan: ToolCall | None
+    llm_error: str | None
 
 
 def plan_node(state: SolverState) -> SolverState:
@@ -88,14 +90,15 @@ def plan_node(state: SolverState) -> SolverState:
     except (PlanningError, ExpressionError) as exc:
         errors.append(str(exc))
 
+    llm_error: str | None = None
     try:
         llm_call = plan_with_llm(problem, context)
     except LLMPlanUnsupported as exc:
         # The LLM judged the problem unsupported/ambiguous: ask rather than guess.
         return {"status": "unsupported", "error": str(exc), "planner": "llm", "llm_used": True}
-    except Exception as exc:  # provider/network/validation errors -> deterministic fallback
+    except Exception as exc:  # provider/network/validation errors -> offline planners, recorded (never silent)
         log.warning("LLM planning failed, using offline planners: %s", exc)
-        llm_call = None
+        llm_call, llm_error = None, f"{type(exc).__name__}: {exc}"[:300]
 
     candidates = [
         c for c in (llm_call.model_copy(update={"source": "llm"}) if llm_call else None, rules_call, nl_call) if c
@@ -108,10 +111,17 @@ def plan_node(state: SolverState) -> SolverState:
             "alternatives": rest,
             "fallback_call": rest[0] if rest else None,
             "llm_used": llm_call is not None,
+            "llm_plan": candidates[0] if llm_call else None,
+            "llm_error": llm_error,
         }
     if clarification:
-        return {"status": "needs_clarification", "error": clarification, "planner": "nl"}
-    return {"status": "unsupported", "error": errors[0] if errors else "Unsupported problem.", "planner": "rules"}
+        return {"status": "needs_clarification", "error": clarification, "planner": "nl", "llm_error": llm_error}
+    return {
+        "status": "unsupported",
+        "error": errors[0] if errors else "Unsupported problem.",
+        "planner": "rules",
+        "llm_error": llm_error,
+    }
 
 
 def _check(problem: str, call: ToolCall) -> tuple[IntentVerification, dict[str, Any]]:

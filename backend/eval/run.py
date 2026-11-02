@@ -174,6 +174,8 @@ def _run_case(case: dict[str, Any], mode: str) -> dict[str, Any]:
                 rec["interpretation"] = state["intent"].interpretation
             if state.get("overall") is not None:
                 rec["overall"] = state["overall"].value
+            if mode == "groq":
+                rec.update(_llm_accounting(state))
             if state.get("status") == "needs_clarification":
                 rec["outcome"], rec["error"] = "clarify", state.get("error")
             elif state.get("status") != "solved":
@@ -192,6 +194,56 @@ def _run_case(case: dict[str, Any], mode: str) -> dict[str, Any]:
         else:
             rec["correct"], rec["detail"] = False, "answered a problem that should have been refused"
     return rec
+
+
+def _llm_accounting(state: dict[str, Any]) -> dict[str, Any]:
+    """What happened to the LLM's plan for this problem (groq mode only).
+
+    accepted              the LLM plan passed the intent check and was executed (possibly after a safe repair)
+    rejected_fallback     the intent check rejected the LLM plan; an offline plan that passes was used instead
+    rejected_clarify      the LLM plan was rejected and no faithful plan existed: the user is asked
+    declared_unsupported  the LLM itself refused (supported = false)
+    error                 the LLM call failed (rate limit, timeout, malformed output): offline planners ran
+    """
+    plan, err, final = state.get("llm_plan"), state.get("llm_error"), state.get("tool_call")
+    out: dict[str, Any] = {}
+    if plan is not None:
+        out["llm_plan"] = {"tool": plan.tool, "args": plan.args, "ambiguities": plan.ambiguities}
+    if err:
+        out["llm"], out["llm_error"] = "error", err
+    elif plan is None and state.get("planner") == "llm" and state.get("status") == "unsupported":
+        out["llm"] = "declared_unsupported"
+    elif plan is None:
+        out["llm"] = "no_plan"
+    elif state.get("status") == "needs_clarification":
+        out["llm"] = "rejected_clarify"
+    elif final is not None and final.source == "llm":
+        out["llm"] = "accepted"
+        out["llm_repaired"] = bool(state.get("intent") and state["intent"].repaired)
+    else:
+        out["llm"] = "rejected_fallback"
+    return out
+
+
+def _llm_summary(records: list[dict[str, Any]]) -> dict[str, Any]:
+    ran = [r for r in records if r.get("outcome") != "skipped"]
+    count = Counter(r.get("llm", "no_plan") for r in ran)
+    accepted = [r for r in ran if r.get("llm") == "accepted"]
+    acc_ans = [r for r in accepted if r["expect"] == "answer"]
+    refuse = [r for r in ran if r["expect"] == "reject"]
+    return {
+        "scope": "every problem run; end-to-end metrics above include offline fallbacks, these isolate the LLM",
+        "outcomes": {k: _m(v, len(ran)) for k, v in sorted(count.items())},
+        "llm_errors": _m(count.get("error", 0), len(ran)),
+        "llm_plans_accepted_by_intent_check": _m(len(accepted), sum(1 for r in ran if "llm_plan" in r)),
+        "accuracy_of_accepted_llm_plans": _m(sum(1 for r in acc_ans if r.get("correct")), len(acc_ans)),
+        "llm_plans_repaired": _m(sum(1 for r in accepted if r.get("llm_repaired")), len(accepted)),
+        "llm_refused_or_was_rejected_on_should_refuse_inputs": _m(
+            sum(1 for r in refuse if r.get("llm") in ("declared_unsupported", "rejected_clarify", "rejected_fallback")),
+            len(refuse),
+        ),
+        "llm_plan_answered_should_refuse_input": _m(sum(1 for r in refuse if r.get("llm") == "accepted"), len(refuse)),
+    }
 
 
 SPLITS = ("dev", "heldout", "unseen", "dev_nl")
@@ -361,7 +413,8 @@ def to_markdown(
         f"Problems run in this mode: {c['problems_run']}"
         + (f" ({c['problems_skipped']} skipped: {c['skipped_reason']})." if c["problems_skipped"] else "."),
         "",
-        "Every rate is shown with its numerator/denominator.",
+        "Every rate is shown with its numerator/denominator."
+        + (f" **Subset run: {summary['subset']}.**" if summary.get("subset") else ""),
         "",
         "## Accuracy by split",
         "",
@@ -428,6 +481,21 @@ def to_markdown(
             f"{_fmt(t['controls_handled_correctly'])} |",
             f"| Valid controls wrongly flagged (false alarms) | {_fmt(t['valid_controls_wrongly_flagged'])} |",
         ]
+    if "llm_planner" in summary:
+        g = summary["llm_planner"]
+        lines += ["", "## LLM planner (isolated from offline fallbacks)", "", "| Metric | Value |", "|---|---|"]
+        lines += [f"| outcome: {k} | {_fmt(v)} |" for k, v in g["outcomes"].items()]
+        lines += [
+            f"| LLM call errors | {_fmt(g['llm_errors'])} |",
+            f"| LLM plans accepted by the intent check | {_fmt(g['llm_plans_accepted_by_intent_check'])} |",
+            f"| Accuracy of accepted LLM plans | {_fmt(g['accuracy_of_accepted_llm_plans'])} |",
+            f"| Accepted LLM plans that needed a safe repair | {_fmt(g['llm_plans_repaired'])} |",
+            f"| Should-refuse inputs: LLM refused or its plan was rejected | "
+            f"{_fmt(g['llm_refused_or_was_rejected_on_should_refuse_inputs'])} |",
+            f"| Should-refuse inputs: LLM plan accepted (bad) | {_fmt(g['llm_plan_answered_should_refuse_input'])} |",
+        ]
+    if summary.get("incomplete"):
+        lines += ["", f"**INCOMPLETE RUN:** {summary['incomplete']}"]
     lines += [
         "",
         "## Latency and robustness",
@@ -492,6 +560,11 @@ class _ReplayModel:
 
 def _select_cases(args: argparse.Namespace) -> list[dict[str, Any]]:
     cases = CASES
+    if args.subset == "smoke":
+        from eval.smoke import SMOKE_IDS
+
+        by_id = {c["id"]: c for c in CASES}
+        cases = [by_id[i] for i in SMOKE_IDS]
     if args.split:
         cases = [c for c in cases if (c.get("split") or ("heldout" if c.get("heldout") else "dev")) == args.split]
     if args.only:
@@ -500,6 +573,36 @@ def _select_cases(args: argparse.Namespace) -> list[dict[str, Any]]:
     if args.limit:
         cases = cases[: args.limit]
     return cases
+
+
+def _tokens_per_call(problem: str = "") -> int:
+    """Rough prompt + completion size of one planner call (characters / 4)."""
+    from langchain_core.utils.function_calling import convert_to_openai_tool
+
+    from app.agents.llm_planner import PLANNER_SYSTEM_PROMPT, PlannerOutput
+
+    chars = len(PLANNER_SYSTEM_PROMPT) + len(json.dumps(convert_to_openai_tool(PlannerOutput))) + len(problem)
+    return chars // 4 + 250
+
+
+def _write_reports(
+    name: str,
+    summary: dict[str, Any],
+    records: list[dict[str, Any]],
+    tamper: list[dict[str, Any]],
+    intent_tamper: list[dict[str, Any]],
+) -> None:
+    REPORT_DIR.mkdir(exist_ok=True)
+    (REPORT_DIR / f"{name}.json").write_text(
+        json.dumps(
+            {"summary": summary, "cases": records, "tamper": tamper, "intent_tamper": intent_tamper},
+            indent=2,
+            default=str,
+        )
+        + "\n"
+    )
+    (REPORT_DIR / f"{name}.md").write_text(to_markdown(summary, records, tamper, intent_tamper))
+    print(f"reports written to {REPORT_DIR}/{name}.{{json,md}}")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -513,36 +616,52 @@ def main(argv: list[str] | None = None) -> int:
         "--replay", action="store_true", help="groq mode: use only cached planner responses (no network, no key)"
     )
     ap.add_argument("--cache", default=str(REPORT_DIR / "groq_cache.jsonl"), help="planner response cache (JSONL)")
-    ap.add_argument("--rpm", type=float, default=20.0, help="max requests per minute in groq mode")
+    ap.add_argument("--rpm", type=float, default=20.0, help="max uncached requests per minute (groq)")
+    ap.add_argument("--tpm", type=float, default=6000.0, help="token budget per minute used for pacing (groq)")
+    ap.add_argument("--retries", type=int, default=5, help="SDK retries per call on rate limits / transient errors")
+    ap.add_argument("--max-consecutive-errors", type=int, default=5, help="stop the run after N failed LLM calls")
     ap.add_argument("--llm-explanations", action="store_true", help="groq mode: also generate LLM explanations")
+    ap.add_argument("--subset", choices=["smoke"], help="run the stratified 25-question smoke subset (eval/smoke.py)")
     ap.add_argument("--only", help="comma-separated case-id prefixes to run")
     ap.add_argument("--split", choices=SPLITS, help="run only one split")
     ap.add_argument("--limit", type=int, help="run only the first N selected problems")
-    ap.add_argument("--out-name", help="report file name (default: the mode)")
+    ap.add_argument("--out-name", help="report file name (default: the mode, or <mode>_smoke for the smoke subset)")
     ap.add_argument("--no-write", action="store_true")
     args = ap.parse_args(argv)
     cases = _select_cases(args)
+    name = args.out_name or (f"{args.mode}_smoke" if args.subset == "smoke" else args.mode)
 
+    model_name = ""
+    delay = 0.0
     if args.mode == "groq":
         from app.config import get_settings
 
         model_name = os.environ.get("LLM_MODEL") or get_settings().llm_model
+        per_call = _tokens_per_call()
+        delay = max(60.0 / args.rpm, per_call * 60.0 / args.tpm)
         if args.dry_run:
             calls = len(cases) * (2 if args.llm_explanations else 1)
             print(
-                f"groq dry run: {len(cases)} problems -> up to {calls} chat completions with model {model_name} "
-                f"(cached responses in {args.cache} are reused). At {args.rpm:g} requests/min this takes about "
-                f"{calls / args.rpm:.0f} min. Nothing was sent."
+                f"groq dry run: {len(cases)} problems -> up to {calls} chat completions with model {model_name}, "
+                f"~{per_call} tokens each (~{calls * per_call:,} tokens). Pacing: one uncached call every "
+                f"{delay:.1f}s (rpm={args.rpm:g}, tpm={args.tpm:g}) => at most ~{calls * delay / 60:.0f} min. "
+                f"Cached responses in {args.cache} are reused and cost nothing. Nothing was sent."
             )
             return 0
         if not args.replay:
-            if not os.environ.get("GROQ_API_KEY"):
-                print("groq mode needs GROQ_API_KEY in the environment; refusing to run.", file=sys.stderr)
+            proxy_auth = (os.environ.get("GROQ_AUTH") or get_settings().groq_auth) == "proxy"
+            if not os.environ.get("GROQ_API_KEY") and not proxy_auth:
+                print(
+                    "groq mode needs credentials: GROQ_API_KEY (local) or GROQ_AUTH=proxy (cloud network secret); "
+                    "refusing to run.",
+                    file=sys.stderr,
+                )
                 return 2
             if not args.allow_network:
                 print("groq mode makes real API calls; re-run with --allow-network to confirm.", file=sys.stderr)
                 return 2
         os.environ["MATHFORGE_LLM_CACHE"] = args.cache
+        os.environ["LLM_MAX_RETRIES"] = str(args.retries)
     _configure(args.mode)
     if args.mode == "groq" and args.replay:
         import app.agents.llm_planner as llm_planner
@@ -557,38 +676,67 @@ def main(argv: list[str] | None = None) -> int:
             False,
         )
 
-    delay = 60.0 / args.rpm if args.mode == "groq" and not args.replay else 0.0
-    records = []
-    for case in cases:
-        t0 = time.perf_counter()
-        records.append(_run_case(case, args.mode))
-        if delay and time.perf_counter() - t0 > 0.05:  # only throttle real (uncached) calls
-            time.sleep(delay)
+    pace = args.mode == "groq" and not args.replay
+    records: list[dict[str, Any]] = []
+    incomplete: str | None = None
+    progress = REPORT_DIR / f"{name}.progress.jsonl"
+    if not args.no_write:
+        REPORT_DIR.mkdir(exist_ok=True)
+        progress.write_text("")
+    consecutive_errors = 0
+    try:
+        for idx, case in enumerate(cases, 1):
+            cached = False
+            if args.mode == "groq":
+                from app.agents.llm_planner import _cache_get, _cache_key
+
+                cached = _cache_get(_cache_key(model_name, case["problem"], None)) is not None
+            t_call = time.perf_counter()
+            rec = _run_case(case, args.mode)
+            if args.mode == "groq":
+                rec["llm_cached"] = cached
+                print(
+                    f"[{idx}/{len(cases)}] {case['id']}: llm={rec.get('llm')} outcome={rec.get('outcome')} "
+                    f"correct={rec.get('correct')}" + (" (cached)" if cached else ""),
+                    flush=True,
+                )
+            records.append(rec)
+            if not args.no_write:
+                with progress.open("a") as fh:
+                    fh.write(json.dumps(rec, default=str) + "\n")
+            consecutive_errors = consecutive_errors + 1 if rec.get("llm") == "error" else 0
+            if args.mode == "groq" and consecutive_errors >= args.max_consecutive_errors:
+                incomplete = (
+                    f"stopped after {consecutive_errors} consecutive LLM errors (last: {rec.get('llm_error')}); "
+                    "re-run the same command to resume from the cache"
+                )
+                print(incomplete, file=sys.stderr)
+                break
+            if pace and not cached:
+                time.sleep(max(0.0, delay - (time.perf_counter() - t_call)))
+    except KeyboardInterrupt:
+        incomplete = "interrupted; re-run the same command to resume (cached planner responses are reused)"
+        print(incomplete, file=sys.stderr)
+
     tamper = run_tamper()
     intent_tamper = run_intent_tamper()
     summary = summarize(records, tamper, args.mode, intent_tamper)
     summary["environment"] = {"python": platform.python_version(), "sympy": sp.__version__}
+    if args.subset:
+        summary["subset"] = f"{args.subset} ({len(cases)} problems; not the full benchmark)"
+    if incomplete:
+        summary["incomplete"] = f"{incomplete} ({len(records)}/{len(cases)} problems done)"
     if args.mode == "groq":
         from app.agents.llm_planner import PROMPT_VERSION
 
         summary["environment"].update(model=model_name, prompt_version=PROMPT_VERSION, replay=args.replay)
-        summary["llm_planner_used"] = _m(sum(1 for r in records if r.get("planner") == "llm"), len(records))
+        summary["llm_planner"] = _llm_summary(records)
 
     print(to_markdown(summary, records, tamper, intent_tamper).split("## Latency")[0])
     if not args.no_write:
-        name = args.out_name or args.mode
-        REPORT_DIR.mkdir(exist_ok=True)
-        (REPORT_DIR / f"{name}.json").write_text(
-            json.dumps(
-                {"summary": summary, "cases": records, "tamper": tamper, "intent_tamper": intent_tamper},
-                indent=2,
-                default=str,
-            )
-            + "\n"
-        )
-        (REPORT_DIR / f"{name}.md").write_text(to_markdown(summary, records, tamper, intent_tamper))
-        print(f"reports written to {REPORT_DIR}/{name}.{{json,md}}")
-    return 0
+        _write_reports(name, summary, records, tamper, intent_tamper)
+        progress.unlink(missing_ok=True)
+    return 3 if incomplete else 0
 
 
 if __name__ == "__main__":
