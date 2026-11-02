@@ -69,6 +69,8 @@ def main(argv: list[str] | None = None) -> int:
     ids = {m.id for m in models.data}
     print(f"AUTH OK: {len(ids)} models visible. Configured model '{s.llm_model}' available: {s.llm_model in ids}")
     if s.llm_model not in ids:
+        # model ids are public catalogue names, not credentials
+        print("Available models: " + ", ".join(sorted(ids)))
         print("Set LLM_MODEL to an available tool-calling model before running the benchmark.")
         return 1
     return 0
