@@ -651,7 +651,7 @@ for i, (problem, tool, args, truth) in enumerate(
     [
         ("What values of x satisfy x squared minus 9 equals 0?", EQ, {"equation": "x^2 - 9 = 0"}, roots("3", "-3")),
         ("Find x if 4x - 7 = 9", EQ, {"equation": "4x - 7 = 9"}, roots("4")),
-        ("Find all real x such that x^2 = 16", EQ, {"equation": "x^2 = 16"}, roots("4", "-4")),
+        ("Find all real x such that x^2 = 16", EQ, {"equation": "x^2 = 16", "domain": "real"}, roots("4", "-4")),
         (
             "Solve the system: 2x + y = 5; x - y = 1",
             "solve_system",
@@ -804,73 +804,221 @@ for i, (problem, tool, args, truth) in enumerate(
 CLARIFY = {"type": "reject", "reason": "clarify"}
 for i, (problem, tool, args, truth) in enumerate(
     [
-        ("A rectangle satisfies x^2 + 3x = 40. What positive value of x works?", EQ,
-         {"equation": "x^2 + 3x = 40", "domain": "positive"}, {"type": "roots", "values": ["5"], "domain": "positive"}),
-        ("What are the real roots of x^3 - x^2 + x - 1 = 0?", EQ,
-         {"equation": "x^3 - x^2 + x - 1 = 0", "domain": "real"}, {"type": "roots", "values": ["1"], "domain": "real"}),
-        ("Find the positive solution of t^2 - 2t - 3 = 0", EQ,
-         {"equation": "t^2 - 2t - 3 = 0", "variable": "t", "domain": "positive"}, {"type": "roots", "values": ["3"], "domain": "positive"}),
+        (
+            "A rectangle satisfies x^2 + 3x = 40. What positive value of x works?",
+            EQ,
+            {"equation": "x^2 + 3x = 40", "domain": "positive"},
+            {"type": "roots", "values": ["5"], "domain": "positive"},
+        ),
+        (
+            "What are the real roots of x^3 - x^2 + x - 1 = 0?",
+            EQ,
+            {"equation": "x^3 - x^2 + x - 1 = 0", "domain": "real"},
+            {"type": "roots", "values": ["1"], "domain": "real"},
+        ),
+        (
+            "Find the positive solution of t^2 - 2t - 3 = 0",
+            EQ,
+            {"equation": "t^2 - 2t - 3 = 0", "variable": "t", "domain": "positive"},
+            {"type": "roots", "values": ["3"], "domain": "positive"},
+        ),
         ("If 3(x - 2) = 2x + 5, what is x?", EQ, {"equation": "3(x - 2) = 2x + 5"}, roots("11")),
         ("Solve for y: 2y/3 + 4 = 10", EQ, {"equation": "2y/3 + 4 = 10", "variable": "y"}, roots("9")),
-        ("Two numbers x and y satisfy x + y = 12 and x - y = 4. Find them.", "solve_system", {"equations": ["x + y = 12", "x - y = 4"]},
-         {"type": "system", "solutions": [{"x": "8", "y": "4"}]}),
-        ("For a 2023 physics project, find all t with -5t^2 + 20t = 0", EQ, {"equation": "-5t^2 + 20t = 0", "variable": "t"}, roots("0", "4")),
+        (
+            "Two numbers x and y satisfy x + y = 12 and x - y = 4. Find them.",
+            "solve_system",
+            {"equations": ["x + y = 12", "x - y = 4"]},
+            {"type": "system", "solutions": [{"x": "8", "y": "4"}]},
+        ),
+        (
+            "For a 2023 physics project, find all t with -5t^2 + 20t = 0",
+            EQ,
+            {"equation": "-5t^2 + 20t = 0", "variable": "t"},
+            roots("0", "4"),
+        ),
         ("Solve 2^(x+1) = 32", EQ, {"equation": "2^(x+1) = 32"}, roots("4")),
-        ("What's the rate of change of f(t) = t^2 + 3t when t = 1?", D, {"expression": "t^2 + 3t", "variable": "t", "point": "1"}, num("5")),
+        (
+            "What's the rate of change of f(t) = t^2 + 3t when t = 1?",
+            D,
+            {"expression": "t^2 + 3t", "variable": "t", "point": "1"},
+            num("5"),
+        ),
         ("Find the instantaneous rate of change of x^3 at x = -2", D, {"expression": "x^3", "point": "-2"}, num("12")),
         ("Find f''(x) for f(x) = x^3 + 2x^2", D, {"expression": "x^3 + 2x^2", "order": 2}, expr("6*x + 4")),
         ("What is d/dx of ln(3x)?", D, {"expression": "ln(3x)"}, expr("1/x")),
-        ("Find the second derivative of e^(3x) at x = 0", D, {"expression": "e^(3x)", "order": 2, "point": "0"}, num("9")),
-        ("Compute the definite integral of 2x + 1 over [0, 4]", I_, {"expression": "2x + 1", "lower": "0", "upper": "4"}, num("20")),
-        ("Find the area under the curve y = sin(x) from x = 0 to x = pi/2", I_, {"expression": "sin(x)", "lower": "0", "upper": "pi/2"}, num("1")),
+        (
+            "Find the second derivative of e^(3x) at x = 0",
+            D,
+            {"expression": "e^(3x)", "order": 2, "point": "0"},
+            num("9"),
+        ),
+        (
+            "Compute the definite integral of 2x + 1 over [0, 4]",
+            I_,
+            {"expression": "2x + 1", "lower": "0", "upper": "4"},
+            num("20"),
+        ),
+        (
+            "Find the area under the curve y = sin(x) from x = 0 to x = pi/2",
+            I_,
+            {"expression": "sin(x)", "lower": "0", "upper": "pi/2"},
+            num("1"),
+        ),
         ("Integrate 6x^2 with respect to x", I_, {"expression": "6x^2"}, {"type": "antiderivative", "value": "2*x**3"}),
-        ("Evaluate the integral of x e^(-x) from 0 to infinity", I_, {"expression": "x e^(-x)", "lower": "0", "upper": "oo"}, num("1")),
+        (
+            "Evaluate the integral of x e^(-x) from 0 to infinity",
+            I_,
+            {"expression": "x e^(-x)", "lower": "0", "upper": "oo"},
+            num("1"),
+        ),
         ("What value does sin(3x)/x approach as x tends to 0?", L, {"expression": "sin(3x)/x", "point": "0"}, num("3")),
-        ("Evaluate lim_{x->oo} (5x^3 - 2)/(2x^3 + x)", L, {"expression": "(5x^3 - 2)/(2x^3 + x)", "point": "oo"}, num("5/2")),
-        ("limit of (sqrt(x) - 2)/(x - 4) when x approaches 4", L, {"expression": "(sqrt(x) - 2)/(x - 4)", "point": "4"}, num("1/4")),
-        ("Find the inverse of the 2x2 matrix [[1, 2], [3, 4]]", M, {"operation": "inverse", "matrix": [[1, 2], [3, 4]]},
-         {"type": "matrix", "value": [["-2", "1"], ["3/2", "-1/2"]]}),
+        (
+            "Evaluate lim_{x->oo} (5x^3 - 2)/(2x^3 + x)",
+            L,
+            {"expression": "(5x^3 - 2)/(2x^3 + x)", "point": "oo"},
+            num("5/2"),
+        ),
+        (
+            "limit of (sqrt(x) - 2)/(x - 4) when x approaches 4",
+            L,
+            {"expression": "(sqrt(x) - 2)/(x - 4)", "point": "4"},
+            num("1/4"),
+        ),
+        (
+            "Find the inverse of the 2x2 matrix [[1, 2], [3, 4]]",
+            M,
+            {"operation": "inverse", "matrix": [[1, 2], [3, 4]]},
+            {"type": "matrix", "value": [["-2", "1"], ["3/2", "-1/2"]]},
+        ),
         ("Compute det([[3, 8], [4, 6]])", M, {"operation": "determinant", "matrix": [[3, 8], [4, 6]]}, num("-14")),
-        ("What's the transpose of [[1, 2], [3, 4], [5, 6]]?", M, {"operation": "transpose", "matrix": [[1, 2], [3, 4], [5, 6]]},
-         {"type": "matrix", "value": [["1", "3", "5"], ["2", "4", "6"]]}),
-        ("Find the eigenvalues for A = [[5, 4], [1, 2]]", M, {"operation": "eigenvalues", "matrix": [[5, 4], [1, 2]]},
-         {"type": "multiset", "values": ["1", "6"]}),
-        ("Solve the linear system Ax = b with A = [[1, 2], [3, 5]] and b = [5, 13]", M,
-         {"operation": "solve", "matrix": [[1, 2], [3, 5]], "vector": [5, 13]}, {"type": "vector", "value": ["1", "2"]}),
+        (
+            "What's the transpose of [[1, 2], [3, 4], [5, 6]]?",
+            M,
+            {"operation": "transpose", "matrix": [[1, 2], [3, 4], [5, 6]]},
+            {"type": "matrix", "value": [["1", "3", "5"], ["2", "4", "6"]]},
+        ),
+        (
+            "Find the eigenvalues for A = [[5, 4], [1, 2]]",
+            M,
+            {"operation": "eigenvalues", "matrix": [[5, 4], [1, 2]]},
+            {"type": "multiset", "values": ["1", "6"]},
+        ),
+        (
+            "Solve the linear system Ax = b with A = [[1, 2], [3, 5]] and b = [5, 13]",
+            M,
+            {"operation": "solve", "matrix": [[1, 2], [3, 5]], "vector": [5, 13]},
+            {"type": "vector", "value": ["1", "2"]},
+        ),
         ("What is the rank of [[2, 4], [1, 2]]?", M, {"operation": "rank", "matrix": [[2, 4], [1, 2]]}, num("1")),
-        ("The daily temperatures were 21, 23, 19, 25 and 22 degrees. What were the mean and standard deviation?",
-         "descriptive_statistics", {"data": [21, 23, 19, 25, 22]},
-         {"type": "stats", "mean": "22", "median": "22", "population_std": "2", "sample_std": "sqrt(5)"}),
-        ("Find the variance of the sample 2, 4, 6, 8", "descriptive_statistics", {"data": [2, 4, 6, 8]},
-         {"type": "stats", "mean": "5", "median": "5", "population_std": "sqrt(5)", "sample_std": "sqrt(20/3)"}),
-        ("Find the median and mean of 5, 3, 9, 1", "descriptive_statistics", {"data": [5, 3, 9, 1]},
-         {"type": "stats", "mean": "9/2", "median": "4", "population_std": "sqrt(35)/2", "sample_std": "sqrt(35/3)"}),
-        ("A basketball player makes 70% of free throws. If she takes 10 shots, what is the probability she makes exactly 7?", P,
-         {"distribution": "binomial", "params": {"n": 10, "p": 0.7}, "query": "pmf", "x": 7}, num("binomial(10, 7)*(7/10)**7*(3/10)**3")),
-        ("Each of 12 light bulbs fails independently with probability 0.1. What is the probability that at most 1 fails?", P,
-         {"distribution": "binomial", "params": {"n": 12, "p": 0.1}, "query": "cdf", "x": 1}, num("(9/10)**12 + 12*(1/10)*(9/10)**11")),
-        ("Find P(X >= 3) for a binomial with 6 trials and success probability 0.5", P,
-         {"distribution": "binomial", "params": {"n": 6, "p": 0.5}, "query": "greater", "x": 3}, num("21/32")),
-        ("Emails arrive at an average rate of 4 per minute (Poisson). What is the probability of fewer than 2 emails in a minute?", P,
-         {"distribution": "poisson", "params": {"lambda": 4}, "query": "cdf", "x": 1}, num("5*exp(-4)")),
-        ("Find P(X > 3) for a Poisson distribution with mean 2", P,
-         {"distribution": "poisson", "params": {"lambda": 2}, "query": "greater", "x": 4}, num("1 - 19*exp(-2)/3")),
-        ("Test scores are normally distributed with mean 75 and standard deviation 8. What proportion scored below 91?", P,
-         {"distribution": "normal", "params": {"mean": 75, "std": 8}, "query": "cdf", "x": 91}, num("(1 + erf(sqrt(2)))/2")),
-        ("IQ is normal with mean 100 and sd 15. What fraction lies between 85 and 115?", P,
-         {"distribution": "normal", "params": {"mean": 100, "std": 15}, "query": "between", "x": 85, "x2": 115}, num("erf(sqrt(2)/2)")),
-        ("For a standard normal Z, find P(Z > -1)", P,
-         {"distribution": "normal", "params": {"mean": 0, "std": 1}, "query": "greater", "x": -1}, num("(1 + erf(sqrt(2)/2))/2")),
-        ("A bus arrives uniformly at random between 0 and 20 minutes. What's the probability you wait more than 15 minutes?", P,
-         {"distribution": "uniform", "params": {"a": 0, "b": 20}, "query": "greater", "x": 15}, num("1/4")),
-        ("A component's lifetime is exponential with rate 0.2 per year. What is the probability it lasts more than 5 years?", P,
-         {"distribution": "exponential", "params": {"rate": 0.2}, "query": "greater", "x": 5}, num("exp(-1)")),
-        ("How many different 5-card hands can be dealt from a 52-card deck?", C, {"operation": "combinations", "n": 52, "k": 5}, num("2598960")),
-        ("In how many ways can 6 runners finish first, second and third?", C, {"operation": "permutations", "n": 6, "k": 3}, num("120")),
+        (
+            "The daily temperatures were 21, 23, 19, 25 and 22 degrees. What were the mean and standard deviation?",
+            "descriptive_statistics",
+            {"data": [21, 23, 19, 25, 22]},
+            {"type": "stats", "mean": "22", "median": "22", "population_std": "2", "sample_std": "sqrt(5)"},
+        ),
+        (
+            "Find the variance of the sample 2, 4, 6, 8",
+            "descriptive_statistics",
+            {"data": [2, 4, 6, 8]},
+            {"type": "stats", "mean": "5", "median": "5", "population_std": "sqrt(5)", "sample_std": "sqrt(20/3)"},
+        ),
+        (
+            "Find the median and mean of 5, 3, 9, 1",
+            "descriptive_statistics",
+            {"data": [5, 3, 9, 1]},
+            {"type": "stats", "mean": "9/2", "median": "4", "population_std": "sqrt(35)/2", "sample_std": "sqrt(35/3)"},
+        ),
+        (
+            "A basketball player makes 70% of free throws. If she takes 10 shots, what is the probability she makes exactly 7?",
+            P,
+            {"distribution": "binomial", "params": {"n": 10, "p": 0.7}, "query": "pmf", "x": 7},
+            num("binomial(10, 7)*(7/10)**7*(3/10)**3"),
+        ),
+        (
+            "Each of 12 light bulbs fails independently with probability 0.1. What is the probability that at most 1 fails?",
+            P,
+            {"distribution": "binomial", "params": {"n": 12, "p": 0.1}, "query": "cdf", "x": 1},
+            num("(9/10)**12 + 12*(1/10)*(9/10)**11"),
+        ),
+        (
+            "Find P(X >= 3) for a binomial with 6 trials and success probability 0.5",
+            P,
+            {"distribution": "binomial", "params": {"n": 6, "p": 0.5}, "query": "greater", "x": 3},
+            num("21/32"),
+        ),
+        (
+            "Emails arrive at an average rate of 4 per minute (Poisson). What is the probability of fewer than 2 emails in a minute?",
+            P,
+            {"distribution": "poisson", "params": {"lambda": 4}, "query": "cdf", "x": 1},
+            num("5*exp(-4)"),
+        ),
+        (
+            "Find P(X > 3) for a Poisson distribution with mean 2",
+            P,
+            {"distribution": "poisson", "params": {"lambda": 2}, "query": "greater", "x": 4},
+            num("1 - 19*exp(-2)/3"),
+        ),
+        (
+            "Test scores are normally distributed with mean 75 and standard deviation 8. What proportion scored below 91?",
+            P,
+            {"distribution": "normal", "params": {"mean": 75, "std": 8}, "query": "cdf", "x": 91},
+            num("(1 + erf(sqrt(2)))/2"),
+        ),
+        (
+            "IQ is normal with mean 100 and sd 15. What fraction lies between 85 and 115?",
+            P,
+            {"distribution": "normal", "params": {"mean": 100, "std": 15}, "query": "between", "x": 85, "x2": 115},
+            num("erf(sqrt(2)/2)"),
+        ),
+        (
+            "For a standard normal Z, find P(Z > -1)",
+            P,
+            {"distribution": "normal", "params": {"mean": 0, "std": 1}, "query": "greater", "x": -1},
+            num("(1 + erf(sqrt(2)/2))/2"),
+        ),
+        (
+            "A bus arrives uniformly at random between 0 and 20 minutes. What's the probability you wait more than 15 minutes?",
+            P,
+            {"distribution": "uniform", "params": {"a": 0, "b": 20}, "query": "greater", "x": 15},
+            num("1/4"),
+        ),
+        (
+            "A component's lifetime is exponential with rate 0.2 per year. What is the probability it lasts more than 5 years?",
+            P,
+            {"distribution": "exponential", "params": {"rate": 0.2}, "query": "greater", "x": 5},
+            num("exp(-1)"),
+        ),
+        (
+            "How many different 5-card hands can be dealt from a 52-card deck?",
+            C,
+            {"operation": "combinations", "n": 52, "k": 5},
+            num("2598960"),
+        ),
+        (
+            "In how many ways can 6 runners finish first, second and third?",
+            C,
+            {"operation": "permutations", "n": 6, "k": 3},
+            num("120"),
+        ),
         ("How many ways can 7 people line up?", C, {"operation": "factorial", "n": 7}, num("5040")),
-        ("Expand (x + 2)^4", "expand_expression", {"expression": "(x + 2)^4"}, expr("x**4 + 8*x**3 + 24*x**2 + 32*x + 16", "expanded")),
-        ("Factor completely: 3x^2 - 12", "factor_expression", {"expression": "3x^2 - 12"}, expr("3*(x - 2)*(x + 2)", "factored")),
-        ("Simplify (x^2 - 9)/(x^2 + 6x + 9)", "simplify_expression", {"expression": "(x^2 - 9)/(x^2 + 6x + 9)"}, expr("(x - 3)/(x + 3)")),
+        (
+            "Expand (x + 2)^4",
+            "expand_expression",
+            {"expression": "(x + 2)^4"},
+            expr("x**4 + 8*x**3 + 24*x**2 + 32*x + 16", "expanded"),
+        ),
+        (
+            "Factor completely: 3x^2 - 12",
+            "factor_expression",
+            {"expression": "3x^2 - 12"},
+            expr("3*(x - 2)*(x + 2)", "factored"),
+        ),
+        (
+            "Simplify (x^2 - 9)/(x^2 + 6x + 9)",
+            "simplify_expression",
+            {"expression": "(x^2 - 9)/(x^2 + 6x + 9)"},
+            expr("(x - 3)/(x + 3)"),
+        ),
         # --- missing or ambiguous information: the system should ask, not guess
         ("Solve x + y = 10", None, None, CLARIFY),
         ("Find the derivative", None, None, CLARIFY),
@@ -887,3 +1035,499 @@ for i, (problem, tool, args, truth) in enumerate(
     1,
 ):
     _add(f"unseen-{i:02d}", "unseen", problem, tool, args, truth, split="unseen")
+
+# ------------------------------------------------------------------ tampered interpretations (Phase 3)
+# A correct plan ("args") and a deliberately wrong reading of the same question
+# ("bad": overrides; "bad_tool": a different tool). The intent checker should
+# flag every tampered plan (mismatch/ambiguous) and accept every control.
+INTENT_TAMPER: list[Case] = []
+
+
+def _itamper(
+    cid: str,
+    problem: str,
+    tool: str,
+    args: dict,
+    bad: dict,
+    note: str,
+    bad_tool: str | None = None,
+    control_expect: str = "accept",
+) -> None:
+    INTENT_TAMPER.append(
+        {
+            "id": cid,
+            "problem": problem,
+            "tool": tool,
+            "args": args,
+            "bad": bad,
+            "bad_tool": bad_tool,
+            "note": note,
+            "control_expect": control_expect,
+        }
+    )
+
+
+_itamper(
+    "it-01",
+    "Determine the rank of the matrix [[1, 2], [2, 4]]",
+    M,
+    {"operation": "rank", "matrix": [[1, 2], [2, 4]]},
+    {"operation": "determinant"},
+    "wrong matrix operation",
+)
+_itamper(
+    "it-02",
+    "inverse of [[4,7],[2,6]]",
+    M,
+    {"operation": "inverse", "matrix": [[4, 7], [2, 6]]},
+    {"operation": "transpose"},
+    "transpose instead of inverse",
+)
+_itamper(
+    "it-03",
+    "eigenvalues of [[2,1],[1,2]]",
+    M,
+    {"operation": "eigenvalues", "matrix": [[2, 1], [1, 2]]},
+    {"matrix": [[2, 1], [1, 3]]},
+    "matrix entry misread",
+)
+_itamper(
+    "it-04",
+    "solve [[2,1],[1,3]] x = [3,5]",
+    M,
+    {"operation": "solve", "matrix": [[2, 1], [1, 3]], "vector": [3, 5]},
+    {"vector": [5, 3]},
+    "right-hand side swapped",
+)
+_itamper(
+    "it-05",
+    "Integrate x^2 from 0 to 3",
+    I_,
+    {"expression": "x^2", "lower": "0", "upper": "3"},
+    {"lower": "3", "upper": "0"},
+    "integration limits swapped",
+)
+_itamper(
+    "it-06",
+    "Integrate x^2 from 0 to 3",
+    I_,
+    {"expression": "x^2", "lower": "0", "upper": "3"},
+    {"lower": None, "upper": None},
+    "definite integral computed as indefinite",
+)
+_itamper(
+    "it-07",
+    "integral of x e^x dx",
+    I_,
+    {"expression": "x e^x"},
+    {"lower": "0", "upper": "1"},
+    "invented integration limits",
+)
+_itamper(
+    "it-08", "integrate 3x^2 + 2x + 1", I_, {"expression": "3x^2 + 2x + 1"}, {"expression": "3x^2 + 2x"}, "dropped term"
+)
+_itamper(
+    "it-09", "integrate cos(x)", I_, {"expression": "cos(x)"}, {}, "differentiated instead of integrated", bad_tool=D
+)
+_itamper(
+    "it-10", "second derivative of x^4", D, {"expression": "x^4", "order": 2}, {"order": 1}, "wrong derivative order"
+)
+_itamper(
+    "it-11",
+    "derivative of x^2 at x = 3",
+    D,
+    {"expression": "x^2", "point": "3"},
+    {"point": None},
+    "evaluation point ignored",
+)
+_itamper(
+    "it-12",
+    "derivative of x^2 at x = 3",
+    D,
+    {"expression": "x^2", "point": "3"},
+    {"point": "2"},
+    "wrong evaluation point",
+)
+_itamper(
+    "it-13",
+    "Find the derivative of x^3 sin(x)",
+    D,
+    {"expression": "x^3 sin(x)"},
+    {"expression": "x^3 cos(x)"},
+    "misread function",
+)
+_itamper(
+    "it-14", "d/dt t^3 + 2t", D, {"expression": "t^3 + 2t", "variable": "t"}, {"expression": "t^3 + 2"}, "misread term"
+)
+_itamper(
+    "it-15",
+    "limit of sin(x)/x as x -> 0",
+    L,
+    {"expression": "sin(x)/x", "point": "0"},
+    {"point": "oo"},
+    "wrong limit point",
+)
+_itamper(
+    "it-16",
+    "limit of 1/x as x -> 0 from the right",
+    L,
+    {"expression": "1/x", "point": "0", "direction": "+"},
+    {"direction": "-"},
+    "wrong side",
+)
+_itamper(
+    "it-17",
+    "Solve x^2 - 5x + 6 = 0",
+    EQ,
+    {"equation": "x^2 - 5x + 6 = 0"},
+    {"equation": "x^2 - 5x - 6 = 0"},
+    "sign misread",
+)
+_itamper(
+    "it-18",
+    "Find the positive solution of x^2 - x - 6 = 0",
+    EQ,
+    {"equation": "x^2 - x - 6 = 0", "domain": "positive"},
+    {"domain": "complex"},
+    "ignored 'positive' constraint",
+)
+_itamper(
+    "it-19",
+    "What are the real roots of x^4 - 1 = 0?",
+    EQ,
+    {"equation": "x^4 - 1 = 0", "domain": "real"},
+    {"domain": "complex"},
+    "ignored 'real' constraint",
+)
+_itamper(
+    "it-20",
+    "Solve 3t - 7 = 2 for t",
+    EQ,
+    {"equation": "3t - 7 = 2", "variable": "t"},
+    {"equation": "3t - 7 = 3"},
+    "wrong constant",
+)
+_itamper(
+    "it-21",
+    "x + y = 3, x - y = 1",
+    "solve_system",
+    {"equations": ["x + y = 3", "x - y = 1"]},
+    {"equation": "x + y = 3"},
+    "second equation ignored",
+    bad_tool=EQ,
+)
+_itamper(
+    "it-22",
+    "factor x^2 - 9",
+    "factor_expression",
+    {"expression": "x^2 - 9"},
+    {},
+    "expanded instead of factored",
+    bad_tool="expand_expression",
+)
+_itamper(
+    "it-23",
+    "Binomial n=10 p=0.5, P(X < 3)",
+    P,
+    {"distribution": "binomial", "params": {"n": 10, "p": 0.5}, "query": "cdf", "x": 2},
+    {"x": 3},
+    "strict inequality treated as <=",
+)
+_itamper(
+    "it-24",
+    "Binomial n=10 p=0.5, P(X > 3)",
+    P,
+    {"distribution": "binomial", "params": {"n": 10, "p": 0.5}, "query": "greater", "x": 4},
+    {"x": 3},
+    "P(X > 3) computed as P(X >= 3)",
+)
+_itamper(
+    "it-25",
+    "binomial n = 20, p = 0.3, P(X >= 5)",
+    P,
+    {"distribution": "binomial", "params": {"n": 20, "p": 0.3}, "query": "greater", "x": 5},
+    {"params": {"n": 20, "p": 0.5}},
+    "success probability misread",
+)
+_itamper(
+    "it-26",
+    "normal mean 100 std 15 P(X > 130)",
+    P,
+    {"distribution": "normal", "params": {"mean": 100, "std": 15}, "query": "greater", "x": 130},
+    {"query": "cdf"},
+    "complement event",
+)
+_itamper(
+    "it-27",
+    "normal mean 100 std 15 P(X > 130)",
+    P,
+    {"distribution": "normal", "params": {"mean": 100, "std": 15}, "query": "greater", "x": 130},
+    {"params": {"mean": 100, "std": 1}},
+    "wrong standard deviation",
+)
+_itamper(
+    "it-28",
+    "poisson lambda = 3, P(X <= 2)",
+    P,
+    {"distribution": "poisson", "params": {"lambda": 3}, "query": "cdf", "x": 2},
+    {"distribution": "binomial", "params": {"n": 3, "p": 0.5}},
+    "wrong distribution",
+)
+_itamper(
+    "it-29",
+    "Normal distribution with mean 50: what is P(X < 60)?",
+    P,
+    {"distribution": "normal", "params": {"mean": 50, "std": 10}, "query": "cdf", "x": 60},
+    {"params": {"mean": 50, "std": 1}},
+    "missing standard deviation silently defaulted",
+    control_expect="clarify",
+)  # no std in the text: asking is correct
+_itamper(
+    "it-30",
+    "uniform between 2 and 6, P(3 < X < 5)",
+    P,
+    {"distribution": "uniform", "params": {"a": 2, "b": 6}, "query": "between", "x": 3, "x2": 5},
+    {"x2": 6},
+    "wrong bound",
+)
+_itamper(
+    "it-31",
+    "In how many ways can a committee of 3 be chosen from 10 people?",
+    C,
+    {"operation": "combinations", "n": 10, "k": 3},
+    {"operation": "permutations"},
+    "order treated as mattering",
+)
+_itamper(
+    "it-32",
+    "how many ways to choose 2 people from 8",
+    C,
+    {"operation": "combinations", "n": 8, "k": 2},
+    {"n": 2, "k": 8},
+    "n and k swapped",
+)
+_itamper(
+    "it-33",
+    "mean and standard deviation of 2, 4, 4, 4, 5, 5, 7, 9",
+    "descriptive_statistics",
+    {"data": [2, 4, 4, 4, 5, 5, 7, 9]},
+    {"data": [2, 4, 4, 5, 5, 7, 9]},
+    "dropped a data value",
+)
+_itamper(
+    "it-34",
+    "statistics of [1, 2, 3, 4, 5]",
+    "descriptive_statistics",
+    {"data": [1, 2, 3, 4, 5]},
+    {"data": [1, 2, 3, 4, 6]},
+    "misread data value",
+)
+_itamper(
+    "it-35",
+    "Solve x + y = 10 for y",
+    EQ,
+    {"equation": "x + y = 10", "variable": "y"},
+    {"variable": "x"},
+    "solved for the wrong variable",
+)
+_itamper(
+    "it-36",
+    "simplify (x^2 - 1)/(x - 1)",
+    "simplify_expression",
+    {"expression": "(x^2 - 1)/(x - 1)"},
+    {"expression": "(x^2 - 1)/(x + 1)"},
+    "misread denominator",
+)
+
+# ------------------------------------------------------------------ NL tuning set (Phase 3)
+# Natural-language phrasings used to DEVELOP the intent-based planner. Kept
+# separate from the held-out paraphrases and the frozen unseen set.
+for i, (problem, tool, args, truth) in enumerate(
+    [
+        ("What's the value of x when 5x + 2 = 17?", EQ, {"equation": "5x + 2 = 17"}, roots("3")),
+        ("For which x does x^2 - 4x + 3 = 0 hold?", EQ, {"equation": "x^2 - 4x + 3 = 0"}, roots("1", "3")),
+        (
+            "Give the positive root of x^2 - 2x - 8 = 0",
+            EQ,
+            {"equation": "x^2 - 2x - 8 = 0", "domain": "positive"},
+            {"type": "roots", "values": ["4"], "domain": "positive"},
+        ),
+        (
+            "List the real solutions of x^3 + x = 0",
+            EQ,
+            {"equation": "x^3 + x = 0", "domain": "real"},
+            {"type": "roots", "values": ["0"], "domain": "real"},
+        ),
+        ("Find y such that 7 - 2y = 1", EQ, {"equation": "7 - 2y = 1", "variable": "y"}, roots("3")),
+        (
+            "Both 2a + b = 7 and a - b = 2 hold. Find a and b.",
+            "solve_system",
+            {"equations": ["2a + b = 7", "a - b = 2"]},
+            {"type": "system", "solutions": [{"a": "3", "b": "1"}]},
+        ),
+        (
+            "Factorize x^2 + 7x + 10",
+            "factor_expression",
+            {"expression": "x^2 + 7x + 10"},
+            expr("(x + 2)*(x + 5)", "factored"),
+        ),
+        (
+            "Please multiply out (2x + 1)(x - 3)",
+            "expand_expression",
+            {"expression": "(2x + 1)(x - 3)"},
+            expr("2*x**2 - 5*x - 3", "expanded"),
+        ),
+        ("Can you simplify (x^3 - x)/x ?", "simplify_expression", {"expression": "(x^3 - x)/x"}, expr("x**2 - 1")),
+        (
+            "What's the slope of the tangent to y = x^2 + 1 at x = 3?",
+            D,
+            {"expression": "x^2 + 1", "point": "3"},
+            num("6"),
+        ),
+        ("How quickly does 4t^2 change at t = 2?", D, {"expression": "4t^2", "variable": "t", "point": "2"}, num("16")),
+        ("Give me the derivative of x^4 - 3x", D, {"expression": "x^4 - 3x"}, expr("4*x**3 - 3")),
+        ("What's the second derivative of cos(x)?", D, {"expression": "cos(x)", "order": 2}, expr("-cos(x)")),
+        (
+            "Differentiate g(x) = sqrt(x) + x with respect to x",
+            D,
+            {"expression": "sqrt(x) + x"},
+            expr("1/(2*sqrt(x)) + 1"),
+        ),
+        (
+            "What's the area under y = 3x^2 between x = 1 and x = 2?",
+            I_,
+            {"expression": "3x^2", "lower": "1", "upper": "2"},
+            num("7"),
+        ),
+        ("Integrate 4x^3 over the interval [0, 2]", I_, {"expression": "4x^3", "lower": "0", "upper": "2"}, num("16")),
+        (
+            "What's the antiderivative of sin(x)?",
+            I_,
+            {"expression": "sin(x)"},
+            {"type": "antiderivative", "value": "-cos(x)"},
+        ),
+        (
+            "Find the integral of e^(2x) from 0 to 1",
+            I_,
+            {"expression": "e^(2x)", "lower": "0", "upper": "1"},
+            num("(exp(2) - 1)/2"),
+        ),
+        (
+            "What does (x^2 - 4)/(x - 2) tend to as x tends to 2?",
+            L,
+            {"expression": "(x^2 - 4)/(x - 2)", "point": "2"},
+            num("4"),
+        ),
+        (
+            "As x goes to infinity, what does (3x + 1)/(x + 5) approach?",
+            L,
+            {"expression": "(3x + 1)/(x + 5)", "point": "oo"},
+            num("3"),
+        ),
+        ("What is the limit of tan(x)/x when x approaches 0?", L, {"expression": "tan(x)/x", "point": "0"}, num("1")),
+        (
+            "Let A = [[2, 0], [0, 5]]. What's det(A)?",
+            M,
+            {"operation": "determinant", "matrix": [[2, 0], [0, 5]]},
+            num("10"),
+        ),
+        (
+            "Please invert the matrix [[2, 1], [1, 1]]",
+            M,
+            {"operation": "inverse", "matrix": [[2, 1], [1, 1]]},
+            {"type": "matrix", "value": [["1", "-1"], ["-1", "2"]]},
+        ),
+        (
+            "Compute the eigenvalues of A = [[6, 2], [2, 3]]",
+            M,
+            {"operation": "eigenvalues", "matrix": [[6, 2], [2, 3]]},
+            {"type": "multiset", "values": ["2", "7"]},
+        ),
+        (
+            "Here are some numbers: 4, 7, 10. What is their average?",
+            "descriptive_statistics",
+            {"data": [4, 7, 10]},
+            {"type": "stats", "mean": "7", "median": "7", "population_std": "sqrt(6)", "sample_std": "3"},
+        ),
+        (
+            "Find the standard deviation of the sample 1, 3, 5",
+            "descriptive_statistics",
+            {"data": [1, 3, 5]},
+            {"type": "stats", "mean": "3", "median": "3", "population_std": "sqrt(8/3)", "sample_std": "2"},
+        ),
+        (
+            "A coin is fair. Tossing it 6 times, what is the probability of exactly 2 heads?",
+            P,
+            {"distribution": "binomial", "params": {"n": 6, "p": 0.5}, "query": "pmf", "x": 2},
+            num("15/64"),
+        ),
+        (
+            "A machine produces defects with probability 0.05. In 20 independent items, what is the chance of no more than 1 defect?",
+            P,
+            {"distribution": "binomial", "params": {"n": 20, "p": 0.05}, "query": "cdf", "x": 1},
+            num("(19/20)**20 + 20*(1/20)*(19/20)**19"),
+        ),
+        (
+            "A shooter hits the target 80% of the time. Out of 5 shots, what is the probability of at least 4 hits?",
+            P,
+            {"distribution": "binomial", "params": {"n": 5, "p": 0.8}, "query": "greater", "x": 4},
+            num("5*(4/5)**4*(1/5) + (4/5)**5"),
+        ),
+        (
+            "Customers arrive at a rate of 3 per hour (Poisson). What is the probability that exactly 2 arrive in an hour?",
+            P,
+            {"distribution": "poisson", "params": {"lambda": 3}, "query": "pmf", "x": 2},
+            num("9*exp(-3)/2"),
+        ),
+        (
+            "Typos occur on average 2 per page (Poisson). Probability of more than 1 typo on a page?",
+            P,
+            {"distribution": "poisson", "params": {"lambda": 2}, "query": "greater", "x": 2},
+            num("1 - 3*exp(-2)"),
+        ),
+        (
+            "Weights are normal with mean 60 and standard deviation 5. What fraction weigh more than 70?",
+            P,
+            {"distribution": "normal", "params": {"mean": 60, "std": 5}, "query": "greater", "x": 70},
+            num("(1 - erf(sqrt(2)))/2"),
+        ),
+        (
+            "Scores follow a normal distribution with mean 500 and sd 100. Probability a score is between 400 and 600?",
+            P,
+            {"distribution": "normal", "params": {"mean": 500, "std": 100}, "query": "between", "x": 400, "x2": 600},
+            num("erf(sqrt(2)/2)"),
+        ),
+        (
+            "A train arrives uniformly between 0 and 30 minutes. Probability it arrives within 10 minutes?",
+            P,
+            {"distribution": "uniform", "params": {"a": 0, "b": 30}, "query": "cdf", "x": 10},
+            num("1/3"),
+        ),
+        (
+            "Waiting times are exponential with rate 0.5 per minute. What is the probability of waiting more than 4 minutes?",
+            P,
+            {"distribution": "exponential", "params": {"rate": 0.5}, "query": "greater", "x": 4},
+            num("exp(-2)"),
+        ),
+        ("How many ways can 5 books be arranged on a shelf?", C, {"operation": "factorial", "n": 5}, num("120")),
+        (
+            "How many ways are there to choose 4 cards from 10?",
+            C,
+            {"operation": "combinations", "n": 10, "k": 4},
+            num("210"),
+        ),
+        (
+            "A club of 12 people elects a president and a treasurer. How many possible outcomes?",
+            C,
+            {"operation": "permutations", "n": 12, "k": 2},
+            num("132"),
+        ),
+        # missing information in the tuning set too
+        ("Integrate sin(x) from 0", None, None, CLARIFY),
+        ("A coin is tossed several times. What is the probability of 2 heads?", None, None, CLARIFY),
+        ("Solve 2x + 3y = 6", None, None, CLARIFY),
+        ("Find the inverse", None, None, CLARIFY),
+    ],
+    1,
+):
+    _add(f"nl-{i:02d}", "dev_nl", problem, tool, args, truth, split="dev_nl")

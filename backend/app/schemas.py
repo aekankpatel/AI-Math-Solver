@@ -52,6 +52,12 @@ class ToolCall(BaseModel):
     category: ProblemCategory
     args: dict[str, Any] = Field(default_factory=dict)
     rationale: str = ""
+    # Filled by the LLM planner: its own restatement, assumptions and the
+    # ambiguities it noticed. Ambiguities lead to a clarification request.
+    interpretation: str = ""
+    assumptions: list[str] = Field(default_factory=list)
+    ambiguities: list[str] = Field(default_factory=list)
+    source: Literal["llm", "rules", "nl"] | None = None  # which planner produced the call
 
 
 class Step(BaseModel):
@@ -72,6 +78,41 @@ class Verification(BaseModel):
     summary: str = ""
 
 
+class IntentStatus(StrEnum):
+    CONFIRMED = "confirmed"  # plan matches the question; nothing assumed
+    ASSUMED = "assumed"  # consistent with the question, but relies on stated assumptions
+    AMBIGUOUS = "ambiguous"  # information is missing or the question has several readings
+    MISMATCH = "mismatch"  # the planned tool/arguments contradict the question
+    UNCHECKED = "unchecked"
+
+
+class OverallStatus(StrEnum):
+    """End-to-end trust: mathematical verification AND intent verification."""
+
+    VERIFIED = "verified"  # math verified + intent confirmed
+    VERIFIED_WITH_ASSUMPTIONS = "verified_with_assumptions"  # math verified + intent assumed
+    APPROXIMATE = "approximate"
+    UNVERIFIED = "unverified"
+    FAILED = "failed"
+    NEEDS_CLARIFICATION = "needs_clarification"
+
+
+class IntentCheck(BaseModel):
+    name: str
+    passed: bool
+    detail: str = ""
+    severity: Literal["error", "missing", "warning", "info"] = "info"
+
+
+class IntentVerification(BaseModel):
+    status: IntentStatus
+    interpretation: str = ""
+    checks: list[IntentCheck] = Field(default_factory=list)
+    assumptions: list[str] = Field(default_factory=list)
+    clarification: str | None = None
+    repaired: bool = False
+
+
 class SolveRequest(BaseModel):
     problem: str = Field(..., min_length=1, max_length=2000)
     session_id: str | None = Field(default=None, max_length=64)
@@ -85,7 +126,7 @@ class FollowUpRequest(BaseModel):
 class SolveResponse(BaseModel):
     session_id: str
     problem: str
-    status: Literal["solved", "unsupported", "error", "answered"]
+    status: Literal["solved", "unsupported", "error", "answered", "needs_clarification"]
     category: ProblemCategory
     tool_call: ToolCall | None = None
     answer_text: str | None = None
@@ -93,10 +134,12 @@ class SolveResponse(BaseModel):
     steps: list[Step] = Field(default_factory=list)
     explanation: str | None = None
     verification: Verification | None = None
+    intent: IntentVerification | None = None
+    overall_status: OverallStatus | None = None
     visualization: dict[str, Any] | None = None
     error: str | None = None
     llm_used: bool = False
-    planner: Literal["llm", "rules"] = "rules"
+    planner: Literal["llm", "rules", "nl"] = "rules"
 
 
 class HealthResponse(BaseModel):

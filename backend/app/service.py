@@ -14,7 +14,7 @@ import sympy as sp
 from app.agents.graph import SolverState, category_of, run_solver, state_steps
 from app.agents.tutor import answer_followup
 from app.config import get_settings
-from app.schemas import ProblemCategory, SolveResponse
+from app.schemas import OverallStatus, ProblemCategory, SolveResponse
 
 
 @dataclass
@@ -66,7 +66,7 @@ def _to_response(session_id: str, problem: str, state: SolverState) -> SolveResp
     return SolveResponse(
         session_id=session_id,
         problem=problem,
-        status=status if status in ("solved", "unsupported", "error") else "error",
+        status=status if status in ("solved", "unsupported", "error", "needs_clarification") else "error",
         category=category_of(state) if status != "unsupported" else ProblemCategory.UNSUPPORTED,
         tool_call=state.get("tool_call"),
         answer_text=out.answer_text if out else None,
@@ -74,10 +74,13 @@ def _to_response(session_id: str, problem: str, state: SolverState) -> SolveResp
         steps=state_steps(state),
         explanation=state.get("explanation"),
         verification=state.get("verification"),
+        intent=state.get("intent"),
+        overall_status=state.get("overall")
+        or (OverallStatus.NEEDS_CLARIFICATION if status == "needs_clarification" else None),
         visualization=state.get("visualization"),
         error=state.get("error"),
         llm_used=bool(state.get("llm_used")),
-        planner="llm" if state.get("planner") == "llm" else "rules",
+        planner=state.get("planner") if state.get("planner") in ("llm", "rules", "nl") else "rules",
     )
 
 

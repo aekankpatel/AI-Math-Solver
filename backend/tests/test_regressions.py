@@ -229,7 +229,11 @@ def test_english_words_are_not_variables():
     from app.agents.graph import run_solver
 
     state = run_solver("Find x if 4x - 7 = 9")
-    assert state["status"] == "error" and "if" in state["error"]
+    # Now understood by the intent-based planner; it must never return the old garbage answer.
+    if state["status"] == "solved":
+        assert state["tool_output"].answer_text == "x = 4"
+    else:
+        assert state.get("tool_output") is None
 
 
 def test_determine_does_not_trigger_determinant():

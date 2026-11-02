@@ -1,11 +1,20 @@
-"""LangGraph Solver–Verifier–Tutor workflow.
+"""LangGraph Solver–Verifier–Tutor workflow with intent verification.
 
-    classify/plan ──► solve (tool) ──► verify ──► explain ──► visualize ──► END
-          │                │
-          └── unsupported ─┴── error ──────────────────────────────────────► END
+    plan ──► intent ──► solve ──► verify ──► explain ──► visualize ──► END
+      │        │          │
+      │        │          └── tool error ─────────────────────────────► END
+      │        └── ambiguous / mismatch (after one repair attempt) ──► END (needs clarification)
+      └── unsupported ───────────────────────────────────────────────► END
 
-Planning uses the Groq LLM (structured tool selection) when configured and
-falls back to the deterministic rule planner otherwise or on failure.
+* **plan**: Groq LLM planner (structured tool call) when configured, with the
+  deterministic rule planner as fallback.
+* **intent**: checks that the planned tool and arguments answer the question
+  that was asked (``app/agents/intent.py``). A mismatch gets one repair attempt
+  (safe slot fixes stated in the question, or the alternative plan). Otherwise
+  the system asks for clarification instead of answering the wrong question.
+* **verify**: independent *mathematical* verification of the tool result.
+* The final ``overall`` status is "verified" only if the math is verified AND
+  the intent is confirmed.
 """
 
 from __future__ import annotations
@@ -16,16 +25,29 @@ from typing import Any, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
+from app.agents.intent import check_intent
 from app.agents.llm_planner import LLMPlanUnsupported, plan_with_llm
+from app.agents.nl_planner import ClarificationNeeded, plan_from_intent
 from app.agents.rule_planner import PlanningError, plan_with_rules
 from app.agents.tutor import explain
 from app.math_engine.parser import ExpressionError
 from app.math_engine.tools import ToolError, ToolOutput, run_tool
 from app.math_engine.verifier import verify
 from app.math_engine.visualize import visualize
-from app.schemas import ProblemCategory, Step, ToolCall, Verification
+from app.schemas import (
+    IntentStatus,
+    IntentVerification,
+    OverallStatus,
+    ProblemCategory,
+    Step,
+    ToolCall,
+    Verification,
+    VerificationStatus,
+)
 
 log = logging.getLogger(__name__)
+
+_ACCEPTABLE = (IntentStatus.CONFIRMED, IntentStatus.ASSUMED)
 
 
 class SolverState(TypedDict, total=False):
@@ -34,8 +56,11 @@ class SolverState(TypedDict, total=False):
     tool_call: ToolCall | None
     planner: str
     fallback_call: ToolCall | None
+    alternatives: list[ToolCall]
+    intent: IntentVerification | None
     tool_output: ToolOutput | None
     verification: Verification | None
+    overall: OverallStatus | None
     explanation: str | None
     visualization: dict[str, Any] | None
     status: str
@@ -44,13 +69,24 @@ class SolverState(TypedDict, total=False):
 
 
 def plan_node(state: SolverState) -> SolverState:
+    """Produce a primary plan and alternatives: LLM (if configured), then the rule
+    planner, then the intent-based NL planner. The intent node picks the first
+    one that faithfully matches the question."""
     problem, context = state["problem"], state.get("context")
     rules_call: ToolCall | None = None
-    rules_error: str | None = None
+    nl_call: ToolCall | None = None
+    errors: list[str] = []
+    clarification: str | None = None
     try:
-        rules_call = plan_with_rules(problem)
+        rules_call = plan_with_rules(problem).model_copy(update={"source": "rules"})
     except (PlanningError, ExpressionError) as exc:
-        rules_error = str(exc)
+        errors.append(str(exc))
+    try:
+        nl_call = plan_from_intent(problem)
+    except ClarificationNeeded as exc:
+        clarification = str(exc)
+    except (PlanningError, ExpressionError) as exc:
+        errors.append(str(exc))
 
     try:
         llm_call = plan_with_llm(problem, context)
@@ -58,14 +94,65 @@ def plan_node(state: SolverState) -> SolverState:
         # The LLM judged the problem unsupported/ambiguous: ask rather than guess.
         return {"status": "unsupported", "error": str(exc), "planner": "llm", "llm_used": True}
     except Exception as exc:  # provider/network/validation errors -> deterministic fallback
-        log.warning("LLM planning failed, using rules: %s", exc)
+        log.warning("LLM planning failed, using offline planners: %s", exc)
         llm_call = None
 
-    if llm_call is not None:
-        return {"tool_call": llm_call, "planner": "llm", "fallback_call": rules_call, "llm_used": True}
-    if rules_call is not None:
-        return {"tool_call": rules_call, "planner": "rules"}
-    return {"status": "unsupported", "error": rules_error or "Unsupported problem.", "planner": "rules"}
+    candidates = [
+        c for c in (llm_call.model_copy(update={"source": "llm"}) if llm_call else None, rules_call, nl_call) if c
+    ]
+    if candidates:
+        primary, rest = candidates[0], candidates[1:]
+        return {
+            "tool_call": primary,
+            "planner": primary.source or "rules",
+            "alternatives": rest,
+            "fallback_call": rest[0] if rest else None,
+            "llm_used": llm_call is not None,
+        }
+    if clarification:
+        return {"status": "needs_clarification", "error": clarification, "planner": "nl"}
+    return {"status": "unsupported", "error": errors[0] if errors else "Unsupported problem.", "planner": "rules"}
+
+
+def _check(problem: str, call: ToolCall) -> tuple[IntentVerification, dict[str, Any]]:
+    iv, fixes = check_intent(problem, call, call.ambiguities, call.assumptions)
+    if call.source == "nl" and iv.status == IntentStatus.CONFIRMED:
+        # the NL planner and the checker share the same extraction: not independent
+        iv.status = IntentStatus.ASSUMED
+        iv.assumptions.append(
+            "This interpretation was built from the same language analysis that checks it; please confirm it."
+        )
+    return iv, fixes
+
+
+def intent_node(state: SolverState) -> SolverState:
+    problem, call = state["problem"], state["tool_call"]
+    assert call is not None
+    iv, fixes = _check(problem, call)
+    if iv.status in _ACCEPTABLE:
+        return {"intent": iv}
+
+    declared = any(c.name == "planner-declared ambiguity" and not c.passed for c in iv.checks)
+    if iv.status == IntentStatus.MISMATCH and fixes:
+        repaired = call.model_copy(update={"args": {**call.args, **fixes}})
+        iv2, _ = _check(problem, repaired)
+        if iv2.status in _ACCEPTABLE:
+            iv2.repaired = True
+            iv2.assumptions.append(
+                "Adjusted the plan to match the question: " + ", ".join(f"{k} = {v}" for k, v in fixes.items()) + "."
+            )
+            return {"intent": iv2, "tool_call": repaired}
+
+    if not declared:
+        for alt in state.get("alternatives") or []:
+            if alt == call:
+                continue
+            iva, _ = _check(problem, alt)
+            if iva.status in _ACCEPTABLE:
+                iva.assumptions.append(f"The first plan did not match the question; used the {alt.source} plan.")
+                return {"intent": iva, "tool_call": alt, "planner": alt.source or "rules"}
+
+    return {"intent": iv, "status": "needs_clarification", "error": iv.clarification}
 
 
 def solve_node(state: SolverState) -> SolverState:
@@ -74,29 +161,51 @@ def solve_node(state: SolverState) -> SolverState:
     try:
         return {"tool_output": run_tool(call.tool, call.args)}
     except (ToolError, ExpressionError) as exc:
-        fallback = state.get("fallback_call")
-        if fallback is not None and fallback != call:
+        for alt in state.get("alternatives") or []:
+            if alt == call:
+                continue
+            iva, _ = _check(state["problem"], alt)
+            if iva.status not in _ACCEPTABLE:  # never run an alternative that misreads the question
+                continue
             try:
                 return {
-                    "tool_output": run_tool(fallback.tool, fallback.args),
-                    "tool_call": fallback,
-                    "planner": "rules",
+                    "tool_output": run_tool(alt.tool, alt.args),
+                    "tool_call": alt,
+                    "planner": alt.source or "rules",
+                    "intent": iva,
                 }
             except (ToolError, ExpressionError):
-                pass
+                continue
         return {"status": "error", "error": str(exc)}
+
+
+def overall_status(verification: Verification | None, intent: IntentVerification | None) -> OverallStatus:
+    if intent is None or intent.status in (IntentStatus.AMBIGUOUS, IntentStatus.MISMATCH):
+        return OverallStatus.NEEDS_CLARIFICATION
+    if verification is None or verification.status == VerificationStatus.UNVERIFIED:
+        return OverallStatus.UNVERIFIED
+    if verification.status == VerificationStatus.FAILED:
+        return OverallStatus.FAILED
+    if verification.status == VerificationStatus.APPROXIMATE:
+        return OverallStatus.APPROXIMATE
+    if intent.status == IntentStatus.CONFIRMED:
+        return OverallStatus.VERIFIED
+    return OverallStatus.VERIFIED_WITH_ASSUMPTIONS
 
 
 def verify_node(state: SolverState) -> SolverState:
     call, out = state["tool_call"], state["tool_output"]
     assert call is not None and out is not None
-    return {"verification": verify(call.tool, out)}
+    verification = verify(call.tool, out)
+    return {"verification": verification, "overall": overall_status(verification, state.get("intent"))}
 
 
 def explain_node(state: SolverState) -> SolverState:
     call, out = state["tool_call"], state["tool_output"]
     assert call is not None and out is not None
-    text, used = explain(state["problem"], call.tool, out.answer_text, out.steps, state.get("verification"))
+    text, used = explain(
+        state["problem"], call.tool, out.answer_text, out.steps, state.get("verification"), state.get("intent")
+    )
     return {"explanation": text, "llm_used": state.get("llm_used", False) or used}
 
 
@@ -107,7 +216,11 @@ def visualize_node(state: SolverState) -> SolverState:
 
 
 def _after_plan(state: SolverState) -> str:
-    return "end" if state.get("status") == "unsupported" else "solve"
+    return "end" if state.get("status") in ("unsupported", "needs_clarification") else "intent"
+
+
+def _after_intent(state: SolverState) -> str:
+    return "end" if state.get("status") == "needs_clarification" else "solve"
 
 
 def _after_solve(state: SolverState) -> str:
@@ -118,12 +231,14 @@ def _after_solve(state: SolverState) -> str:
 def build_graph() -> Any:
     g = StateGraph(SolverState)
     g.add_node("plan", plan_node)
+    g.add_node("intent", intent_node)
     g.add_node("solve", solve_node)
     g.add_node("verify", verify_node)
     g.add_node("explain", explain_node)
     g.add_node("visualize", visualize_node)
     g.add_edge(START, "plan")
-    g.add_conditional_edges("plan", _after_plan, {"solve": "solve", "end": END})
+    g.add_conditional_edges("plan", _after_plan, {"intent": "intent", "end": END})
+    g.add_conditional_edges("intent", _after_intent, {"solve": "solve", "end": END})
     g.add_conditional_edges("solve", _after_solve, {"verify": "verify", "end": END})
     g.add_edge("verify", "explain")
     g.add_edge("explain", "visualize")

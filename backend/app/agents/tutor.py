@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 
 from app.agents.llm import get_chat_model
-from app.schemas import Step, Verification, VerificationStatus
+from app.schemas import IntentStatus, IntentVerification, Step, Verification, VerificationStatus
 
 log = logging.getLogger(__name__)
 
@@ -20,6 +20,10 @@ verification report. Explain the solution clearly for a student in 3-6 short sen
 compact list. Rules:
 - Do NOT recompute or change the answer and do NOT introduce numbers that are not in the
   provided material. The computed answer is authoritative.
+- Start by stating how the question was interpreted (one sentence) and mention any listed
+  assumptions, so the student can spot a misreading.
+- Explain WHY the method works, not only what was done; point out the key idea or common
+  mistake for this kind of problem in one sentence.
 - If verification status is not "verified", say plainly how confident the result is.
 - Use plain text with inline LaTeX between $...$ when helpful. No headings."""
 
@@ -37,8 +41,43 @@ _STATUS_SENTENCE = {
 }
 
 
-def _material(problem: str, answer: str, steps: list[Step], verification: Verification | None) -> str:
-    lines = [f"Problem: {problem}", f"Computed answer: {answer}", "Steps:"]
+_INTENT_SENTENCE = {
+    IntentStatus.CONFIRMED: "Every number and condition in the question was matched to the computation.",
+    IntentStatus.ASSUMED: "The computation is consistent with the question, but relies on the assumptions above.",
+}
+
+_KEY_IDEAS = {
+    "solve_equation": "Key idea: a solution must make both sides equal, so every root is checked by substituting it back.",
+    "solve_system": "Key idea: a solution of a system must satisfy every equation at the same time.",
+    "simplify_expression": "Key idea: simplifying never changes the value, so the result must agree with the original "
+    "wherever both are defined.",
+    "factor_expression": "Key idea: factoring rewrites a sum as a product; multiplying the factors back must give the original.",
+    "expand_expression": "Key idea: expanding distributes every product; collecting like terms gives the polynomial form.",
+    "differentiate": "Key idea: the derivative measures the instantaneous rate of change; for products and compositions "
+    "remember the product and chain rules.",
+    "integrate": "Key idea: integration reverses differentiation, so differentiating the antiderivative must return "
+    "the integrand. A definite integral is F(b) − F(a).",
+    "limit": "Key idea: a limit describes the value the function approaches, even when it is undefined at the point.",
+    "matrix_operation": "Key idea: matrix results can be checked directly, e.g. A·A⁻¹ = I or A·x = b.",
+    "descriptive_statistics": "Key idea: the sample standard deviation divides by n − 1, the population one by n.",
+    "probability_distribution": "Key idea: for discrete distributions, 'fewer than k' means P(X ≤ k − 1); "
+    "for continuous ones P(X < k) = P(X ≤ k).",
+    "combinatorics": "Key idea: use permutations when order matters and combinations when it does not.",
+}
+
+
+def _material(
+    problem: str,
+    answer: str,
+    steps: list[Step],
+    verification: Verification | None,
+    intent: IntentVerification | None = None,
+) -> str:
+    lines = [f"Problem: {problem}"]
+    if intent:
+        lines.append(f"Interpretation: {intent.interpretation} (intent check: {intent.status.value})")
+        lines += [f"Assumption: {a}" for a in intent.assumptions]
+    lines += [f"Computed answer: {answer}", "Steps:"]
     for i, s in enumerate(steps, 1):
         lines.append(f"{i}. {s.title}. {s.detail} {s.latex or ''}".strip())
     if verification:
@@ -48,7 +87,9 @@ def _material(problem: str, answer: str, steps: list[Step], verification: Verifi
     return "\n".join(lines)
 
 
-def template_explanation(tool: str, answer: str, verification: Verification | None) -> str:
+def template_explanation(
+    tool: str, answer: str, verification: Verification | None, intent: IntentVerification | None = None
+) -> str:
     intro = {
         "solve_equation": "We rewrote the equation as f = 0 and found every value of the variable that makes it true.",
         "solve_system": "We solved the equations simultaneously by eliminating variables.",
@@ -63,26 +104,42 @@ def template_explanation(tool: str, answer: str, verification: Verification | No
         "probability_distribution": "We used the distribution's probability function to compute the requested probability.",
         "combinatorics": "We applied the standard counting formula.",
     }.get(tool, "We computed the result with a computer algebra system.")
-    status = _STATUS_SENTENCE[verification.status] if verification else ""
-    return f"{intro} Result: {answer}. {status}".strip()
+    parts = []
+    if intent and intent.interpretation:
+        parts.append(f"I read the question as: {intent.interpretation}")
+        if intent.assumptions:
+            parts.append("Assumptions: " + " ".join(a.rstrip(".") + "." for a in intent.assumptions))
+    parts += [intro, f"Result: {answer}."]
+    if tool in _KEY_IDEAS:
+        parts.append(_KEY_IDEAS[tool])
+    if verification:
+        parts.append(_STATUS_SENTENCE[verification.status])
+    if intent and intent.status in _INTENT_SENTENCE:
+        parts.append(_INTENT_SENTENCE[intent.status])
+    return " ".join(parts).strip()
 
 
 def explain(
-    problem: str, tool: str, answer: str, steps: list[Step], verification: Verification | None
+    problem: str,
+    tool: str,
+    answer: str,
+    steps: list[Step],
+    verification: Verification | None,
+    intent: IntentVerification | None = None,
 ) -> tuple[str, bool]:
     """Return (explanation, llm_used)."""
     model = get_chat_model()
     if model is not None:
         try:
             msg = model.invoke(
-                [("system", TUTOR_SYSTEM_PROMPT), ("human", _material(problem, answer, steps, verification))]
+                [("system", TUTOR_SYSTEM_PROMPT), ("human", _material(problem, answer, steps, verification, intent))]
             )
             text = str(getattr(msg, "content", "")).strip()
             if text:
                 return text, True
         except Exception as exc:  # network/provider errors fall back to templates
             log.warning("LLM explanation failed: %s", exc)
-    return template_explanation(tool, answer, verification), False
+    return template_explanation(tool, answer, verification, intent), False
 
 
 def answer_followup(

@@ -24,7 +24,7 @@ from typing import Any
 
 import sympy as sp
 
-from eval.dataset import CASES, TAMPER
+from eval.dataset import CASES, INTENT_TAMPER, TAMPER
 from eval.scoring import score
 
 REPORT_DIR = Path(__file__).parent / "reports"
@@ -70,6 +70,33 @@ def _apply_mutation(data: dict[str, Any], mutate: dict[str, Any]) -> None:
             data["numeric"] = float(value)
         else:
             data[key] = parse(value)
+
+
+def run_intent_tamper() -> list[dict[str, Any]]:
+    """Wrong readings of a question must be flagged; correct ones accepted."""
+    from app.agents.intent import check_intent
+    from app.schemas import ProblemCategory, ToolCall
+
+    rows = []
+    for case in INTENT_TAMPER:
+        good = ToolCall(tool=case["tool"], category=ProblemCategory.ALGEBRA, args=dict(case["args"]))
+        bad_args = {k: v for k, v in {**case["args"], **case["bad"]}.items() if v is not None}
+        if case["bad_tool"] == "solve_equation" and "equations" in bad_args:
+            bad_args.pop("equations")
+        bad = ToolCall(tool=case["bad_tool"] or case["tool"], category=ProblemCategory.ALGEBRA, args=bad_args)
+        control, _ = check_intent(case["problem"], good)
+        tampered, _ = check_intent(case["problem"], bad)
+        rows.append(
+            {
+                "id": case["id"],
+                "note": case["note"],
+                "control_status": control.status.value,
+                "control_expect": case.get("control_expect", "accept"),
+                "tampered_status": tampered.status.value,
+                "flag_reason": tampered.clarification,
+            }
+        )
+    return rows
 
 
 def run_tamper() -> list[dict[str, Any]]:
@@ -125,6 +152,15 @@ def _run_case(case: dict[str, Any], mode: str) -> dict[str, Any]:
                 out, rec["outcome"], rec["error"] = None, "rejected", str(exc)
             verification = verify(case["tool"], out) if out else None
             tool = case["tool"]
+            from app.agents.graph import overall_status
+            from app.agents.intent import check_intent
+            from app.schemas import ProblemCategory, ToolCall
+
+            canon = ToolCall(tool=tool, category=ProblemCategory.ALGEBRA, args=dict(case["args"]))
+            intent, _ = check_intent(case["problem"], canon)
+            rec["intent"] = intent.status.value
+            if out is not None:
+                rec["overall"] = overall_status(verification, intent).value
         else:
             from app.agents.graph import run_solver
 
@@ -133,7 +169,14 @@ def _run_case(case: dict[str, Any], mode: str) -> dict[str, Any]:
             rec["planned_tool"] = call.tool if call else None
             rec["planner"] = state.get("planner")
             out, verification, tool = state.get("tool_output"), state.get("verification"), rec["planned_tool"]
-            if state.get("status") != "solved":
+            if state.get("intent") is not None:
+                rec["intent"] = state["intent"].status.value
+                rec["interpretation"] = state["intent"].interpretation
+            if state.get("overall") is not None:
+                rec["overall"] = state["overall"].value
+            if state.get("status") == "needs_clarification":
+                rec["outcome"], rec["error"] = "clarify", state.get("error")
+            elif state.get("status") != "solved":
                 rec["outcome"], rec["error"] = "rejected", state.get("error")
     except Exception as exc:  # anything escaping the pipeline is a crash
         rec["outcome"], rec["error"] = "crash", f"{type(exc).__name__}: {exc}"
@@ -237,14 +280,18 @@ def summarize(
             "scope": "answers produced on benchmark problems (tamper controls excluded)",
             "verified_precision": _m(sum(1 for r in math_verified if r.get("correct")), len(math_verified)),
             "verified_recall": _m(sum(1 for r in good if r.get("verification") == "verified"), len(good)),
-            "incorrect_answers_marked_verified": _m(sum(1 for r in bad if r.get("verification") == "verified"), len(bad)),
+            "incorrect_answers_marked_verified": _m(
+                sum(1 for r in bad if r.get("verification") == "verified"), len(bad)
+            ),
             "status_on_correct": dict(Counter(r.get("verification") for r in good)),
             "status_on_incorrect": dict(Counter(r.get("verification") for r in bad)),
         },
         "tampered_solutions": {
             "detected_as_failed": _m(sum(1 for t in tamper if t["tampered_status"] == "failed"), len(tamper)),
             "marked_verified": _m(sum(1 for t in tamper if t["tampered_status"] == "verified"), len(tamper)),
-            "untampered_controls_verified": _m(sum(1 for t in tamper if t["control_status"] == "verified"), len(tamper)),
+            "untampered_controls_verified": _m(
+                sum(1 for t in tamper if t["control_status"] == "verified"), len(tamper)
+            ),
             "untampered_controls_failed": _m(sum(1 for t in tamper if t["control_status"] == "failed"), len(tamper)),
         },
         "latency_ms": {
@@ -270,16 +317,24 @@ def summarize(
         }
     if intent_tamper:
         summary["tampered_interpretations"] = {
-            "flagged": _m(sum(1 for t in intent_tamper if t["tampered_status"] in ("mismatch", "ambiguous")), len(intent_tamper)),
-            "accepted_as_confirmed": _m(sum(1 for t in intent_tamper if t["tampered_status"] == "confirmed"), len(intent_tamper)),
-            "correct_controls_confirmed": _m(
-                sum(1 for t in intent_tamper if t["control_status"] in ("confirmed", "assumed")), len(intent_tamper)
+            "flagged": _m(
+                sum(1 for t in intent_tamper if t["tampered_status"] in ("mismatch", "ambiguous")), len(intent_tamper)
             ),
-            "correct_controls_flagged": _m(
-                sum(1 for t in intent_tamper if t["control_status"] in ("mismatch", "ambiguous")), len(intent_tamper)
+            "accepted_as_confirmed": _m(
+                sum(1 for t in intent_tamper if t["tampered_status"] == "confirmed"), len(intent_tamper)
+            ),
+            "controls_handled_correctly": _m(sum(1 for t in intent_tamper if _control_ok(t)), len(intent_tamper)),
+            "valid_controls_wrongly_flagged": _m(
+                sum(1 for t in intent_tamper if t["control_expect"] == "accept" and not _control_ok(t)),
+                sum(1 for t in intent_tamper if t["control_expect"] == "accept"),
             ),
         }
     return summary
+
+
+def _control_ok(t: dict[str, Any]) -> bool:
+    flagged = t["control_status"] in ("mismatch", "ambiguous")
+    return flagged if t["control_expect"] == "clarify" else not flagged
 
 
 def _fmt(metric: dict[str, Any] | None) -> str:
@@ -369,8 +424,9 @@ def to_markdown(
             "|---|---|",
             f"| Flagged (mismatch or ambiguous) | {_fmt(t['flagged'])} |",
             f"| Accepted as confirmed | {_fmt(t['accepted_as_confirmed'])} |",
-            f"| Correct interpretations confirmed (controls) | {_fmt(t['correct_controls_confirmed'])} |",
-            f"| Correct interpretations wrongly flagged (controls) | {_fmt(t['correct_controls_flagged'])} |",
+            f"| Controls handled correctly (accepted, or clarified when the question lacks information) | "
+            f"{_fmt(t['controls_handled_correctly'])} |",
+            f"| Valid controls wrongly flagged (false alarms) | {_fmt(t['valid_controls_wrongly_flagged'])} |",
         ]
     lines += [
         "",
@@ -420,65 +476,117 @@ def to_markdown(
     return "\n".join(lines) + "\n"
 
 
-def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--mode", choices=["oracle", "rules", "groq"], default="rules")
-    ap.add_argument(
-        "--allow-network", action="store_true", help="required for --mode groq (real, rate-limited API calls)"
-    )
-    ap.add_argument("--rpm", type=float, default=20.0, help="max requests per minute in groq mode")
-    ap.add_argument("--llm-explanations", action="store_true", help="groq mode: also generate LLM explanations")
-    ap.add_argument("--only", help="comma-separated case-id prefixes to run")
-    ap.add_argument("--split", choices=SPLITS, help="run only one split")
-    ap.add_argument("--out-name", help="report file name (default: the mode)")
-    ap.add_argument("--no-write", action="store_true")
-    args = ap.parse_args(argv)
+class _ReplayModel:
+    """Stand-in chat model for --replay: every planner response must come from the
+    cache; a cache miss raises instead of calling the network."""
 
-    if args.mode == "groq":
-        if not os.environ.get("GROQ_API_KEY"):
-            print("groq mode needs GROQ_API_KEY in the environment; refusing to run.", file=sys.stderr)
-            return 2
-        if not args.allow_network:
-            print("groq mode makes real API calls; re-run with --allow-network to confirm.", file=sys.stderr)
-            return 2
-    _configure(args.mode)
-    if args.mode == "groq" and not args.llm_explanations:
-        import app.agents.graph as graph
-        from app.agents.tutor import template_explanation
+    def __init__(self, model_name: str) -> None:
+        self.model_name = model_name
 
-        graph.explain = lambda problem, tool, answer, steps, verification: (
-            template_explanation(tool, answer, verification),
-            False,
-        )
+    def with_structured_output(self, schema: Any) -> Any:
+        return self
 
+    def invoke(self, messages: Any) -> Any:
+        raise RuntimeError("replay mode: no cached planner response for this problem")
+
+
+def _select_cases(args: argparse.Namespace) -> list[dict[str, Any]]:
     cases = CASES
     if args.split:
         cases = [c for c in cases if (c.get("split") or ("heldout" if c.get("heldout") else "dev")) == args.split]
     if args.only:
         prefixes = tuple(args.only.split(","))
         cases = [c for c in cases if c["id"].startswith(prefixes)]
-    delay = 60.0 / args.rpm if args.mode == "groq" else 0.0
-    records = []
-    for case in cases:
-        records.append(_run_case(case, args.mode))
-        if delay:
-            time.sleep(delay)
-    tamper = run_tamper()
-    summary = summarize(records, tamper, args.mode)
-    summary["environment"] = {"python": platform.python_version(), "sympy": sp.__version__}
+    if args.limit:
+        cases = cases[: args.limit]
+    return cases
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--mode", choices=["oracle", "rules", "groq"], default="rules")
+    ap.add_argument(
+        "--allow-network", action="store_true", help="required for --mode groq (real, rate-limited API calls)"
+    )
+    ap.add_argument("--dry-run", action="store_true", help="groq mode: show what would be called, call nothing")
+    ap.add_argument(
+        "--replay", action="store_true", help="groq mode: use only cached planner responses (no network, no key)"
+    )
+    ap.add_argument("--cache", default=str(REPORT_DIR / "groq_cache.jsonl"), help="planner response cache (JSONL)")
+    ap.add_argument("--rpm", type=float, default=20.0, help="max requests per minute in groq mode")
+    ap.add_argument("--llm-explanations", action="store_true", help="groq mode: also generate LLM explanations")
+    ap.add_argument("--only", help="comma-separated case-id prefixes to run")
+    ap.add_argument("--split", choices=SPLITS, help="run only one split")
+    ap.add_argument("--limit", type=int, help="run only the first N selected problems")
+    ap.add_argument("--out-name", help="report file name (default: the mode)")
+    ap.add_argument("--no-write", action="store_true")
+    args = ap.parse_args(argv)
+    cases = _select_cases(args)
+
     if args.mode == "groq":
         from app.config import get_settings
 
-        summary["environment"]["model"] = get_settings().llm_model
+        model_name = os.environ.get("LLM_MODEL") or get_settings().llm_model
+        if args.dry_run:
+            calls = len(cases) * (2 if args.llm_explanations else 1)
+            print(
+                f"groq dry run: {len(cases)} problems -> up to {calls} chat completions with model {model_name} "
+                f"(cached responses in {args.cache} are reused). At {args.rpm:g} requests/min this takes about "
+                f"{calls / args.rpm:.0f} min. Nothing was sent."
+            )
+            return 0
+        if not args.replay:
+            if not os.environ.get("GROQ_API_KEY"):
+                print("groq mode needs GROQ_API_KEY in the environment; refusing to run.", file=sys.stderr)
+                return 2
+            if not args.allow_network:
+                print("groq mode makes real API calls; re-run with --allow-network to confirm.", file=sys.stderr)
+                return 2
+        os.environ["MATHFORGE_LLM_CACHE"] = args.cache
+    _configure(args.mode)
+    if args.mode == "groq" and args.replay:
+        import app.agents.llm_planner as llm_planner
 
-    print(to_markdown(summary, records, tamper).split("## Latency")[0])
+        llm_planner.get_chat_model = lambda: _ReplayModel(model_name)
+    if args.mode == "groq" and not args.llm_explanations:
+        import app.agents.graph as graph
+        from app.agents.tutor import template_explanation
+
+        graph.explain = lambda problem, tool, answer, steps, verification, intent=None: (
+            template_explanation(tool, answer, verification, intent),
+            False,
+        )
+
+    delay = 60.0 / args.rpm if args.mode == "groq" and not args.replay else 0.0
+    records = []
+    for case in cases:
+        t0 = time.perf_counter()
+        records.append(_run_case(case, args.mode))
+        if delay and time.perf_counter() - t0 > 0.05:  # only throttle real (uncached) calls
+            time.sleep(delay)
+    tamper = run_tamper()
+    intent_tamper = run_intent_tamper()
+    summary = summarize(records, tamper, args.mode, intent_tamper)
+    summary["environment"] = {"python": platform.python_version(), "sympy": sp.__version__}
+    if args.mode == "groq":
+        from app.agents.llm_planner import PROMPT_VERSION
+
+        summary["environment"].update(model=model_name, prompt_version=PROMPT_VERSION, replay=args.replay)
+        summary["llm_planner_used"] = _m(sum(1 for r in records if r.get("planner") == "llm"), len(records))
+
+    print(to_markdown(summary, records, tamper, intent_tamper).split("## Latency")[0])
     if not args.no_write:
         name = args.out_name or args.mode
         REPORT_DIR.mkdir(exist_ok=True)
         (REPORT_DIR / f"{name}.json").write_text(
-            json.dumps({"summary": summary, "cases": records, "tamper": tamper}, indent=2, default=str) + "\n"
+            json.dumps(
+                {"summary": summary, "cases": records, "tamper": tamper, "intent_tamper": intent_tamper},
+                indent=2,
+                default=str,
+            )
+            + "\n"
         )
-        (REPORT_DIR / f"{name}.md").write_text(to_markdown(summary, records, tamper))
+        (REPORT_DIR / f"{name}.md").write_text(to_markdown(summary, records, tamper, intent_tamper))
         print(f"reports written to {REPORT_DIR}/{name}.{{json,md}}")
     return 0
 

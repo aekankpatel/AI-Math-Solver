@@ -26,6 +26,32 @@ export interface Verification {
   summary: string
 }
 
+export type IntentStatus = 'confirmed' | 'assumed' | 'ambiguous' | 'mismatch' | 'unchecked'
+
+export type OverallStatus =
+  | 'verified'
+  | 'verified_with_assumptions'
+  | 'approximate'
+  | 'unverified'
+  | 'failed'
+  | 'needs_clarification'
+
+export interface IntentCheck {
+  name: string
+  passed: boolean
+  detail: string
+  severity: 'error' | 'missing' | 'warning' | 'info'
+}
+
+export interface IntentVerification {
+  status: IntentStatus
+  interpretation: string
+  checks: IntentCheck[]
+  assumptions: string[]
+  clarification: string | null
+  repaired: boolean
+}
+
 export interface ToolCall {
   tool: string
   category: Category
@@ -41,7 +67,7 @@ export interface PlotlyFigure {
 export interface SolveResponse {
   session_id: string
   problem: string
-  status: 'solved' | 'unsupported' | 'error' | 'answered'
+  status: 'solved' | 'unsupported' | 'error' | 'answered' | 'needs_clarification'
   category: Category
   tool_call: ToolCall | null
   answer_text: string | null
@@ -49,10 +75,12 @@ export interface SolveResponse {
   steps: Step[]
   explanation: string | null
   verification: Verification | null
+  intent?: IntentVerification | null
+  overall_status?: OverallStatus | null
   visualization: PlotlyFigure | null
   error: string | null
   llm_used: boolean
-  planner: 'llm' | 'rules'
+  planner: 'llm' | 'rules' | 'nl'
 }
 
 export interface Health {

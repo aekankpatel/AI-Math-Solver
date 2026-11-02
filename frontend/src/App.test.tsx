@@ -92,6 +92,67 @@ describe('App', () => {
   })
 })
 
+describe('intent verification UI', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('shows a clarification card instead of an answer', async () => {
+    vi.stubGlobal(
+      'fetch',
+      mockFetch({
+        '/api/solve': {
+          ...solved,
+          status: 'needs_clarification',
+          answer_text: null,
+          answer_latex: null,
+          verification: null,
+          error: 'The question does not state the standard deviation.',
+          intent: {
+            status: 'ambiguous',
+            interpretation: 'P(X ≤ 12) for X ~ Normal(mean=10, std=1).',
+            checks: [],
+            assumptions: [],
+            clarification: 'The question does not state the standard deviation.',
+            repaired: false,
+          },
+          overall_status: 'needs_clarification',
+        },
+      }),
+    )
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('Math problem'), { target: { value: 'normal mean 10, P(X < 12)' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Solve' }))
+    const card = await screen.findByTestId('clarify-card')
+    expect(card).toHaveTextContent('standard deviation')
+    expect(card).toHaveTextContent('I did not compute it')
+    expect(screen.queryByTestId('solution-card')).not.toBeInTheDocument()
+  })
+
+  it('distinguishes verified-with-assumptions from fully verified', async () => {
+    vi.stubGlobal(
+      'fetch',
+      mockFetch({
+        '/api/solve': {
+          ...solved,
+          overall_status: 'verified_with_assumptions',
+          intent: {
+            status: 'assumed',
+            interpretation: 'Solve 4x - 3 = 13 for x.',
+            checks: [{ name: 'all stated numbers used', passed: false, detail: '2023 unused', severity: 'warning' }],
+            assumptions: ['Number(s) in the question not used by the plan: 2023 (treated as context).'],
+            clarification: null,
+            repaired: false,
+          },
+        },
+      }),
+    )
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('Math problem'), { target: { value: 'For 2023, solve 4x - 3 = 13' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Solve' }))
+    expect(await screen.findByTestId('overall-badge')).toHaveTextContent('with assumptions')
+    expect(screen.getByTestId('intent-panel')).toHaveTextContent('2023')
+  })
+})
+
 describe('VerificationBadge', () => {
   it.each([
     ['verified', 'Verified'],

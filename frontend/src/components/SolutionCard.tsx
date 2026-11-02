@@ -1,4 +1,5 @@
 import type { SolveResponse } from '../types'
+import { IntentPanel, OverallBadge } from './IntentPanel'
 import { Plot } from './Plot'
 import { RichText, Tex } from './Tex'
 import { VerificationBadge, VerificationPanel } from './VerificationPanel'
@@ -27,6 +28,27 @@ export function SolutionCard({ result, isFollowUp }: { result: SolveResponse; is
     )
   }
 
+  if (result.status === 'needs_clarification') {
+    return (
+      <article className="card clarify-card" role="alert" data-testid="clarify-card">
+        <header className="card-head">
+          <span className="chip chip-warn">Needs clarification</span>
+          <h3 className="problem">{result.problem}</h3>
+        </header>
+        <p>
+          <strong>{result.error}</strong>
+        </p>
+        {result.intent?.interpretation && (
+          <p className="muted">
+            Closest reading I could form: {result.intent.interpretation} I did not compute it, because it may not be what
+            you asked.
+          </p>
+        )}
+        <p className="muted small">Add the missing information and ask again.</p>
+      </article>
+    )
+  }
+
   if (result.status !== 'solved') {
     return (
       <article className="card error-card" role="alert" data-testid="error-card">
@@ -43,7 +65,11 @@ export function SolutionCard({ result, isFollowUp }: { result: SolveResponse; is
     <article className="card" data-testid="solution-card">
       <header className="card-head">
         <span className="chip">{isFollowUp ? 'Follow-up · ' : ''}{CATEGORY_LABEL[result.category]}</span>
-        {result.verification && <VerificationBadge status={result.verification.status} />}
+        {result.overall_status ? (
+          <OverallBadge status={result.overall_status} />
+        ) : (
+          result.verification && <VerificationBadge status={result.verification.status} />
+        )}
         <h3 className="problem">{result.problem}</h3>
       </header>
 
@@ -52,6 +78,7 @@ export function SolutionCard({ result, isFollowUp }: { result: SolveResponse; is
         {result.answer_latex ? <Tex math={result.answer_latex} display /> : <code>{result.answer_text}</code>}
       </section>
 
+      {result.intent && <IntentPanel intent={result.intent} />}
       {result.verification && <VerificationPanel verification={result.verification} />}
 
       <div className="grid">
@@ -93,7 +120,10 @@ export function SolutionCard({ result, isFollowUp }: { result: SolveResponse; is
         <span>
           Tool: <code>{result.tool_call?.tool}</code>
         </span>
-        <span>Planner: {result.planner === 'llm' ? 'LLM (Groq)' : 'deterministic rules'}</span>
+        <span>
+          Planner:{' '}
+          {result.planner === 'llm' ? 'LLM (Groq)' : result.planner === 'nl' ? 'language analysis' : 'deterministic rules'}
+        </span>
         {result.tool_call?.rationale && <span className="muted">{result.tool_call.rationale}</span>}
       </footer>
     </article>

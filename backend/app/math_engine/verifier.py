@@ -148,8 +148,20 @@ def _verify_equation(out: ToolOutput) -> Verification:
                 )
             )
     claimed = [complex(sp.N(s)) for s in sols]
+    domain = out.data.get("domain", "complex")
+
+    def in_domain(z: complex) -> bool:
+        return domain == "complex" or (abs(z.imag) < 1e-9 and (domain == "real" or z.real > 1e-12))
+
+    for c in claimed:
+        if not in_domain(c):
+            checks.append(
+                VerificationCheck(method=f"solutions lie in the {domain} domain", passed=False, detail=f"{c:.6g}")
+            )
 
     def accounted(root: complex) -> bool:
+        if not in_domain(root):
+            return True
         for c in claimed:
             if period is not None:
                 t = float(sp.N(period))
@@ -173,13 +185,15 @@ def _verify_equation(out: ToolOutput) -> Verification:
                 else f"solver missed real root(s) near {', '.join(f'{m:.6g}' for m in missing[:5])}",
             )
         )
-    poly_check = _polynomial_root_check(expr, var, claimed)
+    poly_check = _polynomial_root_check(expr, var, claimed, in_domain)
     if poly_check is not None:
         checks.append(poly_check)
     return _finish(checks, exact_all, out.approximate)
 
 
-def _polynomial_root_check(expr: sp.Expr, var: sp.Symbol, claimed: list[complex]) -> VerificationCheck | None:
+def _polynomial_root_check(
+    expr: sp.Expr, var: sp.Symbol, claimed: list[complex], in_domain: Callable[[complex], bool] = lambda z: True
+) -> VerificationCheck | None:
     """For polynomials, compare against *all* complex roots from numpy.roots
     (companion-matrix eigenvalues) of the square-free part: catches missing
     complex roots and extra values that brentq cannot see."""
@@ -197,7 +211,7 @@ def _polynomial_root_check(expr: sp.Expr, var: sp.Symbol, claimed: list[complex]
     roots = np.roots(coeffs)
     # roots of the numerator that are poles of the full expression are excluded
     f = _lambdify(expr, var)
-    roots = [r for r in roots if _finite(f(complex(r)))]
+    roots = [r for r in roots if _finite(f(complex(r))) and in_domain(complex(r))]
     missing = [r for r in roots if not any(_close(r, c, 1e-6, 1e-7) for c in claimed)]
     extra = [c for c in claimed if not any(_close(r, c, 1e-6, 1e-7) for r in roots)]
     detail = f"{len(roots)} distinct root(s) expected"

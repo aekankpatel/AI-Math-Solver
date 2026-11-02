@@ -29,12 +29,22 @@ Every solution includes:
 ## Architecture
 
 ```
-                ┌──────────── LangGraph StateGraph ─────────────┐
- problem ──►  plan ──► solve ──► verify ──► explain ──► visualize ──► response
-               │         │
-               │         └─ tool error ──────────────────────────► error response
-               └─ unsupported / ambiguous ───────────────────────► "not supported" response
+                ┌──────────────────── LangGraph StateGraph ────────────────────┐
+ problem ──► plan ──► intent ──► solve ──► verify ──► explain ──► visualize ──► response
+              │         │          │
+              │         │          └─ tool error ───────────────────────────► error
+              │         └─ ambiguous / misread (after one repair attempt) ──► needs clarification
+              └─ unsupported ───────────────────────────────────────────────► not supported
 ```
+
+Two separate questions are verified:
+
+1. **Is the math right?** The independent mathematical verifier checks the tool's result.
+2. **Is it the right question?** The intent verifier checks that the planned tool and arguments match what was asked.
+
+A result is shown as **fully verified** only when both pass. If the math is verified but the reading of the question
+relied on assumptions, it is shown as **verified with assumptions**, with the assumptions listed. If the question was
+misread or information is missing, nothing is computed and the user is asked for clarification.
 
 | Layer | Path | Responsibility |
 |---|---|---|
@@ -43,9 +53,11 @@ Every solution includes:
 | Verifier | `backend/app/math_engine/verifier.py` | Checks each result with a *different* method (see below) |
 | Visualizer | `backend/app/math_engine/visualize.py` | Builds Plotly JSON from the computed objects |
 | Planner (LLM) | `backend/app/agents/llm_planner.py` | Groq via `langchain-groq` structured output (tool calling). Returns only a tool name and string arguments, validated by Pydantic. |
-| Planner (rules) | `backend/app/agents/rule_planner.py` | Deterministic offline planner. Used when no key is set, or as a fallback when the LLM's plan fails. |
+| Planner (rules) | `backend/app/agents/rule_planner.py` | Deterministic offline planner for formulaic input. Used when no key is set, and as an alternative plan. |
+| Planner (NL) | `backend/app/agents/nl_planner.py` | Offline planner for word problems, built on the structured intent extraction. It asks for missing information rather than using defaults. Because it shares the extraction with the intent checker, its readings are capped at "assumed". |
+| Intent verifier | `backend/app/agents/intent.py` | Extracts the intent with its own cue-based rules: task, variable, domain, order, point, bounds, limit point and direction, probability event, distribution, counting rule, matrices, data and every number. It then checks the plan: the task matches, every argument value appears in the question, every stated number is used, the slots match, and expressions are numerically equivalent to the math written in the question. Ambiguities the LLM declares are honoured. |
 | Tutor | `backend/app/agents/tutor.py` | Explains the verified result without adding numbers, and answers follow-ups |
-| Graph | `backend/app/agents/graph.py` | LangGraph workflow with conditional edges |
+| Graph | `backend/app/agents/graph.py` | LangGraph workflow. Tries plans in order (LLM, rules, NL) until one matches the question, makes one safe repair (filling in a slot the question states, such as "positive" or "at x = 3"), and combines the math and intent statuses into the overall status. |
 | API | `backend/app/main.py`, `service.py` | FastAPI: `/api/solve`, `/api/followup`, `/api/health`, `/api/examples`; in-memory LRU sessions |
 | UI | `frontend/` | React 19 + TypeScript + Vite, KaTeX, Plotly (loaded lazily) |
 
@@ -148,80 +160,129 @@ cd backend && pytest
 cd frontend && npm test
 ```
 
-The backend suite (183 tests, including regression tests for every bug the audit found and benchmark floors) covers parser security, the correctness of every tool against known answers,
-verifier acceptance *and* failure detection, the rule planner, the LangGraph workflow with a fake LLM
-(including fallback when the LLM's plan is invalid or the provider is down), and the HTTP API.
-It runs fully offline. The frontend suite uses Vitest and Testing Library.
+The backend suite has 224 tests and runs fully offline. It covers:
+
+- parser security and the correctness of every tool against known answers;
+- the verifier, both accepting correct results and detecting wrong ones;
+- intent verification (`tests/test_intent.py`): ambiguous wording, wrong tool selection, missing constraints and misread parameters;
+- the LangGraph workflow with a fake LLM, including misreadings, declared ambiguities and provider failure;
+- the HTTP API, plus benchmark floors and an offline Groq replay test.
+
+The frontend suite (10 tests) uses Vitest and Testing Library.
 
 CI (`.github/workflows/ci.yml`) runs ruff, pytest, oxlint, vitest and the production build. It then
 builds both Docker images and smoke-tests the running stack.
 
 ## Evaluation benchmark
 
-`backend/eval/` contains a reproducible benchmark of **213 items**:
+`backend/eval/` contains a reproducible benchmark of **378 items**:
 
-- **181 answerable problems** covering all 12 tools: 150 in the development set plus 31 held-out paraphrases.
-- **34 problems that should be refused**: 13 unsolvable or invalid edge cases, 8 ambiguous inputs and 8 unsupported or unsafe requests. Five of these are tool-level edge cases that don't run in `oracle` mode.
-- **34 deliberately incorrect solutions**. Each takes a correct tool output and corrupts it, for example with a wrong root, a missing complex root, an extraneous root, a misapplied chain rule, a transposed inverse, or a population standard deviation reported as the sample one.
+| Part | Items | Purpose |
+|---|---|---|
+| Development set | 150 answerable + 29 should-refuse | All 12 tools, edge cases, ambiguous inputs, unsupported or unsafe requests |
+| Held-out paraphrases (Phase 2) | 31 answerable | Natural wording, written after the Phase 2 planner was frozen |
+| **Unseen real-world set (Phase 3)** | 45 answerable + 11 needing clarification | Word problems, "positive" / "real" constraints, distractor numbers, missing information. Committed in its own commit (`3c6ba6f`) before any Phase 3 change, and never used for tuning |
+| NL tuning set (Phase 3) | 38 answerable + 4 needing clarification | Used to develop the Phase 3 language handling |
+| Tampered solutions | 34 | Correct tool outputs corrupted, e.g. a wrong root, a missing complex root, a transposed inverse |
+| Tampered interpretations | 36 | Correct plans with one misreading each, e.g. the wrong operation, swapped bounds, an invented parameter, an ignored "positive", wrong strictness, swapped n and k |
 
-Ground truth is written by hand from closed forms and definitions. It is not produced by the app or by an LLM.
-`python -m eval.ground_truth` checks every truth independently with mpmath, NumPy and SciPy, and imports no
-application code. A test also confirms that the validator rejects deliberately wrong truths.
+That is 308 problems (264 answerable + 44 that should be refused or clarified), plus 34 tampered solutions and 36 tampered
+interpretations. Every rate in the reports is printed with its numerator and denominator. Two notes on denominators:
+
+- `oracle` mode skips the 29 natural-language-only refusal cases, because they have no canonical tool arguments.
+- Tamper controls are reported separately and are never pooled with real outputs.
+
+Ground truth is written by hand from closed forms and definitions. `python -m eval.ground_truth` confirms all 264 answers
+independently with mpmath, NumPy and SciPy, without importing application code.
 
 ```bash
 cd backend && python -m eval.ground_truth
 ```
 
 ```bash
-python -m eval.run --mode oracle   # math engine only: canonical tool arguments
+python -m eval.run --mode oracle   # math engine + intent checker on canonical plans
 ```
 
 ```bash
-python -m eval.run --mode rules    # full LangGraph pipeline with the deterministic planner
+python -m eval.run --mode rules    # full pipeline, offline planners
 ```
+
+**Results, `rules` mode**, from the committed reports in `eval/reports/`:
+
+| | Phase 2 baseline | Intent layer only | Phase 3 first run | Phase 3 final |
+|---|---|---|---|---|
+| Unseen: answer accuracy | 48.9% (22/45) | 48.9% (22/45) | 93.3% (42/45) | **95.6% (43/45)** |
+| Unseen: clarification when information is missing | 9/11 | 11/11 | 10/11 | **11/11** |
+| Unseen: wrong answers + answered-when-should-ask | 0 + 2 | 0 + 0 | 2 + 1 | **0 + 0** |
+| Held-out paraphrases: answer accuracy | 51.6% (16/31) | 51.6% | 96.8% (30/31) | **96.8% (30/31)** |
+| Development set: answer / refusal accuracy | 150/150, 29/29 | same | same | **150/150, 29/29** |
+| Incorrect answers presented as fully verified | n/a | 0 | 0/3 | **0** |
+
+| Final metric (`rules`, all 308 problems) | Value |
+|---|---|
+| Fully-verified precision (math verified *and* intent confirmed ⇒ correct) | 100% (176/176) |
+| Fully-verified recall | 67.4% (176/261). The other correct answers are shown as "verified with assumptions" or "approximate" |
+| Math-verified precision / recall | 100% (231/231) / 88.5% (231/261) |
+| Tampered solutions detected | 34/34 |
+| Tampered interpretations flagged / valid controls wrongly flagged | 36/36 / 0/35 |
+| Correct canonical plans flagged by the intent checker (`oracle`) | 0/264 |
+| Latency p50 / p95 | 22 ms / 96 ms |
+
+How these numbers were produced, and what they don't show:
+
+- **"Phase 3 first run"** was the first evaluation on the unseen set after development. It produced 2 wrong answers and 1
+  answer that should have been a question. All 3 were shown as "verified with assumptions", none as fully verified.
+  Two general safety fixes followed:
+  - a planned variable must occur in the expression (the planner had differentiated "with respect to f" in "for f(x) = …");
+  - the NL planner may no longer default to n! when only one number is given.
+
+  The second fix also made `unseen-11` correct, which accounts for 42 → 43. No coverage was added for the phrasings
+  still refused (`unseen-40`, `unseen-41`, `para-01`).
+- **The unseen set was written by the same author as the system**, so it measures generalisation beyond the tuned
+  examples, but not like independent user data. The intent checker was developed against the tampered-interpretation suite, so 36/36 there is a development figure.
+- **Held-out caveat.** The held-out paraphrases' failure list was visible after Phase 2. Some phenomena overlap with the NL tuning set
+  ("what's", "slope at", "area under"), so the 96.8% held-out figure is less clean than the unseen figure.
+- **Dataset correction.** The canonical plan for `para-03` was updated to `domain = real` after the intent checker correctly flagged that
+  the Phase 2 plan ignored "real". The ground truth was not changed.
+
+### Groq planner evaluation (prepared, not run)
+
+No Groq results have been measured: no API key was available, and real calls need explicit approval.
+
+Preview the run without sending anything:
 
 ```bash
-GROQ_API_KEY=... python -m eval.run --mode groq --allow-network   # real Groq calls, rate-limited
+python -m eval.run --mode groq --dry-run
 ```
 
-`groq` mode refuses to run without both a key and `--allow-network`. Reports are written to
-`backend/eval/reports/<mode>.{json,md}`.
+Run it for real (needs `GROQ_API_KEY` and explicit permission):
 
-**Results** (committed in `eval/reports/`, Python 3.13 / SymPy 1.14):
+```bash
+GROQ_API_KEY=... python -m eval.run --mode groq --allow-network --rpm 20
+```
 
-| Metric | oracle | rules |
-|---|---|---|
-| Final-answer accuracy, development set (150) | 100% | 100% |
-| Final-answer accuracy, held-out paraphrases (31) | 100% | 51.6% (all misses are refusals) |
-| Tool-selection accuracy | n/a | 100% dev / 67.7% held-out |
-| Refusal accuracy (edge / ambiguous / unsupported) | 100% | 100% |
-| Verified precision / recall | 100% / 87.9% | 100% / 87.5% |
-| False verification rate | 0% | 0% |
-| Tampered solutions detected (`failed`) | 34/34 | 34/34 |
-| Wrong-answer rate / crash rate | 0% / 0% | 0% / 0% |
-| Latency p50 / p95 | 6 ms / 55 ms | 9 ms / 63 ms |
+Re-score later from cached responses, with no key and no network:
 
-How to read these numbers:
+```bash
+python -m eval.run --mode groq --replay
+```
 
-- **Optimistic development set.** The rule planner and the development-set wording were written by the same
-  author, so 100% there is optimistic. The held-out paraphrases are the honest measure of how the planner copes with free text.
-- **Planner fixes on the held-out set.** On the first held-out run (`rules_first_run_before_fixes.md`), accuracy was 48.4% and there were 2 silent wrong answers.
-  "if" was parsed as `i·f`, and "Determine the rank" matched "det", so the determinant was computed and verified. Both are fixed.
-  No other planner change was made to fit the held-out set.
-- **Verification recall below 100%.** Correct answers that can only be checked numerically are labelled
-  `approximate`, not `verified`. These are limits, higher-order derivatives, numeric roots and LambertW roots.
-- **Verification checks computation, not interpretation.** If the planner misreads the question,
-  the verifier can still confirm the math of the misread problem. The UI therefore always shows the tool and arguments that were used.
+- The dry run reports 308 planner calls, about 15 minutes at 20 requests per minute.
+- Planner responses are cached in `eval/reports/groq_cache.jsonl`, keyed by prompt version, model and problem, so a run can be re-scored and audited.
+- Explanations use templates unless `--llm-explanations` is passed, so only the planner is evaluated.
+- LLM plans go through the same intent verification. When an LLM reading fails it, the workflow tries the offline plans, and asks for clarification if none fits.
 
 ## Known limitations / roadmap
 
 - No inequalities, ODEs, series or multivariable calculus yet. Requests for these are reported as unsupported.
 - Sessions are kept in memory and are lost on restart. A shared store such as Redis would be needed for more than one replica.
-- The offline rule planner understands common phrasings only. Free-form word problems need the LLM planner.
-- LLM-backed planning and explanations are covered by mocked tests only. CI does not call Groq.
-  The `groq` benchmark mode exists, but no Groq results have been measured yet.
-- The deterministic planner handles about half of free-form phrasings (held-out set). It refuses the rest rather than guessing.
+- The offline planners cover common phrasings and typical word problems. They still refuse equations written entirely in words
+  ("x squared minus 9 equals 0"), ordinal rankings ("first, second and third") and hyphenated counts ("5-card hands").
+- Intent verification is cue-based. It checks the plan against what the text says; it does not truly understand the text.
+  A misreading that is consistent with every stated number and cue can pass as "assumed". That status is never shown as fully verified.
+- LLM-backed planning and explanations are covered by mocked tests only. CI does not call Groq, and no Groq results have been measured yet.
 - Approximate numeric roots come from multi-start Newton search on [-10, 10]. Roots outside that range can be missed.
   The verifier's [-50, 50] sweep then reports `failed`.
 - Periodic equations report real solutions only. The period may not be the minimal one, for example 2π for sin²x.
-- Groq-mode benchmark results still need to be measured with a real key. More word-problem coverage is also needed.
+- Next steps: measure the Groq planner (`--mode groq`), add an independent LLM intent judge as a second check on LLM plans,
+  and collect real user questions for a truly external evaluation set.

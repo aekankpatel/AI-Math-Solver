@@ -94,7 +94,21 @@ def _num(value: sp.Basic, digits: int = 10) -> str:
 # --------------------------------------------------------------------------- algebra
 
 
-def solve_equation(equation: str, variable: str | None = None) -> ToolOutput:
+DOMAINS = ("complex", "real", "positive")
+
+
+def _in_domain(value: sp.Basic, domain: str) -> bool:
+    if domain == "complex":
+        return True
+    z = complex(sp.N(value, 30))
+    return abs(z.imag) < 1e-12 and (domain == "real" or z.real > 0)
+
+
+def solve_equation(equation: str, variable: str | None = None, domain: str = "complex") -> ToolOutput:
+    """Solve one equation. ``domain`` restricts the reported solutions to
+    complex (default), real or positive values, as the question requires."""
+    if domain not in DOMAINS:
+        raise ToolError(f"domain must be one of {', '.join(DOMAINS)}.")
     eq = parse_equation(equation)
     expr = sp.simplify(eq.lhs - eq.rhs) if isinstance(eq, sp.Eq) else eq
     if expr == 0 or expr is sp.true:
@@ -155,6 +169,8 @@ def solve_equation(equation: str, variable: str | None = None) -> ToolOutput:
         )
         latex = ", ".join(f"{sp.latex(var)} = {sp.latex(g)}" for g in general) + r",\ k \in \mathbb{Z}"
         steps.append(Step(title="General solution", latex=latex))
+        if domain == "positive":
+            raise ToolError("Listing only the positive members of a periodic solution family is not supported.")
         return ToolOutput(
             answer_text=", ".join(f"{var} = {_fmt(g)}" for g in general) + " (k any integer)",
             answer_latex=latex,
@@ -165,6 +181,7 @@ def solve_equation(equation: str, variable: str | None = None) -> ToolOutput:
                 "solutions": bases,
                 "real_solutions": bases,
                 "period": period,
+                "domain": "real",
             },
         )
 
@@ -190,6 +207,21 @@ def solve_equation(equation: str, variable: str | None = None) -> ToolOutput:
             )
         )
     solutions = _dedupe(solutions + _other_lambertw_branches(solutions))
+    if domain != "complex":
+        kept = [s for s in solutions if _in_domain(s, domain)]
+        dropped = [s for s in solutions if s not in kept]
+        if dropped:
+            steps.append(
+                Step(
+                    title=f"Keep only {domain} solutions",
+                    detail=f"The question asks for {domain} values, so these are discarded: "
+                    + ", ".join(_fmt(d) for d in dropped)
+                    + ".",
+                )
+            )
+        if not kept:
+            raise ToolError(f"The equation has no {domain} solutions.")
+        solutions = kept
     real = [s for s in solutions if s.is_real]
     if complex_set is not None and not isinstance(complex_set, sp.FiniteSet) and not approximate:
         if isinstance(complex_set, (sp.ImageSet, sp.Union)):
@@ -214,7 +246,7 @@ def solve_equation(equation: str, variable: str | None = None) -> ToolOutput:
         answer_latex=latex,
         steps=steps,
         approximate=approximate,
-        data={"expr": expr, "var": var, "solutions": solutions, "real_solutions": real},
+        data={"expr": expr, "var": var, "solutions": solutions, "real_solutions": real, "domain": domain},
     )
 
 
