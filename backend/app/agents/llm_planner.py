@@ -22,7 +22,7 @@ from app.agents.llm import get_chat_model
 from app.math_engine.tools import TOOLS
 from app.schemas import ProblemCategory, ToolCall
 
-PROMPT_VERSION = "2026-11-02.p3"
+PROMPT_VERSION = "2026-11-02.p3b"  # p3b: tool/category optional in the schema (Groq gpt-oss compatibility)
 
 PLANNER_SYSTEM_PROMPT = """You are the planning component of MathForge AI, a math solver.
 Your ONLY job is to translate the user's question into a call to exactly one whitelisted tool.
@@ -104,7 +104,10 @@ class PlannerOutput(BaseModel):
         "probability_distribution",
         "combinatorics",
         "none",
-    ]
+    ] = Field(
+        default="none",
+        description="The tool to call; 'none' (or omitted) when supported is false.",
+    )
     rationale: str = Field(default="", description="One short sentence on why this tool was chosen.")
     interpretation: str = Field(default="", description="One-sentence restatement of what will be computed.")
     assumptions: list[str] = Field(default_factory=list, description="Readings you had to assume.")
@@ -159,8 +162,10 @@ _TOOL_CATEGORY = {
 
 
 def plan_output_to_tool_call(out: PlannerOutput) -> ToolCall:
-    if not out.supported or out.tool == "none":
+    if not out.supported:
         raise LLMPlanUnsupported(out.clarification or "The problem is not supported.")
+    if out.tool == "none":  # claims to be supported but names no tool: not a usable plan
+        raise LLMPlanError("the plan names no tool")
     allowed = set(inspect.signature(TOOLS[out.tool]).parameters)
     fields = out.model_dump(exclude_none=True)
     args: dict[str, Any] = {k: v for k, v in fields.items() if k in allowed}
@@ -186,7 +191,10 @@ def pop_call_stats(problem: str) -> dict[str, Any] | None:
         return _USAGE.pop(problem, None)
 
 
-def _record_usage(problem: str, raw: Any, seconds: float) -> None:
+_TOOL_CALL_RETRIES = 1
+
+
+def _record_usage(problem: str, raw: Any, seconds: float, retries: int = 0) -> None:
     usage = getattr(raw, "usage_metadata", None) or {}
     meta = getattr(raw, "response_metadata", None) or {}
     token_usage = meta.get("token_usage") or {}
@@ -195,6 +203,7 @@ def _record_usage(problem: str, raw: Any, seconds: float) -> None:
         "output_tokens": usage.get("output_tokens", token_usage.get("completion_tokens")),
         "total_tokens": usage.get("total_tokens", token_usage.get("total_tokens")),
         "seconds": round(seconds, 3),
+        "tool_call_retries": retries,
         "model": meta.get("model_name"),
     }
     with _USAGE_LOCK:
@@ -246,12 +255,22 @@ def plan_with_llm(problem: str, context: str | None = None) -> ToolCall | None:
     structured = model.with_structured_output(PlannerOutput, include_raw=True)
     user = problem if not context else f"Previous context:\n{context}\n\nNew request: {problem}"
     t0 = time.perf_counter()
-    try:
-        result = structured.invoke([("system", PLANNER_SYSTEM_PROMPT), ("human", user)])
-    except Exception as exc:  # network, rate limit after retries, malformed tool call (400)
-        raise LLMPlanError(f"{type(exc).__name__}: {str(exc)[:200]}") from exc
+    retries = 0
+    while True:
+        try:
+            result = structured.invoke([("system", PLANNER_SYSTEM_PROMPT), ("human", user)])
+            break
+        except Exception as exc:  # network, rate limit after SDK retries, malformed tool call (400)
+            # Groq rejects malformed tool calls with HTTP 400 "Tool call validation failed" (e.g. gpt-oss
+            # occasionally calls a non-existent tool named 'json'). The SDK does not retry 400s; retry once.
+            if retries < _TOOL_CALL_RETRIES and "tool call validation failed" in str(exc).lower():
+                retries += 1
+                continue
+            raise LLMPlanError(
+                f"{type(exc).__name__}: {str(exc)[:200]}" + (f" (after {retries} retry)" if retries else "")
+            ) from exc
     if isinstance(result, dict) and "parsed" in result:
-        _record_usage(problem, result.get("raw"), time.perf_counter() - t0)
+        _record_usage(problem, result.get("raw"), time.perf_counter() - t0, retries)
         if result.get("parsing_error") is not None:
             raise LLMPlanError(f"invalid structured output: {str(result['parsing_error'])[:200]}")
         result = result.get("parsed")

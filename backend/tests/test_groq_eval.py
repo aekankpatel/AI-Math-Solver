@@ -432,6 +432,39 @@ def test_planner_output_without_category_is_accepted():
     from app.agents.llm_planner import plan_output_to_tool_call
 
     required = convert_to_openai_tool(PlannerOutput)["function"]["parameters"].get("required", [])
-    assert required == ["tool"]
+    assert required == []  # gpt-oss omits 'tool' when refusing and 'category' sometimes
     call = plan_output_to_tool_call(PlannerOutput(tool="integrate", expression="x^2", lower="0", upper="3"))
     assert call.category == PC.INTEGRALS
+
+
+def test_refusal_without_tool_is_a_refusal_not_an_error():
+    from app.agents.llm_planner import LLMPlanUnsupported, plan_output_to_tool_call
+
+    with pytest.raises(LLMPlanUnsupported, match="standard deviation"):
+        plan_output_to_tool_call(PlannerOutput(supported=False, clarification="What is the standard deviation?"))
+    with pytest.raises(LLMPlanError, match="no tool"):
+        plan_output_to_tool_call(PlannerOutput(supported=True))
+
+
+def test_tool_call_validation_400_is_retried_once(monkeypatch):
+    class Flaky(_FakeModel):
+        calls = 0
+
+        def invoke(self, messages):
+            Flaky.calls += 1
+            if Flaky.calls == 1:
+                raise RuntimeError("Error code: 400 - Tool call validation failed: attempted to call tool 'json'")
+            return {"raw": None, "parsed": PlannerOutput(tool="integrate", expression="x^2"), "parsing_error": None}
+
+    monkeypatch.setattr(llm_planner, "get_chat_model", lambda: Flaky())
+    call = plan_with_llm("integral of x^2 dx")
+    assert call.tool == "integrate" and Flaky.calls == 2
+    assert llm_planner.pop_call_stats("integral of x^2 dx")["tool_call_retries"] == 1
+
+    class AlwaysBad(_FakeModel):
+        def invoke(self, messages):
+            raise RuntimeError("Error code: 400 - Tool call validation failed: missing properties")
+
+    monkeypatch.setattr(llm_planner, "get_chat_model", lambda: AlwaysBad())
+    with pytest.raises(LLMPlanError, match="after 1 retry"):
+        plan_with_llm("integral of x^3 dx")
