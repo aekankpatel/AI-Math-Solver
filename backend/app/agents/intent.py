@@ -566,6 +566,8 @@ class _Ctx:
     checks: list[IntentCheck] = field(default_factory=list)
     assumptions: list[str] = field(default_factory=list)
     fixes: dict[str, Any] = field(default_factory=dict)
+    # numbers inside written math that a plan expression was proven equivalent to (count as used)
+    matched_numbers: set[float] = field(default_factory=set)
 
     def add(self, name: str, ok: bool, detail: str = "", severity: str = "error", fix: dict | None = None) -> None:
         self.checks.append(IntentCheck(name=name, passed=ok, detail=detail, severity=severity if not ok else "info"))
@@ -811,6 +813,8 @@ def _check_alignment(
     elif call.tool == "descriptive_statistics":
         _check_data(problem, call, ctx)
 
+    _check_unused(it, call, ctx)
+
     # 4. what the LLM planner itself declared
     for amb in declared_ambiguities or []:
         ctx.add("planner-declared ambiguity", False, amb, "missing")
@@ -909,8 +913,11 @@ def _check_numbers(problem: str, it: Intent, call: ToolCall, ctx: _Ctx) -> None:
                 )
             else:
                 ctx.add(f"{key} grounded", False, f"{key} = {value} does not appear in the question.")
-    # numbers in the question that the plan ignores
-    used = set()
+
+
+def _check_unused(it: Intent, call: ToolCall, ctx: _Ctx) -> None:
+    """Numbers in the question that the plan ignores (a warning: they may be context)."""
+    used = set(ctx.matched_numbers)
     for _, value in _arg_scalars(call):
         v = _scalar(value)
         if v is not None:
@@ -967,10 +974,18 @@ def _check_solve(problem: str, it: Intent, call: ToolCall, ctx: _Ctx) -> None:
         spans = [s for s in all_spans if _substantial(s)]
     text_eqs = [e for e in (_expr_of(s) for s in spans) if e is not None]
     if not text_eqs:
-        ctx.assumptions.append("The equation was reconstructed from words: " + "; ".join(equations))
+        if _check_reconstruction(problem, it, equations, ctx):
+            ctx.assumptions.append("The equation was reconstructed from words: " + "; ".join(equations))
     else:
         for eq_text, e in zip(equations, exprs, strict=True):
-            ok = e is not None and any(_equivalent(e, t, proportional=True) for t in text_eqs)
+            hits = [
+                sp_
+                for sp_, t in zip(spans, text_eqs, strict=False)
+                if e is not None and _equivalent(e, t, proportional=True)
+            ]
+            ok = bool(hits)
+            for sp_ in hits:
+                ctx.matched_numbers |= set(_numbers_in(sp_))
             ctx.add(
                 "equation matches question",
                 ok,
@@ -1030,6 +1045,71 @@ def _check_solve(problem: str, it: Intent, call: ToolCall, ctx: _Ctx) -> None:
             )
 
 
+def _atomic_numbers(text: str) -> list[float]:
+    """Number literals as written (no derived ratios): '2*sqrt(36)' -> [2, 36]."""
+    return [abs(float(m)) for m in re.findall(r"(?<![A-Za-z_\d.])\d+(?:\.\d+)?", text)]
+
+
+def _structural_constants(problem: str, it: Intent) -> set[float]:
+    """Constants a faithful translation from words may introduce without computing anything."""
+    low = _normalise(problem).lower()
+    allowed = set(it.allowed_numbers) | {0.0, 1.0}
+    if re.search(r"squar|sqrt|\broot|\bhalf|\btwice|\bdouble|quadratic|√", low):
+        allowed.add(2.0)
+    if re.search(r"\bcub(?:e|ed|ic)\b", low):
+        allowed.add(3.0)
+    if re.search(r"percent|%", low):
+        allowed.add(100.0)
+    return allowed
+
+
+def _check_reconstruction(problem: str, it: Intent, texts: list[str], ctx: _Ctx) -> bool:
+    """Provenance of math the plan wrote although the question contains no matching written math.
+
+    A faithful translation from words may only use numbers stated in the question (as digits or
+    words) plus structural constants; it must not reduce the problem to a constant. Values computed
+    by the planner itself (e.g. sqrt(36) from a triangle with sides 3, 4, 5 via Heron's formula)
+    cannot be verified by the math engine and are rejected. Returns True if the reconstruction is
+    acceptable (then it is reported as an assumption, never as confirmed)."""
+    allowed = _structural_constants(problem, it)
+    ok = True
+    for text in texts:
+        expr = _expr_of(text)
+        if expr is not None and not expr.free_symbols:
+            ctx.add(
+                "no precomputed values",
+                False,
+                f"The plan reduces the question to the constant '{text}', which is not written in the question: "
+                "the steps that produced it were done outside the math engine and cannot be verified.",
+            )
+            ok = False
+            continue
+        if expr is not None:
+            low_text = _normalise(problem)
+            strangers = sorted(
+                s_.name
+                for s_ in expr.free_symbols
+                if not re.search(rf"(?<![A-Za-z]){re.escape(s_.name)}(?![A-Za-z])", low_text)
+            )
+            if strangers:
+                ctx.add(
+                    "symbols traceable to the question",
+                    False,
+                    f"'{text}' introduces symbol(s) {', '.join(strangers)} that do not appear in the question.",
+                )
+                ok = False
+        foreign = sorted({n for n in _atomic_numbers(text) if not any(_num_close(n, a) for a in allowed)})
+        if foreign:
+            ctx.add(
+                "values traceable to the question",
+                False,
+                f"'{text}' uses value(s) {', '.join(f'{n:g}' for n in foreign)} that do not come from the question; "
+                "intermediate calculations done outside the math engine cannot be verified.",
+            )
+            ok = False
+    return ok
+
+
 def _check_expression(problem: str, it: Intent, call: ToolCall, ctx: _Ctx) -> None:
     arg = call.args.get("expression")
     e = _expr_of(str(arg)) if arg else None
@@ -1038,9 +1118,13 @@ def _check_expression(problem: str, it: Intent, call: ToolCall, ctx: _Ctx) -> No
     spans = [s for s in _math_spans(problem, strip_definitions=True) if "=" not in s and _substantial(s)]
     cands = [c for c in (_expr_of(s) for s in spans) if c is not None]
     if not cands:
-        ctx.assumptions.append(f"The expression was reconstructed from words: {arg}")
+        if _check_reconstruction(problem, it, [str(arg)], ctx):
+            ctx.assumptions.append(f"The expression was reconstructed from words: {arg}")
         return
-    ok = any(_equivalent(e, c) for c in cands)
+    matches = [sp_ for sp_, c in zip(spans, cands, strict=False) if _equivalent(e, c)]
+    ok = bool(matches)
+    for sp_ in matches:
+        ctx.matched_numbers |= set(_numbers_in(sp_))
     ctx.add(
         "expression matches question",
         ok,

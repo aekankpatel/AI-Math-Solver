@@ -632,6 +632,9 @@ def _select_cases(args: argparse.Namespace) -> list[dict[str, Any]]:
     if args.only:
         prefixes = tuple(args.only.split(","))
         cases = [c for c in cases if c["id"].startswith(prefixes)]
+    if getattr(args, "cases_from", None):  # exactly the problems of an earlier report (e.g. to re-score it)
+        done = {r["id"] for r in json.loads(Path(args.cases_from).read_text())["cases"]}
+        cases = [c for c in cases if c["id"] in done]
     if args.limit:
         cases = cases[: args.limit]
     return cases
@@ -687,6 +690,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--only", help="comma-separated case-id prefixes to run")
     ap.add_argument("--split", choices=SPLITS, help="run only one split")
     ap.add_argument("--limit", type=int, help="run only the first N selected problems")
+    ap.add_argument("--cases-from", help="run only the problems present in this earlier report (JSON)")
     ap.add_argument("--out-name", help="report file name (default: the mode, or <mode>_smoke for the smoke subset)")
     ap.add_argument("--no-write", action="store_true")
     args = ap.parse_args(argv)

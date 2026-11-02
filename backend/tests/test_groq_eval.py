@@ -51,7 +51,7 @@ def test_smoke_cases_are_the_benchmark_objects_themselves():
 
     from eval.run import _select_cases
 
-    chosen = _select_cases(Namespace(subset="smoke", split=None, only=None, limit=None))
+    chosen = _select_cases(Namespace(subset="smoke", split=None, only=None, limit=None, cases_from=None))
     assert [c["id"] for c in chosen] == list(SMOKE_IDS)
     assert all(c is BY_ID[c["id"]] for c in chosen)  # same question text and ground truth, nothing copied
 
