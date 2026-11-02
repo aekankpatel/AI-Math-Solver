@@ -87,9 +87,12 @@ class PlannerOutput(BaseModel):
     )
     # Optional: it is determined by the tool. Some models (e.g. gpt-oss on Groq) omit it, and Groq
     # rejects tool calls that miss a *required* property with HTTP 400.
-    category: (
-        Literal["algebra", "calculus", "integrals", "linear_algebra", "probability_statistics", "unsupported"] | None
-    ) = None
+    # Free text (not an enum): gpt-oss sometimes writes e.g. "combinatorics" and Groq rejects enum violations
+    # with HTTP 400. Unknown values are replaced by the category implied by the tool.
+    category: str | None = Field(
+        default=None,
+        description="One of algebra, calculus, integrals, linear_algebra, probability_statistics (optional).",
+    )
     tool: Literal[
         "solve_equation",
         "solve_system",
@@ -171,7 +174,7 @@ def plan_output_to_tool_call(out: PlannerOutput) -> ToolCall:
     args: dict[str, Any] = {k: v for k, v in fields.items() if k in allowed}
     return ToolCall(
         tool=out.tool,
-        category=ProblemCategory(out.category or _TOOL_CATEGORY[out.tool]),
+        category=ProblemCategory(out.category if out.category in _TOOL_CATEGORY.values() else _TOOL_CATEGORY[out.tool]),
         args=args,
         rationale=out.rationale,
         interpretation=out.interpretation,

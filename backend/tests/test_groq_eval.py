@@ -468,3 +468,53 @@ def test_tool_call_validation_400_is_retried_once(monkeypatch):
     monkeypatch.setattr(llm_planner, "get_chat_model", lambda: AlwaysBad())
     with pytest.raises(LLMPlanError, match="after 1 retry"):
         plan_with_llm("integral of x^3 dx")
+
+
+def test_unknown_category_value_does_not_reject_the_plan():
+    # gpt-oss wrote an out-of-enum category and Groq rejected the call (400) while it was an enum
+    from app.agents.llm_planner import plan_output_to_tool_call
+
+    call = plan_output_to_tool_call(
+        PlannerOutput(tool="combinatorics", category="combinatorics", operation="combinations", n=10, k=3)
+    )
+    assert call.category == PC.PROBABILITY_STATISTICS
+
+
+# ---- optional tool/category must not weaken validation of executable plans
+
+
+def test_executable_plans_still_need_a_valid_tool_and_required_arguments():
+    from app.agents.llm_planner import LLMPlanUnsupported, plan_output_to_tool_call
+
+    # refusals may omit the tool ...
+    with pytest.raises(LLMPlanUnsupported):
+        plan_output_to_tool_call(PlannerOutput(supported=False))
+    # ... but a "supported" plan without a tool is an error, never executed
+    with pytest.raises(LLMPlanError):
+        plan_output_to_tool_call(PlannerOutput(supported=True, expression="x^2"))
+    # an unknown tool name is still a schema violation
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        PlannerOutput(tool="run_python")
+    # a valid tool with missing required arguments is rejected by the intent check before any tool runs
+    for out, problem in [
+        (PlannerOutput(tool="integrate"), "Integrate x^2 from 0 to 3"),
+        (PlannerOutput(tool="solve_equation"), "Solve x^2 = 4"),
+        (PlannerOutput(tool="matrix_operation", operation="determinant"), "det of [[1,2],[3,4]]"),
+        (PlannerOutput(tool="probability_distribution", distribution="normal", query="cdf"), "normal P(X < 1)"),
+    ]:
+        call = plan_output_to_tool_call(out).model_copy(update={"source": "llm"})
+        iv, fixes = check_intent(problem, call)
+        assert iv.status == IS.MISMATCH and "missing required argument" in iv.clarification and fixes == {}
+
+
+def test_missing_category_is_derived_not_trusted():
+    from app.agents.llm_planner import plan_output_to_tool_call
+
+    call = plan_output_to_tool_call(PlannerOutput(tool="differentiate", expression="x^2"))
+    assert call.category == PC.CALCULUS
+    # an explicit but contradictory (valid-enum) category is still rejected as self-inconsistent
+    bad = plan_output_to_tool_call(PlannerOutput(tool="differentiate", category="linear_algebra", expression="x^2"))
+    iv, _ = check_intent("derivative of x^2", bad.model_copy(update={"source": "llm"}))
+    assert iv.status == IS.MISMATCH and "contradicts its tool" in iv.clarification

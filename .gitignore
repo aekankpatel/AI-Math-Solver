@@ -22,3 +22,7 @@ dist/
 
 # benchmark run progress (deleted after a completed run)
 *.progress.jsonl
+
+# raw LLM response caches (local only; reports in backend/eval/reports are the sanitized record)
+*cache*.jsonl
+backend/eval/reports/groq_cache.jsonl

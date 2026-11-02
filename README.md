@@ -245,7 +245,36 @@ How these numbers were produced, and what they don't show:
 - **Dataset correction.** The canonical plan for `para-03` was updated to `domain = real` after the intent checker correctly flagged that
   the Phase 2 plan ignored "real". The ground truth was not changed.
 
-### Groq planner evaluation (prepared, not run)
+### Groq smoke test (25 questions, `openai/gpt-oss-120b`)
+
+`llama-3.3-70b-versatile` turned out to be unavailable on the test account. `openai/gpt-oss-120b`, the largest available
+model with tool calling, is now the default. Reports: `eval/reports/groq_smoke.md`, plus
+`groq_smoke_run1_schema_errors.md` for the first run. These are smoke-test figures, **not** benchmark accuracy.
+
+| | Run 1 (schema errors) | Final run |
+|---|---|---|
+| Groq calls that failed (HTTP 400, schema validation) | 7/25 | 2/25 |
+| End-to-end answer accuracy | 19/19 | 19/19 |
+| End-to-end refusal / clarification accuracy | 6/6 | 6/6 |
+| Groq plans accepted by the intent check | 16/18 | 18/19 |
+| Accuracy of accepted Groq plans | 15/15 | 18/18 |
+| Groq tool selection (before intent check) | 16/16 | 18/18 |
+| Should-refuse inputs where Groq refused or its plan was rejected | 1/6 | 5/6 |
+| Should-refuse inputs where a Groq plan was accepted | 1/6¹ | 0/6 |
+| Tokens (measured calls) | not recorded | 45,042 over 24 calls (~1,880 per call) |
+| Groq call latency p50 / max; end-to-end p50 / p95 | n/a | 1.16 s / 1.81 s; 1.21 s / 1.83 s |
+
+¹ `edge-05` (the inverse of a singular matrix): a faithful plan, which the math engine then correctly refused.
+
+Run 1 failed when `gpt-oss` omitted fields the schema required (`tool` when refusing, `category`) or called a non-existent
+`json` tool. In those cases the offline planners answered, and the report recorded each one as a Groq `error`.
+The fixes made `tool` and `category` optional and added one retry for Groq's tool-call validation 400s.
+After the final run, a remaining failure (an out-of-range `category` value) was fixed offline but not re-measured.
+
+Raw planner response caches (`*cache*.jsonl`) stay on the local machine and are git-ignored. The committed reports hold
+the sanitized record: structured plans, statuses, usage and truncated error messages. `--replay` needs the local cache.
+
+### Groq planner evaluation (full benchmark prepared, not run)
 
 No Groq results have been measured yet. Each command below that contacts Groq needs `--allow-network`.
 
