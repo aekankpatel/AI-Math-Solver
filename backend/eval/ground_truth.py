@@ -65,9 +65,10 @@ def close(a: Any, b: Any, tol: float = 1e-12) -> bool:
 
 def _sides(eq: str) -> Callable[[Any], Any]:
     lhs, _, rhs = eq.partition("=")
-    var = "t" if "t" in eq and "x" not in eq else "x"
-    f = F(f"({lhs}) - ({rhs or 0})", var)
-    return f
+    expr = P(f"({lhs}) - ({rhs or 0})")
+    names = sorted(s.name for s in expr.free_symbols)
+    var = names[0] if len(names) == 1 else "x"
+    return F(f"({lhs}) - ({rhs or 0})", var)
 
 
 def _real_scan(f: Callable, lo: float, hi: float, n: int = 6001) -> list[mp.mpf]:
@@ -102,6 +103,17 @@ def check_roots(case: dict) -> str | None:
     for r in truth:
         if abs(f(r)) > 1e-15:  # decimal truths carry 20 significant digits
             return f"f({r}) = {f(r)} is not zero"
+    domain = case["truth"].get("domain", "complex")
+
+    def in_domain(z: Any) -> bool:
+        if domain == "complex":
+            return True
+        real = abs(mp.im(z)) < 1e-20
+        return real and (domain == "real" or mp.re(z) > 0)
+
+    for r in truth:
+        if not in_domain(r):
+            return f"truth value {r} violates domain {domain}"
     expr = P(eq.split("=")[0]) - P(eq.split("=")[1] if "=" in eq else 0)
     sym = sorted(expr.free_symbols, key=lambda s: s.name)[0]
     num, _ = sp.fraction(sp.together(expr))
@@ -109,12 +121,12 @@ def check_roots(case: dict) -> str | None:
         poly = sp.Poly(num, sym)
         coeffs = [complex(c) for c in poly.all_coeffs()]
         found = mp.polyroots(coeffs, maxsteps=200, extraprec=200)
-        found = [z for z in found if mp.isfinite(f(z)) if not _is_pole(f, z)]
+        found = [z for z in found if mp.isfinite(f(z)) if not _is_pole(f, z) and in_domain(z)]
         missing = [z for z in found if not any(close(z, t, 1e-10) for t in truth)]
         if missing:
             return f"truth misses polynomial roots {missing}"
     for r in _real_scan(f, -50, 50):
-        if not any(close(r, t, 1e-10) for t in truth):
+        if in_domain(r) and not any(close(r, t, 1e-10) for t in truth):
             return f"truth misses real root {r}"
     return None
 

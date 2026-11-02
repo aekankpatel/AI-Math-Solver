@@ -41,27 +41,38 @@ def test_ground_truth_validator_rejects_wrong_truth(case_id, bad_truth):
     assert ground_truth.validate(case) is not None
 
 
+def _rate(metric):
+    return metric["rate"]
+
+
 def test_oracle_mode_regression_floor():
     records = [_run_case(c, "oracle") for c in CASES]
     s = summarize(records, run_tamper(), "oracle")
-    assert s["final_answer_accuracy"] == 1.0
-    assert s["refusal_accuracy"] == 1.0
-    assert s["verification"]["false_verification_rate"] == 0.0
-    assert s["verification"]["tamper_detected"] == f"{len(TAMPER)}/{len(TAMPER)}"
-    assert s["failure_rates"]["crash_rate"] == 0.0
+    assert _rate(s["all_problems"]["answer_accuracy"]) == 1.0
+    assert _rate(s["all_problems"]["refusal_accuracy"]) == 1.0
+    assert s["math_verification"]["incorrect_answers_marked_verified"]["n"] == 0
+    assert s["tampered_solutions"]["detected_as_failed"]["n"] == len(TAMPER)
+    assert s["crashes"]["n"] == 0
 
 
 def test_rules_mode_regression_floor():
     records = [_run_case(c, "rules") for c in CASES]
     s = summarize(records, [], "rules")
-    assert s["development_set"]["final_answer_accuracy"] == 1.0
-    assert s["development_set"]["tool_selection_accuracy"] == 1.0
-    assert s["refusal_accuracy"] == 1.0
-    assert s["failure_rates"]["crash_rate"] == 0.0
-    # Held-out paraphrases: the deterministic planner may refuse, but must not
-    # silently answer wrongly.
-    held = [r for r in records if r["heldout"]]
-    assert not [r["id"] for r in held if r.get("outcome") == "answered" and not r.get("correct")]
+    dev = s["splits"]["dev"]
+    assert _rate(dev["answer_accuracy"]) == 1.0
+    assert _rate(dev["tool_selection_accuracy"]) == 1.0
+    assert _rate(dev["refusal_accuracy"]) == 1.0
+    assert s["crashes"]["n"] == 0
+    # Held-out and unseen problems: the planner may refuse, but must not silently answer wrongly.
+    for split in ("heldout", "unseen"):
+        assert s["splits"][split]["wrong_answers"]["n"] == 0, split
+
+
+def test_counts_are_consistent():
+    records = [_run_case(c, "rules") for c in CASES[:5]]
+    s = summarize(records, run_tamper(), "rules")
+    c = s["counts"]
+    assert c["benchmark_items"] == c["problems"] + c["tampered_solutions"] + c["tampered_interpretations"]
 
 
 def test_groq_mode_requires_key_and_explicit_permission(monkeypatch, capsys):

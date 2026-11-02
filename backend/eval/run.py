@@ -110,7 +110,7 @@ def _run_case(case: dict[str, Any], mode: str) -> dict[str, Any]:
         "problem": case["problem"],
         "expected_tool": case["tool"],
         "expect": "reject" if case["truth"]["type"] == "reject" else "answer",
-        "heldout": bool(case.get("heldout")),
+        "split": case.get("split") or ("heldout" if case.get("heldout") else "dev"),
     }
     t0 = time.perf_counter()
     try:
@@ -151,79 +151,101 @@ def _run_case(case: dict[str, Any], mode: str) -> dict[str, Any]:
     return rec
 
 
-def _rate(n: int, d: int) -> float | None:
-    return round(n / d, 4) if d else None
+SPLITS = ("dev", "heldout", "unseen", "dev_nl")
+SPLIT_LABELS = {
+    "dev": "development set",
+    "heldout": "held-out paraphrases (Phase 2)",
+    "unseen": "unseen real-world set (Phase 3, frozen)",
+    "dev_nl": "NL tuning set (Phase 3)",
+}
 
 
-def summarize(records: list[dict[str, Any]], tamper: list[dict[str, Any]], mode: str) -> dict[str, Any]:
+def _m(n: int, d: int) -> dict[str, Any]:
+    """A metric with an explicit numerator and denominator."""
+    return {"n": n, "d": d, "rate": round(n / d, 4) if d else None}
+
+
+def _refused(r: dict[str, Any]) -> bool:
+    return r.get("outcome") in ("rejected", "clarify")
+
+
+def _split_metrics(rows: list[dict[str, Any]], mode: str) -> dict[str, Any]:
+    ans = [r for r in rows if r["expect"] == "answer"]
+    ref = [r for r in rows if r["expect"] == "reject"]
+    return {
+        "answerable": len(ans),
+        "should_refuse": len(ref),
+        "answer_accuracy": _m(sum(1 for r in ans if r.get("correct")), len(ans)),
+        "refusal_accuracy": _m(sum(1 for r in ref if _refused(r)), len(ref)),
+        "overall_accuracy": _m(sum(1 for r in ans if r.get("correct")) + sum(1 for r in ref if _refused(r)), len(rows)),
+        "tool_selection_accuracy": None
+        if mode == "oracle"
+        else _m(sum(1 for r in ans if r.get("planned_tool") == r["expected_tool"]), len(ans)),
+        "wrong_answers": _m(sum(1 for r in ans if r.get("outcome") == "answered" and not r.get("correct")), len(ans)),
+        "answered_when_should_refuse": _m(sum(1 for r in ref if r.get("outcome") == "answered"), len(ref)),
+    }
+
+
+def summarize(
+    records: list[dict[str, Any]],
+    tamper: list[dict[str, Any]],
+    mode: str,
+    intent_tamper: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    intent_tamper = intent_tamper or []
     ran = [r for r in records if r.get("outcome") != "skipped"]
-    answerable = [r for r in ran if r["expect"] == "answer"]
-    refusals = [r for r in ran if r["expect"] == "reject"]
-    correct = [r for r in answerable if r.get("correct")]
-    refused_ok = [r for r in refusals if r.get("outcome") == "rejected"]
+    answered = [r for r in ran if r.get("outcome") == "answered"]
+    # every answered output is labelled correct/incorrect against ground truth
+    # (an answer to a problem that should have been refused is incorrect)
+    good = [r for r in answered if r.get("correct")]
+    bad = [r for r in answered if not r.get("correct")]
+    math_verified = [r for r in answered if r.get("verification") == "verified"]
+    overall_verified = [r for r in answered if r.get("overall") == "verified"]
 
     by_cat: dict[str, list[int]] = defaultdict(lambda: [0, 0])
     by_tool: dict[str, list[int]] = defaultdict(lambda: [0, 0])
     for r in ran:
-        ok = bool(r.get("correct")) if r["expect"] == "answer" else r.get("outcome") == "rejected"
+        ok = bool(r.get("correct")) if r["expect"] == "answer" else _refused(r)
         by_cat[r["category"]][0] += ok
         by_cat[r["category"]][1] += 1
         if r["expect"] == "answer":
             by_tool[r["expected_tool"]][0] += ok
             by_tool[r["expected_tool"]][1] += 1
 
-    tool_sel = [r for r in answerable if r.get("planned_tool") is not None or r.get("outcome") != "crash"]
-    tool_ok = [r for r in tool_sel if r.get("planned_tool") == r["expected_tool"]]
-
-    # Verification labels: an answer is "correct" only if it matches ground truth.
-    labelled = [(r.get("verification"), bool(r.get("correct"))) for r in ran if r.get("outcome") == "answered"]
-    labelled += [(t["tampered_status"], False) for t in tamper]
-    labelled += [(t["control_status"], True) for t in tamper]
-    good = [s for s, c in labelled if c]
-    bad = [s for s, c in labelled if not c]
-    verified = [c for s, c in labelled if s == "verified"]
-
-    def subset_acc(rows: list[dict[str, Any]]) -> dict[str, Any]:
-        rows = [r for r in rows if r["expect"] == "answer"]
-        return {
-            "cases": len(rows),
-            "final_answer_accuracy": _rate(sum(1 for r in rows if r.get("correct")), len(rows)),
-            "tool_selection_accuracy": None
-            if mode == "oracle"
-            else _rate(sum(1 for r in rows if r.get("planned_tool") == r["expected_tool"]), len(rows)),
-        }
-
     lat = [r["latency_ms"] for r in ran if "latency_ms" in r]
     q = statistics.quantiles(lat, n=20) if len(lat) >= 20 else [max(lat)] * 19
+    splits = {sp_: [r for r in ran if r["split"] == sp_] for sp_ in SPLITS}
 
-    return {
+    summary = {
         "mode": mode,
-        "cases": {
-            "total": len(records),
-            "run": len(ran),
-            "answerable": len(answerable),
-            "should_refuse": len(refusals),
-            "tamper": len(tamper),
+        "counts": {
+            "benchmark_items": len(records) + len(tamper) + len(intent_tamper),
+            "problems": len(records),
+            "answerable": sum(1 for r in records if r["expect"] == "answer"),
+            "should_refuse": sum(1 for r in records if r["expect"] == "reject"),
+            "tampered_solutions": len(tamper),
+            "tampered_interpretations": len(intent_tamper),
+            "problems_run": len(ran),
+            "problems_skipped": len(records) - len(ran),
+            "skipped_reason": "oracle mode cannot run natural-language-only cases (no canonical tool arguments)"
+            if len(records) != len(ran)
+            else None,
         },
-        "final_answer_accuracy": _rate(len(correct), len(answerable)),
-        "refusal_accuracy": _rate(len(refused_ok), len(refusals)),
-        "overall_accuracy": _rate(len(correct) + len(refused_ok), len(ran)),
-        "tool_selection_accuracy": None if mode == "oracle" else _rate(len(tool_ok), len(answerable)),
-        "development_set": subset_acc([r for r in ran if not r["heldout"]]),
-        "heldout_paraphrases": subset_acc([r for r in ran if r["heldout"]]),
-        "verification": {
-            "labelled_outputs": len(labelled),
-            "correct_outputs": len(good),
-            "incorrect_outputs": len(bad),
-            "verified_precision": _rate(sum(verified), len(verified)),
-            "verified_recall": _rate(sum(1 for s in good if s == "verified"), len(good)),
-            "false_verification_rate": _rate(sum(1 for s in bad if s == "verified"), len(bad)),
-            "error_detection_rate": _rate(sum(1 for s in bad if s == "failed"), len(bad)),
-            "incorrect_not_trusted_rate": _rate(sum(1 for s in bad if s in ("failed", "unverified")), len(bad)),
-            "status_on_correct": dict(Counter(good)),
-            "status_on_incorrect": dict(Counter(bad)),
-            "tamper_detected": f"{sum(1 for t in tamper if t['tampered_status'] == 'failed')}/{len(tamper)}",
-            "tamper_controls_verified": f"{sum(1 for t in tamper if t['control_status'] == 'verified')}/{len(tamper)}",
+        "all_problems": _split_metrics(ran, mode),
+        "splits": {sp_: _split_metrics(rows, mode) for sp_, rows in splits.items() if rows},
+        "math_verification": {
+            "scope": "answers produced on benchmark problems (tamper controls excluded)",
+            "verified_precision": _m(sum(1 for r in math_verified if r.get("correct")), len(math_verified)),
+            "verified_recall": _m(sum(1 for r in good if r.get("verification") == "verified"), len(good)),
+            "incorrect_answers_marked_verified": _m(sum(1 for r in bad if r.get("verification") == "verified"), len(bad)),
+            "status_on_correct": dict(Counter(r.get("verification") for r in good)),
+            "status_on_incorrect": dict(Counter(r.get("verification") for r in bad)),
+        },
+        "tampered_solutions": {
+            "detected_as_failed": _m(sum(1 for t in tamper if t["tampered_status"] == "failed"), len(tamper)),
+            "marked_verified": _m(sum(1 for t in tamper if t["tampered_status"] == "verified"), len(tamper)),
+            "untampered_controls_verified": _m(sum(1 for t in tamper if t["control_status"] == "verified"), len(tamper)),
+            "untampered_controls_failed": _m(sum(1 for t in tamper if t["control_status"] == "failed"), len(tamper)),
         },
         "latency_ms": {
             "mean": round(statistics.mean(lat), 1),
@@ -231,58 +253,131 @@ def summarize(records: list[dict[str, Any]], tamper: list[dict[str, Any]], mode:
             "p95": round(q[18], 1),
             "max": round(max(lat), 1),
         },
-        "failure_rates": {
-            "crash_rate": _rate(sum(1 for r in ran if r.get("outcome") == "crash"), len(ran)),
-            "unexpected_refusal_rate": _rate(
-                sum(1 for r in answerable if r.get("outcome") == "rejected"), len(answerable)
-            ),
-            "wrong_answer_rate": _rate(
-                sum(1 for r in answerable if r.get("outcome") == "answered" and not r.get("correct")), len(answerable)
-            ),
-            "answered_when_should_refuse_rate": _rate(
-                sum(1 for r in refusals if r.get("outcome") == "answered"), len(refusals)
-            ),
-        },
+        "crashes": _m(sum(1 for r in ran if r.get("outcome") == "crash"), len(ran)),
         "accuracy_by_category": {k: f"{v[0]}/{v[1]}" for k, v in sorted(by_cat.items())},
         "accuracy_by_tool": {k: f"{v[0]}/{v[1]}" for k, v in sorted(by_tool.items())},
     }
+    if any("overall" in r for r in answered):
+        summary["end_to_end_trust"] = {
+            "scope": "answers produced on benchmark problems; 'fully verified' = math verified AND intent confirmed",
+            "fully_verified_precision": _m(sum(1 for r in overall_verified if r.get("correct")), len(overall_verified)),
+            "fully_verified_recall": _m(sum(1 for r in good if r.get("overall") == "verified"), len(good)),
+            "incorrect_answers_fully_verified": _m(sum(1 for r in bad if r.get("overall") == "verified"), len(bad)),
+            "math_verified_but_wrong": _m(sum(1 for r in bad if r.get("verification") == "verified"), len(bad)),
+            "intent_status_on_correct": dict(Counter(r.get("intent") for r in good)),
+            "intent_status_on_incorrect": dict(Counter(r.get("intent") for r in bad)),
+            "clarification_requests": _m(sum(1 for r in ran if r.get("outcome") == "clarify"), len(ran)),
+        }
+    if intent_tamper:
+        summary["tampered_interpretations"] = {
+            "flagged": _m(sum(1 for t in intent_tamper if t["tampered_status"] in ("mismatch", "ambiguous")), len(intent_tamper)),
+            "accepted_as_confirmed": _m(sum(1 for t in intent_tamper if t["tampered_status"] == "confirmed"), len(intent_tamper)),
+            "correct_controls_confirmed": _m(
+                sum(1 for t in intent_tamper if t["control_status"] in ("confirmed", "assumed")), len(intent_tamper)
+            ),
+            "correct_controls_flagged": _m(
+                sum(1 for t in intent_tamper if t["control_status"] in ("mismatch", "ambiguous")), len(intent_tamper)
+            ),
+        }
+    return summary
 
 
-def to_markdown(summary: dict[str, Any], records: list[dict[str, Any]], tamper: list[dict[str, Any]]) -> str:
-    v = summary["verification"]
-    pct = lambda x: "n/a" if x is None else f"{100 * x:.1f}%"  # noqa: E731
+def _fmt(metric: dict[str, Any] | None) -> str:
+    if not metric or metric["rate"] is None:
+        return "n/a"
+    return f"{100 * metric['rate']:.1f}% ({metric['n']}/{metric['d']})"
+
+
+def to_markdown(
+    summary: dict[str, Any],
+    records: list[dict[str, Any]],
+    tamper: list[dict[str, Any]],
+    intent_tamper: list[dict[str, Any]] | None = None,
+) -> str:
+    c, a = summary["counts"], summary["all_problems"]
+    mv, ts = summary["math_verification"], summary["tampered_solutions"]
     lines = [
         f"# MathForge benchmark — mode `{summary['mode']}`",
         "",
-        f"Cases: {summary['cases']['run']} run ({summary['cases']['answerable']} answerable, "
-        f"{summary['cases']['should_refuse']} should be refused) + {summary['cases']['tamper']} tampered solutions.",
+        f"**{c['benchmark_items']} benchmark items** = {c['problems']} problems ({c['answerable']} answerable + "
+        f"{c['should_refuse']} that should be refused or clarified) + {c['tampered_solutions']} tampered solutions"
+        + (f" + {c['tampered_interpretations']} tampered interpretations" if c["tampered_interpretations"] else "")
+        + ".",
+        f"Problems run in this mode: {c['problems_run']}"
+        + (f" ({c['problems_skipped']} skipped: {c['skipped_reason']})." if c["problems_skipped"] else "."),
+        "",
+        "Every rate is shown with its numerator/denominator.",
+        "",
+        "## Accuracy by split",
+        "",
+        "| Split | Answer accuracy | Refusal / clarification accuracy | Tool selection | Wrong answers |",
+        "|---|---|---|---|---|",
+    ]
+    for sp_, m in summary["splits"].items():
+        lines.append(
+            f"| {SPLIT_LABELS[sp_]} | {_fmt(m['answer_accuracy'])} | {_fmt(m['refusal_accuracy'])} | "
+            f"{_fmt(m['tool_selection_accuracy'])} | {_fmt(m['wrong_answers'])} |"
+        )
+    lines.append(
+        f"| **all problems** | {_fmt(a['answer_accuracy'])} | {_fmt(a['refusal_accuracy'])} | "
+        f"{_fmt(a['tool_selection_accuracy'])} | {_fmt(a['wrong_answers'])} |"
+    )
+    lines += [
+        "",
+        "## Mathematical verification",
+        "",
+        f"Scope: {mv['scope']}.",
         "",
         "| Metric | Value |",
         "|---|---|",
-        f"| Final-answer accuracy | {pct(summary['final_answer_accuracy'])} |",
-        f"| Refusal accuracy (edge / ambiguous / unsupported) | {pct(summary['refusal_accuracy'])} |",
-        f"| Overall accuracy | {pct(summary['overall_accuracy'])} |",
-        f"| Tool-selection accuracy | {pct(summary['tool_selection_accuracy'])} |",
-        f"| — development set ({summary['development_set']['cases']}) accuracy / tool selection | "
-        f"{pct(summary['development_set']['final_answer_accuracy'])} / "
-        f"{pct(summary['development_set']['tool_selection_accuracy'])} |",
-        f"| — held-out paraphrases ({summary['heldout_paraphrases']['cases']}) accuracy / tool selection | "
-        f"{pct(summary['heldout_paraphrases']['final_answer_accuracy'])} / "
-        f"{pct(summary['heldout_paraphrases']['tool_selection_accuracy'])} |",
-        f"| Verified precision (verified ⇒ correct) | {pct(v['verified_precision'])} |",
-        f"| Verified recall (correct ⇒ verified) | {pct(v['verified_recall'])} |",
-        f"| False verification rate (incorrect marked verified) | {pct(v['false_verification_rate'])} |",
-        f"| Error detection rate (incorrect marked failed) | {pct(v['error_detection_rate'])} |",
-        f"| Tampered solutions detected | {v['tamper_detected']} |",
-        f"| Latency mean / p50 / p95 / max (ms) | {summary['latency_ms']['mean']} / {summary['latency_ms']['p50']} / "
-        f"{summary['latency_ms']['p95']} / {summary['latency_ms']['max']} |",
-        f"| Crash rate | {pct(summary['failure_rates']['crash_rate'])} |",
-        f"| Unexpected refusal rate | {pct(summary['failure_rates']['unexpected_refusal_rate'])} |",
-        f"| Wrong-answer rate | {pct(summary['failure_rates']['wrong_answer_rate'])} |",
-        f"| Answered when it should refuse | {pct(summary['failure_rates']['answered_when_should_refuse_rate'])} |",
+        f"| Verified precision (math `verified` ⇒ answer correct) | {_fmt(mv['verified_precision'])} |",
+        f"| Verified recall (correct ⇒ math `verified`) | {_fmt(mv['verified_recall'])} |",
+        f"| Incorrect answers marked math-`verified` | {_fmt(mv['incorrect_answers_marked_verified'])} |",
+        f"| Tampered solutions detected as `failed` | {_fmt(ts['detected_as_failed'])} |",
+        f"| Tampered solutions marked `verified` | {_fmt(ts['marked_verified'])} |",
+        f"| Untampered controls `verified` (rest are `approximate`) | {_fmt(ts['untampered_controls_verified'])} |",
         "",
-        f"Verification status on correct outputs: `{v['status_on_correct']}`  ",
-        f"Verification status on incorrect outputs: `{v['status_on_incorrect']}`",
+        f"Status on correct answers: `{mv['status_on_correct']}`  ",
+        f"Status on incorrect answers: `{mv['status_on_incorrect']}`",
+    ]
+    if "end_to_end_trust" in summary:
+        e = summary["end_to_end_trust"]
+        lines += [
+            "",
+            "## Intent verification and end-to-end trust",
+            "",
+            f"Scope: {e['scope']}.",
+            "",
+            "| Metric | Value |",
+            "|---|---|",
+            f"| Fully-verified precision | {_fmt(e['fully_verified_precision'])} |",
+            f"| Fully-verified recall | {_fmt(e['fully_verified_recall'])} |",
+            f"| Incorrect answers presented as fully verified | {_fmt(e['incorrect_answers_fully_verified'])} |",
+            f"| Incorrect answers whose math was `verified` (misinterpretations) | {_fmt(e['math_verified_but_wrong'])} |",
+            f"| Clarification requests | {_fmt(e['clarification_requests'])} |",
+            "",
+            f"Intent status on correct answers: `{e['intent_status_on_correct']}`  ",
+            f"Intent status on incorrect answers: `{e['intent_status_on_incorrect']}`",
+        ]
+    if "tampered_interpretations" in summary:
+        t = summary["tampered_interpretations"]
+        lines += [
+            "",
+            "## Tampered interpretations (wrong tool / arguments for the original question)",
+            "",
+            "| Metric | Value |",
+            "|---|---|",
+            f"| Flagged (mismatch or ambiguous) | {_fmt(t['flagged'])} |",
+            f"| Accepted as confirmed | {_fmt(t['accepted_as_confirmed'])} |",
+            f"| Correct interpretations confirmed (controls) | {_fmt(t['correct_controls_confirmed'])} |",
+            f"| Correct interpretations wrongly flagged (controls) | {_fmt(t['correct_controls_flagged'])} |",
+        ]
+    lines += [
+        "",
+        "## Latency and robustness",
+        "",
+        f"Latency mean / p50 / p95 / max: {summary['latency_ms']['mean']} / {summary['latency_ms']['p50']} / "
+        f"{summary['latency_ms']['p95']} / {summary['latency_ms']['max']} ms. Crashes: {_fmt(summary['crashes'])}.",
         "",
         "## Accuracy by category",
         "",
@@ -290,7 +385,7 @@ def to_markdown(summary: dict[str, Any], records: list[dict[str, Any]], tamper: 
         "|---|---|",
         *[f"| {k} | {val} |" for k, val in summary["accuracy_by_category"].items()],
         "",
-        "## Accuracy by tool (answerable cases)",
+        "## Accuracy by tool (answerable problems)",
         "",
         "| Tool | Correct |",
         "|---|---|",
@@ -303,10 +398,7 @@ def to_markdown(summary: dict[str, Any], records: list[dict[str, Any]], tamper: 
         r
         for r in records
         if r.get("outcome") != "skipped"
-        and (
-            (r["expect"] == "answer" and not r.get("correct"))
-            or (r["expect"] == "reject" and r.get("outcome") != "rejected")
-        )
+        and ((r["expect"] == "answer" and not r.get("correct")) or (r["expect"] == "reject" and not _refused(r)))
     ]
     if not failures:
         lines.append("None.")
@@ -315,11 +407,16 @@ def to_markdown(summary: dict[str, Any], records: list[dict[str, Any]], tamper: 
         for r in failures:
             detail = (r.get("detail") or r.get("error") or "").replace("|", "\\|")[:140]
             lines.append(
-                f"| {r['id']} | `{r['problem']}` | {r.get('outcome')} | {r.get('planned_tool')} / {r['expected_tool']} | {detail} |"
+                f"| {r['id']} | `{r['problem']}` | {r.get('outcome')} | {r.get('planned_tool')} / "
+                f"{r['expected_tool']} | {detail} |"
             )
     missed = [t for t in tamper if t["tampered_status"] != "failed"]
     lines += ["", "## Tampered solutions not marked `failed`", ""]
     lines += ["None."] if not missed else [f"- {t['id']} ({t['note']}): {t['tampered_status']}" for t in missed]
+    if intent_tamper:
+        missed_i = [t for t in intent_tamper if t["tampered_status"] not in ("mismatch", "ambiguous")]
+        lines += ["", "## Tampered interpretations not flagged", ""]
+        lines += ["None."] if not missed_i else [f"- {t['id']} ({t['note']}): {t['tampered_status']}" for t in missed_i]
     return "\n".join(lines) + "\n"
 
 
@@ -332,6 +429,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--rpm", type=float, default=20.0, help="max requests per minute in groq mode")
     ap.add_argument("--llm-explanations", action="store_true", help="groq mode: also generate LLM explanations")
     ap.add_argument("--only", help="comma-separated case-id prefixes to run")
+    ap.add_argument("--split", choices=SPLITS, help="run only one split")
+    ap.add_argument("--out-name", help="report file name (default: the mode)")
     ap.add_argument("--no-write", action="store_true")
     args = ap.parse_args(argv)
 
@@ -353,9 +452,11 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     cases = CASES
+    if args.split:
+        cases = [c for c in cases if (c.get("split") or ("heldout" if c.get("heldout") else "dev")) == args.split]
     if args.only:
         prefixes = tuple(args.only.split(","))
-        cases = [c for c in CASES if c["id"].startswith(prefixes)]
+        cases = [c for c in cases if c["id"].startswith(prefixes)]
     delay = 60.0 / args.rpm if args.mode == "groq" else 0.0
     records = []
     for case in cases:
@@ -370,14 +471,15 @@ def main(argv: list[str] | None = None) -> int:
 
         summary["environment"]["model"] = get_settings().llm_model
 
-    print(json.dumps({k: v for k, v in summary.items() if k not in ("accuracy_by_tool",)}, indent=2))
+    print(to_markdown(summary, records, tamper).split("## Latency")[0])
     if not args.no_write:
+        name = args.out_name or args.mode
         REPORT_DIR.mkdir(exist_ok=True)
-        (REPORT_DIR / f"{args.mode}.json").write_text(
+        (REPORT_DIR / f"{name}.json").write_text(
             json.dumps({"summary": summary, "cases": records, "tamper": tamper}, indent=2, default=str) + "\n"
         )
-        (REPORT_DIR / f"{args.mode}.md").write_text(to_markdown(summary, records, tamper))
-        print(f"reports written to {REPORT_DIR}/{args.mode}.{{json,md}}")
+        (REPORT_DIR / f"{name}.md").write_text(to_markdown(summary, records, tamper))
+        print(f"reports written to {REPORT_DIR}/{name}.{{json,md}}")
     return 0
 
 
