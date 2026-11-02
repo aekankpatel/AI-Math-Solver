@@ -1,0 +1,1819 @@
+{
+  "summary": {
+    "mode": "groq",
+    "counts": {
+      "benchmark_items": 95,
+      "problems": 25,
+      "answerable": 19,
+      "should_refuse": 6,
+      "tampered_solutions": 34,
+      "tampered_interpretations": 36,
+      "problems_run": 25,
+      "problems_skipped": 0,
+      "skipped_reason": null
+    },
+    "all_problems": {
+      "answerable": 19,
+      "should_refuse": 6,
+      "answer_accuracy": {
+        "n": 19,
+        "d": 19,
+        "rate": 1.0
+      },
+      "refusal_accuracy": {
+        "n": 6,
+        "d": 6,
+        "rate": 1.0
+      },
+      "overall_accuracy": {
+        "n": 25,
+        "d": 25,
+        "rate": 1.0
+      },
+      "tool_selection_accuracy": {
+        "n": 19,
+        "d": 19,
+        "rate": 1.0
+      },
+      "wrong_answers": {
+        "n": 0,
+        "d": 19,
+        "rate": 0.0
+      },
+      "answered_when_should_refuse": {
+        "n": 0,
+        "d": 6,
+        "rate": 0.0
+      }
+    },
+    "splits": {
+      "dev": {
+        "answerable": 3,
+        "should_refuse": 4,
+        "answer_accuracy": {
+          "n": 3,
+          "d": 3,
+          "rate": 1.0
+        },
+        "refusal_accuracy": {
+          "n": 4,
+          "d": 4,
+          "rate": 1.0
+        },
+        "overall_accuracy": {
+          "n": 7,
+          "d": 7,
+          "rate": 1.0
+        },
+        "tool_selection_accuracy": {
+          "n": 3,
+          "d": 3,
+          "rate": 1.0
+        },
+        "wrong_answers": {
+          "n": 0,
+          "d": 3,
+          "rate": 0.0
+        },
+        "answered_when_should_refuse": {
+          "n": 0,
+          "d": 4,
+          "rate": 0.0
+        }
+      },
+      "heldout": {
+        "answerable": 7,
+        "should_refuse": 0,
+        "answer_accuracy": {
+          "n": 7,
+          "d": 7,
+          "rate": 1.0
+        },
+        "refusal_accuracy": {
+          "n": 0,
+          "d": 0,
+          "rate": null
+        },
+        "overall_accuracy": {
+          "n": 7,
+          "d": 7,
+          "rate": 1.0
+        },
+        "tool_selection_accuracy": {
+          "n": 7,
+          "d": 7,
+          "rate": 1.0
+        },
+        "wrong_answers": {
+          "n": 0,
+          "d": 7,
+          "rate": 0.0
+        },
+        "answered_when_should_refuse": {
+          "n": 0,
+          "d": 0,
+          "rate": null
+        }
+      },
+      "unseen": {
+        "answerable": 8,
+        "should_refuse": 2,
+        "answer_accuracy": {
+          "n": 8,
+          "d": 8,
+          "rate": 1.0
+        },
+        "refusal_accuracy": {
+          "n": 2,
+          "d": 2,
+          "rate": 1.0
+        },
+        "overall_accuracy": {
+          "n": 10,
+          "d": 10,
+          "rate": 1.0
+        },
+        "tool_selection_accuracy": {
+          "n": 8,
+          "d": 8,
+          "rate": 1.0
+        },
+        "wrong_answers": {
+          "n": 0,
+          "d": 8,
+          "rate": 0.0
+        },
+        "answered_when_should_refuse": {
+          "n": 0,
+          "d": 2,
+          "rate": 0.0
+        }
+      },
+      "dev_nl": {
+        "answerable": 1,
+        "should_refuse": 0,
+        "answer_accuracy": {
+          "n": 1,
+          "d": 1,
+          "rate": 1.0
+        },
+        "refusal_accuracy": {
+          "n": 0,
+          "d": 0,
+          "rate": null
+        },
+        "overall_accuracy": {
+          "n": 1,
+          "d": 1,
+          "rate": 1.0
+        },
+        "tool_selection_accuracy": {
+          "n": 1,
+          "d": 1,
+          "rate": 1.0
+        },
+        "wrong_answers": {
+          "n": 0,
+          "d": 1,
+          "rate": 0.0
+        },
+        "answered_when_should_refuse": {
+          "n": 0,
+          "d": 0,
+          "rate": null
+        }
+      }
+    },
+    "math_verification": {
+      "scope": "answers produced on benchmark problems (tamper controls excluded)",
+      "verified_precision": {
+        "n": 17,
+        "d": 17,
+        "rate": 1.0
+      },
+      "verified_recall": {
+        "n": 17,
+        "d": 19,
+        "rate": 0.8947
+      },
+      "incorrect_answers_marked_verified": {
+        "n": 0,
+        "d": 0,
+        "rate": null
+      },
+      "status_on_correct": {
+        "verified": 17,
+        "approximate": 2
+      },
+      "status_on_incorrect": {}
+    },
+    "tampered_solutions": {
+      "detected_as_failed": {
+        "n": 34,
+        "d": 34,
+        "rate": 1.0
+      },
+      "marked_verified": {
+        "n": 0,
+        "d": 34,
+        "rate": 0.0
+      },
+      "untampered_controls_verified": {
+        "n": 29,
+        "d": 34,
+        "rate": 0.8529
+      },
+      "untampered_controls_failed": {
+        "n": 0,
+        "d": 34,
+        "rate": 0.0
+      }
+    },
+    "latency_ms": {
+      "mean": 1209.3,
+      "p50": 1136.7,
+      "p95": 1714.2,
+      "max": 1720.0
+    },
+    "crashes": {
+      "n": 0,
+      "d": 25,
+      "rate": 0.0
+    },
+    "accuracy_by_category": {
+      "algebra": "1/1",
+      "ambiguous": "1/1",
+      "calculus": "1/1",
+      "dev_nl": "1/1",
+      "edge": "1/1",
+      "integrals": "1/1",
+      "paraphrase": "7/7",
+      "unseen": "10/10",
+      "unsupported": "2/2"
+    },
+    "accuracy_by_tool": {
+      "combinatorics": "1/1",
+      "descriptive_statistics": "1/1",
+      "differentiate": "3/3",
+      "expand_expression": "1/1",
+      "factor_expression": "1/1",
+      "integrate": "2/2",
+      "limit": "1/1",
+      "matrix_operation": "2/2",
+      "probability_distribution": "3/3",
+      "simplify_expression": "1/1",
+      "solve_equation": "2/2",
+      "solve_system": "1/1"
+    },
+    "end_to_end_trust": {
+      "scope": "answers produced on benchmark problems; 'fully verified' = math verified AND intent confirmed",
+      "fully_verified_precision": {
+        "n": 13,
+        "d": 13,
+        "rate": 1.0
+      },
+      "fully_verified_recall": {
+        "n": 13,
+        "d": 19,
+        "rate": 0.6842
+      },
+      "incorrect_answers_fully_verified": {
+        "n": 0,
+        "d": 0,
+        "rate": null
+      },
+      "math_verified_but_wrong": {
+        "n": 0,
+        "d": 0,
+        "rate": null
+      },
+      "intent_status_on_correct": {
+        "assumed": 4,
+        "confirmed": 15
+      },
+      "intent_status_on_incorrect": {},
+      "clarification_requests": {
+        "n": 3,
+        "d": 25,
+        "rate": 0.12
+      }
+    },
+    "tampered_interpretations": {
+      "flagged": {
+        "n": 36,
+        "d": 36,
+        "rate": 1.0
+      },
+      "accepted_as_confirmed": {
+        "n": 0,
+        "d": 36,
+        "rate": 0.0
+      },
+      "controls_handled_correctly": {
+        "n": 36,
+        "d": 36,
+        "rate": 1.0
+      },
+      "valid_controls_wrongly_flagged": {
+        "n": 0,
+        "d": 35,
+        "rate": 0.0
+      }
+    },
+    "environment": {
+      "python": "3.13.18",
+      "sympy": "1.14.0",
+      "model": "openai/gpt-oss-120b",
+      "prompt_version": "2026-11-02.p3",
+      "replay": false
+    },
+    "subset": "smoke (25 problems; not the full benchmark)",
+    "llm_planner": {
+      "scope": "every problem run; end-to-end metrics above include offline fallbacks, these isolate the LLM",
+      "outcomes": {
+        "accepted": {
+          "n": 16,
+          "d": 25,
+          "rate": 0.64
+        },
+        "error": {
+          "n": 7,
+          "d": 25,
+          "rate": 0.28
+        },
+        "rejected_clarify": {
+          "n": 1,
+          "d": 25,
+          "rate": 0.04
+        },
+        "rejected_fallback": {
+          "n": 1,
+          "d": 25,
+          "rate": 0.04
+        }
+      },
+      "llm_errors": {
+        "n": 7,
+        "d": 25,
+        "rate": 0.28
+      },
+      "llm_plans_accepted_by_intent_check": {
+        "n": 16,
+        "d": 18,
+        "rate": 0.8889
+      },
+      "accuracy_of_accepted_llm_plans": {
+        "n": 15,
+        "d": 15,
+        "rate": 1.0
+      },
+      "llm_plans_repaired": {
+        "n": 0,
+        "d": 16,
+        "rate": 0.0
+      },
+      "llm_refused_or_was_rejected_on_should_refuse_inputs": {
+        "n": 1,
+        "d": 6,
+        "rate": 0.1667
+      },
+      "llm_plan_answered_should_refuse_input": {
+        "n": 1,
+        "d": 6,
+        "rate": 0.1667
+      },
+      "tool_selection_of_llm_plans": {
+        "n": 16,
+        "d": 16,
+        "rate": 1.0
+      },
+      "token_usage": {
+        "measured_calls": 18,
+        "input_tokens": 30047,
+        "output_tokens": 3309,
+        "total_tokens": 33356,
+        "mean_tokens_per_call": 1853,
+        "llm_call_seconds_p50": 1.118,
+        "llm_call_seconds_max": 1.694
+      }
+    }
+  },
+  "cases": [
+    {
+      "id": "unseen-01",
+      "category": "unseen",
+      "problem": "A rectangle satisfies x^2 + 3x = 40. What positive value of x works?",
+      "expected_tool": "solve_equation",
+      "expect": "answer",
+      "split": "unseen",
+      "planned_tool": "solve_equation",
+      "planner": "nl",
+      "intent": "assumed",
+      "interpretation": "Solve x^2 + 3x = 40 for the unknown (positive solutions only).",
+      "overall": "verified_with_assumptions",
+      "llm": "error",
+      "llm_error": "LLMPlanError: BadRequestError: Error code: 400 - {'error': {'message': \"Tool call validation failed: tool call validation failed: parameters for tool PlannerOutput did not match schema: errors: [missing properties: 'category']\", 't",
+      "latency_ms": 1477.4,
+      "outcome": "answered",
+      "answer": "x = 5",
+      "verification": "verified",
+      "correct": true,
+      "detail": "got [5]",
+      "llm_cached": false
+    },
+    {
+      "id": "para-02",
+      "category": "paraphrase",
+      "problem": "Find x if 4x - 7 = 9",
+      "expected_tool": "solve_equation",
+      "expect": "answer",
+      "split": "heldout",
+      "planned_tool": "solve_equation",
+      "planner": "llm",
+      "intent": "confirmed",
+      "interpretation": "Solve 4*x - 7 = 9 for x.",
+      "overall": "verified",
+      "llm_plan": {
+        "tool": "solve_equation",
+        "args": {
+          "domain": "complex",
+          "equation": "4*x - 7 = 9",
+          "variable": "x"
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 1136.7,
+      "outcome": "answered",
+      "answer": "x = 4",
+      "verification": "verified",
+      "correct": true,
+      "detail": "got [4]",
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1662,
+        "output_tokens": 163,
+        "total_tokens": 1825,
+        "seconds": 1.059,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "unseen-06",
+      "category": "unseen",
+      "problem": "Two numbers x and y satisfy x + y = 12 and x - y = 4. Find them.",
+      "expected_tool": "solve_system",
+      "expect": "answer",
+      "split": "unseen",
+      "planned_tool": "solve_system",
+      "planner": "llm",
+      "intent": "confirmed",
+      "interpretation": "Solve the system x + y = 12; x - y = 4.",
+      "overall": "verified",
+      "llm_plan": {
+        "tool": "solve_system",
+        "args": {
+          "equations": [
+            "x + y = 12",
+            "x - y = 4"
+          ],
+          "variables": [
+            "x",
+            "y"
+          ]
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 1071.4,
+      "outcome": "answered",
+      "answer": "(x = 8, y = 4)",
+      "verification": "verified",
+      "correct": true,
+      "detail": "got [{'x': 8, 'y': 4}]",
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1673,
+        "output_tokens": 169,
+        "total_tokens": 1842,
+        "seconds": 1.027,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "simp-02",
+      "category": "algebra",
+      "problem": "simplify (x^2 - 1)/(x - 1)",
+      "expected_tool": "simplify_expression",
+      "expect": "answer",
+      "split": "dev",
+      "planned_tool": "simplify_expression",
+      "planner": "llm",
+      "intent": "confirmed",
+      "interpretation": "Simplify (x^2 - 1)/(x - 1).",
+      "overall": "verified",
+      "llm_plan": {
+        "tool": "simplify_expression",
+        "args": {
+          "expression": "(x^2 - 1)/(x - 1)"
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 966.2,
+      "outcome": "answered",
+      "answer": "x + 1",
+      "verification": "verified",
+      "correct": true,
+      "detail": "got x + 1",
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1665,
+        "output_tokens": 141,
+        "total_tokens": 1806,
+        "seconds": 0.908,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "para-06",
+      "category": "paraphrase",
+      "problem": "Factorise x^2 - 7x + 12",
+      "expected_tool": "factor_expression",
+      "expect": "answer",
+      "split": "heldout",
+      "planned_tool": "factor_expression",
+      "planner": "llm",
+      "intent": "confirmed",
+      "interpretation": "Factor x^2 - 7x + 12.",
+      "overall": "verified",
+      "llm_plan": {
+        "tool": "factor_expression",
+        "args": {
+          "expression": "x^2 - 7x + 12"
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 1229.3,
+      "outcome": "answered",
+      "answer": "(x - 4)*(x - 3)",
+      "verification": "verified",
+      "correct": true,
+      "detail": "got (x - 4)*(x - 3)",
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1662,
+        "output_tokens": 146,
+        "total_tokens": 1808,
+        "seconds": 1.189,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "nl-08",
+      "category": "dev_nl",
+      "problem": "Please multiply out (2x + 1)(x - 3)",
+      "expected_tool": "expand_expression",
+      "expect": "answer",
+      "split": "dev_nl",
+      "planned_tool": "expand_expression",
+      "planner": "llm",
+      "intent": "confirmed",
+      "interpretation": "Expand (2*x + 1)*(x - 3).",
+      "overall": "verified",
+      "llm_plan": {
+        "tool": "expand_expression",
+        "args": {
+          "expression": "(2*x + 1)*(x - 3)"
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 910.2,
+      "outcome": "answered",
+      "answer": "2*x**2 - 5*x - 3",
+      "verification": "verified",
+      "correct": true,
+      "detail": "got 2*x**2 - 5*x - 3",
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1665,
+        "output_tokens": 155,
+        "total_tokens": 1820,
+        "seconds": 0.858,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "diff-13",
+      "category": "calculus",
+      "problem": "derivative of x^2 at x = 3",
+      "expected_tool": "differentiate",
+      "expect": "answer",
+      "split": "dev",
+      "planned_tool": "differentiate",
+      "planner": "llm",
+      "intent": "confirmed",
+      "interpretation": "Derivative of x^2 with respect to x, evaluated at x = 3.",
+      "overall": "verified",
+      "llm_plan": {
+        "tool": "differentiate",
+        "args": {
+          "expression": "x^2",
+          "point": "3"
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 1174.5,
+      "outcome": "answered",
+      "answer": "2*x; at x = 3: 6",
+      "verification": "verified",
+      "correct": true,
+      "detail": "got 6",
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1661,
+        "output_tokens": 168,
+        "total_tokens": 1829,
+        "seconds": 1.118,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "unseen-11",
+      "category": "unseen",
+      "problem": "Find f''(x) for f(x) = x^3 + 2x^2",
+      "expected_tool": "differentiate",
+      "expect": "answer",
+      "split": "unseen",
+      "planned_tool": "differentiate",
+      "planner": "llm",
+      "intent": "confirmed",
+      "interpretation": "Second derivative of x^3 + 2*x^2 with respect to x.",
+      "overall": "approximate",
+      "llm_plan": {
+        "tool": "differentiate",
+        "args": {
+          "expression": "x^3 + 2*x^2",
+          "variable": "x",
+          "order": 2
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 1044.1,
+      "outcome": "answered",
+      "answer": "6*x + 4",
+      "verification": "approximate",
+      "correct": true,
+      "detail": "got 6*x + 4",
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1670,
+        "output_tokens": 199,
+        "total_tokens": 1869,
+        "seconds": 1.006,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "para-08",
+      "category": "paraphrase",
+      "problem": "What is the slope of y = x^3 at x = 2?",
+      "expected_tool": "differentiate",
+      "expect": "answer",
+      "split": "heldout",
+      "planned_tool": "differentiate",
+      "planner": "llm",
+      "intent": "confirmed",
+      "interpretation": "Derivative of x^3 with respect to x, evaluated at x = 2.",
+      "overall": "verified",
+      "llm_plan": {
+        "tool": "differentiate",
+        "args": {
+          "expression": "x^3",
+          "point": "2"
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 1720.0,
+      "outcome": "answered",
+      "answer": "3*x**2; at x = 2: 12",
+      "verification": "verified",
+      "correct": true,
+      "detail": "got 12",
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1666,
+        "output_tokens": 156,
+        "total_tokens": 1822,
+        "seconds": 1.694,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "unseen-15",
+      "category": "unseen",
+      "problem": "Find the area under the curve y = sin(x) from x = 0 to x = pi/2",
+      "expected_tool": "integrate",
+      "expect": "answer",
+      "split": "unseen",
+      "planned_tool": "integrate",
+      "planner": "nl",
+      "intent": "assumed",
+      "interpretation": "Definite integral of sin(x) dx from 0 to pi/2.",
+      "overall": "verified_with_assumptions",
+      "llm_plan": {
+        "tool": "integrate",
+        "args": {
+          "expression": "sin(x)",
+          "variable": "x",
+          "lower": "0",
+          "upper": "pi/2"
+        },
+        "ambiguities": []
+      },
+      "llm": "rejected_fallback",
+      "latency_ms": 1101.8,
+      "outcome": "answered",
+      "answer": "1",
+      "verification": "verified",
+      "correct": true,
+      "detail": "got 1",
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1672,
+        "output_tokens": 173,
+        "total_tokens": 1845,
+        "seconds": 1.052,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "dint-05",
+      "category": "integrals",
+      "problem": "integrate 1/sqrt(x) from 0 to 1",
+      "expected_tool": "integrate",
+      "expect": "answer",
+      "split": "dev",
+      "planned_tool": "integrate",
+      "planner": "rules",
+      "intent": "confirmed",
+      "interpretation": "Definite integral of 1/sqrt(x) dx from 0 to 1.",
+      "overall": "verified",
+      "llm": "error",
+      "llm_error": "LLMPlanError: BadRequestError: Error code: 400 - {'error': {'message': \"Tool call validation failed: tool call validation failed: attempted to call tool 'json' which was not in request.tools\", 'type': 'invalid_request_error', 'code",
+      "latency_ms": 1633.8,
+      "outcome": "answered",
+      "answer": "2",
+      "verification": "verified",
+      "correct": true,
+      "detail": "got 2",
+      "llm_cached": false
+    },
+    {
+      "id": "para-16",
+      "category": "paraphrase",
+      "problem": "What does (x^3 - 8)/(x - 2) approach as x approaches 2?",
+      "expected_tool": "limit",
+      "expect": "answer",
+      "split": "heldout",
+      "planned_tool": "limit",
+      "planner": "llm",
+      "intent": "confirmed",
+      "interpretation": "Limit of (x^3 - 8)/(x - 2) as x \u2192 2.",
+      "overall": "approximate",
+      "llm_plan": {
+        "tool": "limit",
+        "args": {
+          "expression": "(x^3 - 8)/(x - 2)",
+          "variable": "x",
+          "point": "2"
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 1079.2,
+      "outcome": "answered",
+      "answer": "12",
+      "verification": "approximate",
+      "correct": true,
+      "detail": "got 12",
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1672,
+        "output_tokens": 217,
+        "total_tokens": 1889,
+        "seconds": 1.026,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "para-21",
+      "category": "paraphrase",
+      "problem": "Determine the rank of the matrix [[1, 2, 3], [2, 4, 6], [1, 0, 1]]",
+      "expected_tool": "matrix_operation",
+      "expect": "answer",
+      "split": "heldout",
+      "planned_tool": "matrix_operation",
+      "planner": "llm",
+      "intent": "confirmed",
+      "interpretation": "Rank of A = [[1.0, 2.0, 3.0], [2.0, 4.0, 6.0], [1.0, 0.0, 1.0]].",
+      "overall": "verified",
+      "llm_plan": {
+        "tool": "matrix_operation",
+        "args": {
+          "operation": "rank",
+          "matrix": [
+            [
+              1.0,
+              2.0,
+              3.0
+            ],
+            [
+              2.0,
+              4.0,
+              6.0
+            ],
+            [
+              1.0,
+              0.0,
+              1.0
+            ]
+          ]
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 1304.5,
+      "outcome": "answered",
+      "answer": "2",
+      "verification": "verified",
+      "correct": true,
+      "detail": "got 2",
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1683,
+        "output_tokens": 142,
+        "total_tokens": 1825,
+        "seconds": 1.28,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "unseen-25",
+      "category": "unseen",
+      "problem": "Solve the linear system Ax = b with A = [[1, 2], [3, 5]] and b = [5, 13]",
+      "expected_tool": "matrix_operation",
+      "expect": "answer",
+      "split": "unseen",
+      "planned_tool": "matrix_operation",
+      "planner": "llm",
+      "intent": "confirmed",
+      "interpretation": "Solve of A = [[1.0, 2.0], [3.0, 5.0]], b = [5.0, 13.0].",
+      "overall": "verified",
+      "llm_plan": {
+        "tool": "matrix_operation",
+        "args": {
+          "operation": "solve",
+          "matrix": [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              3.0,
+              5.0
+            ]
+          ],
+          "vector": [
+            5.0,
+            13.0
+          ]
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 1257.8,
+      "outcome": "answered",
+      "answer": "[1, 2]",
+      "verification": "verified",
+      "correct": true,
+      "detail": "got [[1], [2]]",
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1681,
+        "output_tokens": 166,
+        "total_tokens": 1847,
+        "seconds": 1.239,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "unseen-27",
+      "category": "unseen",
+      "problem": "The daily temperatures were 21, 23, 19, 25 and 22 degrees. What were the mean and standard deviation?",
+      "expected_tool": "descriptive_statistics",
+      "expect": "answer",
+      "split": "unseen",
+      "planned_tool": "descriptive_statistics",
+      "planner": "llm",
+      "intent": "assumed",
+      "interpretation": "Summary statistics of the data [21.0, 23.0, 19.0, 25.0, 22.0].",
+      "overall": "verified_with_assumptions",
+      "llm_plan": {
+        "tool": "descriptive_statistics",
+        "args": {
+          "data": [
+            21.0,
+            23.0,
+            19.0,
+            25.0,
+            22.0
+          ]
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 1156.4,
+      "outcome": "answered",
+      "answer": "mean = 22 (\u224822.0000), median = 22, sample std = 2.23607, population std = 2.00000",
+      "verification": "verified",
+      "correct": true,
+      "detail": "ok",
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1678,
+        "output_tokens": 251,
+        "total_tokens": 1929,
+        "seconds": 1.137,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "unseen-33",
+      "category": "unseen",
+      "problem": "Emails arrive at an average rate of 4 per minute (Poisson). What is the probability of fewer than 2 emails in a minute?",
+      "expected_tool": "probability_distribution",
+      "expect": "answer",
+      "split": "unseen",
+      "planned_tool": "probability_distribution",
+      "planner": "llm",
+      "intent": "confirmed",
+      "interpretation": "P(X \u2264 1.0) for X ~ Poisson(lambda=4.0).",
+      "overall": "verified",
+      "llm_plan": {
+        "tool": "probability_distribution",
+        "args": {
+          "distribution": "poisson",
+          "params": {
+            "lambda": 4.0
+          },
+          "query": "cdf",
+          "x": 1.0
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 1131.8,
+      "outcome": "answered",
+      "answer": "P(X \u2264 1) = 5*exp(-4) \u2248 0.0915782",
+      "verification": "verified",
+      "correct": true,
+      "detail": "got 5*exp(-4)",
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1679,
+        "output_tokens": 237,
+        "total_tokens": 1916,
+        "seconds": 1.091,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "para-26",
+      "category": "paraphrase",
+      "problem": "Heights are normally distributed with mean 170 and standard deviation 10. What fraction are taller than 190?",
+      "expected_tool": "probability_distribution",
+      "expect": "answer",
+      "split": "heldout",
+      "planned_tool": "probability_distribution",
+      "planner": "llm",
+      "intent": "confirmed",
+      "interpretation": "P(X > 190.0) for X ~ Normal(mean=170.0, std=10.0).",
+      "overall": "verified",
+      "llm_plan": {
+        "tool": "probability_distribution",
+        "args": {
+          "distribution": "normal",
+          "params": {
+            "mean": 170.0,
+            "std": 10.0
+          },
+          "query": "greater",
+          "x": 190.0
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 1226.1,
+      "outcome": "answered",
+      "answer": "P(X > 190) = 1/2 - erf(sqrt(2))/2 \u2248 0.0227501",
+      "verification": "verified",
+      "correct": true,
+      "detail": "got 1/2 - erf(sqrt(2))/2",
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1673,
+        "output_tokens": 182,
+        "total_tokens": 1855,
+        "seconds": 1.189,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "unseen-30",
+      "category": "unseen",
+      "problem": "A basketball player makes 70% of free throws. If she takes 10 shots, what is the probability she makes exactly 7?",
+      "expected_tool": "probability_distribution",
+      "expect": "answer",
+      "split": "unseen",
+      "planned_tool": "probability_distribution",
+      "planner": "nl",
+      "intent": "assumed",
+      "interpretation": "P(X = 7) for X ~ Binomial(n=10, p=0.7).",
+      "overall": "verified_with_assumptions",
+      "llm": "error",
+      "llm_error": "LLMPlanError: BadRequestError: Error code: 400 - {'error': {'message': \"Tool call validation failed: tool call validation failed: attempted to call tool 'json' which was not in request.tools\", 'type': 'invalid_request_error', 'code",
+      "latency_ms": 1443.2,
+      "outcome": "answered",
+      "answer": "P(X = 7) = 66706983/250000000 \u2248 0.266828",
+      "verification": "verified",
+      "correct": true,
+      "detail": "got 66706983/250000000",
+      "llm_cached": false
+    },
+    {
+      "id": "para-30",
+      "category": "paraphrase",
+      "problem": "In how many ways can a committee of 3 be chosen from 10 people?",
+      "expected_tool": "combinatorics",
+      "expect": "answer",
+      "split": "heldout",
+      "planned_tool": "combinatorics",
+      "planner": "llm",
+      "intent": "confirmed",
+      "interpretation": "C(10, 3) (order does not matter).",
+      "overall": "verified",
+      "llm_plan": {
+        "tool": "combinatorics",
+        "args": {
+          "operation": "combinations",
+          "n": 10,
+          "k": 3
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 1014.5,
+      "outcome": "answered",
+      "answer": "120",
+      "verification": "verified",
+      "correct": true,
+      "detail": "got 120",
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1667,
+        "output_tokens": 156,
+        "total_tokens": 1823,
+        "seconds": 1.0,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "unseen-46",
+      "category": "unseen",
+      "problem": "Solve x + y = 10",
+      "expected_tool": null,
+      "expect": "reject",
+      "split": "unseen",
+      "planned_tool": "solve_equation",
+      "planner": "llm",
+      "intent": "ambiguous",
+      "interpretation": "Solve x + y = 10 for the unknown.",
+      "llm_plan": {
+        "tool": "solve_equation",
+        "args": {
+          "equation": "x + y = 10"
+        },
+        "ambiguities": [
+          "The equation involves two variables but only one equation, so there are infinitely many solutions; no specific variable to solve for is specified."
+        ]
+      },
+      "llm": "rejected_clarify",
+      "outcome": "clarify",
+      "error": "The equation has several unknowns (x, y) but only one equation. Which variable should be solved for, or is there another equation?",
+      "latency_ms": 1700.8,
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1657,
+        "output_tokens": 330,
+        "total_tokens": 1987,
+        "seconds": 1.69,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "unseen-51",
+      "category": "unseen",
+      "problem": "Normal distribution with mean 10: what is P(X < 12)?",
+      "expected_tool": null,
+      "expect": "reject",
+      "split": "unseen",
+      "planned_tool": "probability_distribution",
+      "planner": "rules",
+      "intent": "ambiguous",
+      "interpretation": "P(X \u2264 12) for X ~ Normal(mean=10, std=1).",
+      "llm": "error",
+      "llm_error": "LLMPlanError: BadRequestError: Error code: 400 - {'error': {'message': \"Tool call validation failed: tool call validation failed: parameters for tool PlannerOutput did not match schema: errors: [missing properties: 'tool']\", 'type'",
+      "outcome": "clarify",
+      "error": "The question does not state the standard deviation; the plan assumed std = 1. Please provide it.",
+      "latency_ms": 1013.3,
+      "llm_cached": false
+    },
+    {
+      "id": "amb-02",
+      "category": "ambiguous",
+      "problem": "determinant",
+      "expected_tool": null,
+      "expect": "reject",
+      "split": "dev",
+      "planned_tool": null,
+      "planner": "rules",
+      "llm": "error",
+      "llm_error": "LLMPlanError: BadRequestError: Error code: 400 - {'error': {'message': \"Tool call validation failed: tool call validation failed: parameters for tool PlannerOutput did not match schema: errors: [missing properties: 'tool']\", 'type'",
+      "outcome": "rejected",
+      "error": "I couldn't recognise this as a supported problem (algebra, calculus, integrals, linear algebra, probability or statistics). Try rephrasing, e.g. 'solve x^2 - 4 = 0'.",
+      "latency_ms": 964.7,
+      "llm_cached": false
+    },
+    {
+      "id": "unsup-02",
+      "category": "unsupported",
+      "problem": "solve y'' + y = 0",
+      "expected_tool": null,
+      "expect": "reject",
+      "split": "dev",
+      "planned_tool": "solve_equation",
+      "planner": "rules",
+      "intent": "mismatch",
+      "interpretation": "Solve y'' + y = 0 for the unknown.",
+      "llm": "error",
+      "llm_error": "LLMPlanError: BadRequestError: Error code: 400 - {'error': {'message': \"Tool call validation failed: tool call validation failed: parameters for tool PlannerOutput did not match schema: errors: [missing properties: 'tool']\", 'type'",
+      "outcome": "clarify",
+      "error": "The plan was rejected: 'equation' is not a valid mathematical expression (Expression contains disallowed characters: \"'\").",
+      "latency_ms": 1037.5,
+      "llm_cached": false
+    },
+    {
+      "id": "unsup-05",
+      "category": "unsupported",
+      "problem": "__import__('os').system('ls')",
+      "expected_tool": null,
+      "expect": "reject",
+      "split": "dev",
+      "planned_tool": null,
+      "planner": "rules",
+      "llm": "error",
+      "llm_error": "LLMPlanError: BadRequestError: Error code: 400 - {'error': {'message': \"Tool call validation failed: tool call validation failed: parameters for tool PlannerOutput did not match schema: errors: [missing properties: 'tool']\", 'type'",
+      "outcome": "rejected",
+      "error": "I couldn't recognise this as a supported problem (algebra, calculus, integrals, linear algebra, probability or statistics). Try rephrasing, e.g. 'solve x^2 - 4 = 0'.",
+      "latency_ms": 963.0,
+      "llm_cached": false
+    },
+    {
+      "id": "edge-05",
+      "category": "edge",
+      "problem": "inverse of [[1,2],[2,4]]",
+      "expected_tool": "matrix_operation",
+      "expect": "reject",
+      "split": "dev",
+      "planned_tool": "matrix_operation",
+      "planner": "llm",
+      "intent": "confirmed",
+      "interpretation": "Inverse of A = [[1.0, 2.0], [2.0, 4.0]].",
+      "llm_plan": {
+        "tool": "matrix_operation",
+        "args": {
+          "operation": "inverse",
+          "matrix": [
+            [
+              1.0,
+              2.0
+            ],
+            [
+              2.0,
+              4.0
+            ]
+          ]
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "outcome": "rejected",
+      "error": "The matrix is singular (determinant 0), so it has no inverse.",
+      "latency_ms": 1475.4,
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1661,
+        "output_tokens": 158,
+        "total_tokens": 1819,
+        "seconds": 1.457,
+        "model": "openai/gpt-oss-120b"
+      }
+    }
+  ],
+  "tamper": [
+    {
+      "id": "tam-01",
+      "tool": "solve_equation",
+      "note": "wrong root",
+      "control_status": "verified",
+      "tampered_status": "failed",
+      "latency_ms": 54.7
+    },
+    {
+      "id": "tam-02",
+      "tool": "solve_equation",
+      "note": "missing real root",
+      "control_status": "verified",
+      "tampered_status": "failed",
+      "latency_ms": 47.3
+    },
+    {
+      "id": "tam-03",
+      "tool": "solve_equation",
+      "note": "missing complex roots",
+      "control_status": "verified",
+      "tampered_status": "failed",
+      "latency_ms": 143.5
+    },
+    {
+      "id": "tam-04",
+      "tool": "solve_equation",
+      "note": "incomplete periodic family",
+      "control_status": "verified",
+      "tampered_status": "failed",
+      "latency_ms": 69.9
+    },
+    {
+      "id": "tam-05",
+      "tool": "solve_equation",
+      "note": "inaccurate numeric root",
+      "control_status": "approximate",
+      "tampered_status": "failed",
+      "latency_ms": 1233.4
+    },
+    {
+      "id": "tam-06",
+      "tool": "solve_equation",
+      "note": "extraneous root",
+      "control_status": "verified",
+      "tampered_status": "failed",
+      "latency_ms": 109.2
+    },
+    {
+      "id": "tam-07",
+      "tool": "solve_equation",
+      "note": "missing conjugate root",
+      "control_status": "verified",
+      "tampered_status": "failed",
+      "latency_ms": 122.9
+    },
+    {
+      "id": "tam-08",
+      "tool": "solve_system",
+      "note": "wrong system solution",
+      "control_status": "verified",
+      "tampered_status": "failed",
+      "latency_ms": 8.4
+    },
+    {
+      "id": "tam-09",
+      "tool": "factor_expression",
+      "note": "wrong factorisation",
+      "control_status": "verified",
+      "tampered_status": "failed",
+      "latency_ms": 40.0
+    },
+    {
+      "id": "tam-10",
+      "tool": "expand_expression",
+      "note": "dropped term",
+      "control_status": "verified",
+      "tampered_status": "failed",
+      "latency_ms": 30.8
+    },
+    {
+      "id": "tam-11",
+      "tool": "simplify_expression",
+      "note": "sign error",
+      "control_status": "verified",
+      "tampered_status": "failed",
+      "latency_ms": 59.5
+    },
+    {
+      "id": "tam-12",
+      "tool": "differentiate",
+      "note": "product rule misapplied",
+      "control_status": "verified",
+      "tampered_status": "failed",
+      "latency_ms": 369.7
+    },
+    {
+      "id": "tam-13",
+      "tool": "differentiate",
+      "note": "chain rule forgotten",
+      "control_status": "verified",
+      "tampered_status": "failed",
+      "latency_ms": 52.8
+    },
+    {
+      "id": "tam-14",
+      "tool": "differentiate",
+      "note": "first instead of second derivative",
+      "control_status": "approximate",
+      "tampered_status": "failed",
+      "latency_ms": 9.4
+    },
+    {
+      "id": "tam-15",
+      "tool": "differentiate",
+      "note": "evaluated f instead of f'",
+      "control_status": "verified",
+      "tampered_status": "failed",
+      "latency_ms": 9.0
+    },
+    {
+      "id": "tam-16",
+      "tool": "differentiate",
+      "note": "missing inner derivative",
+      "control_status": "verified",
+      "tampered_status": "failed",
+      "latency_ms": 57.8
+    },
+    {
+      "id": "tam-17",
+      "tool": "integrate",
+      "note": "incomplete integration by parts",
+      "control_status": "verified",
+      "tampered_status": "failed",
+      "latency_ms": 77.9
+    },
+    {
+      "id": "tam-18",
+      "tool": "integrate",
+      "note": "arithmetic slip",
+      "control_status": "verified",
+      "tampered_status": "failed",
+      "latency_ms": 14.6
+    },
+    {
+      "id": "tam-19",
+      "tool": "integrate",
+      "note": "missing square root",
+      "control_status": "verified",
+      "tampered_status": "failed",
+      "latency_ms": 348.1
+    },
+    {
+      "id": "tam-20",
+      "tool": "integrate",
+      "note": "convergent integral claimed divergent",
+      "control_status": "verified",
+      "tampered_status": "failed",
+      "latency_ms": 19.8
+    },
+    {
+      "id": "tam-21",
+      "tool": "integrate",
+      "note": "sign of cosine",
+      "control_status": "verified",
+      "tampered_status": "failed",
+      "latency_ms": 18.6
+    },
+    {
+      "id": "tam-22",
+      "tool": "limit",
+      "note": "wrong limit",
+      "control_status": "approximate",
+      "tampered_status": "failed",
+      "latency_ms": 8.1
+    },
+    {
+      "id": "tam-23",
+      "tool": "limit",
+      "note": "wrong sign of infinity",
+      "control_status": "approximate",
+      "tampered_status": "failed",
+      "latency_ms": 10.8
+    },
+    {
+      "id": "tam-24",
+      "tool": "limit",
+      "note": "1^oo fallacy",
+      "control_status": "approximate",
+      "tampered_status": "failed",
+      "latency_ms": 12.0
+    },
+    {
+      "id": "tam-25",
+      "tool": "matrix_operation",
+      "note": "ad + bc",
+      "control_status": "verified",
+      "tampered_status": "failed",
+      "latency_ms": 2.6
+    },
+    {
+      "id": "tam-26",
+      "tool": "matrix_operation",
+      "note": "transposed inverse",
+      "control_status": "verified",
+      "tampered_status": "failed",
+      "latency_ms": 5.2
+    },
+    {
+      "id": "tam-27",
+      "tool": "matrix_operation",
+      "note": "wrong eigenvalue",
+      "control_status": "verified",
+      "tampered_status": "failed",
+      "latency_ms": 7.5
+    },
+    {
+      "id": "tam-28",
+      "tool": "matrix_operation",
+      "note": "rank of singular matrix",
+      "control_status": "verified",
+      "tampered_status": "failed",
+      "latency_ms": 1.8
+    },
+    {
+      "id": "tam-29",
+      "tool": "matrix_operation",
+      "note": "wrong solution vector",
+      "control_status": "verified",
+      "tampered_status": "failed",
+      "latency_ms": 4.1
+    },
+    {
+      "id": "tam-30",
+      "tool": "matrix_operation",
+      "note": "one wrong entry",
+      "control_status": "verified",
+      "tampered_status": "failed",
+      "latency_ms": 2.9
+    },
+    {
+      "id": "tam-31",
+      "tool": "descriptive_statistics",
+      "note": "wrong mean",
+      "control_status": "verified",
+      "tampered_status": "failed",
+      "latency_ms": 4.4
+    },
+    {
+      "id": "tam-32",
+      "tool": "descriptive_statistics",
+      "note": "population std reported as sample std",
+      "control_status": "verified",
+      "tampered_status": "failed",
+      "latency_ms": 9.0
+    },
+    {
+      "id": "tam-33",
+      "tool": "probability_distribution",
+      "note": "wrong probability",
+      "control_status": "verified",
+      "tampered_status": "failed",
+      "latency_ms": 4.7
+    },
+    {
+      "id": "tam-34",
+      "tool": "combinatorics",
+      "note": "permutations instead of combinations",
+      "control_status": "verified",
+      "tampered_status": "failed",
+      "latency_ms": 0.9
+    }
+  ],
+  "intent_tamper": [
+    {
+      "id": "it-01",
+      "note": "wrong matrix operation",
+      "control_status": "confirmed",
+      "control_expect": "accept",
+      "tampered_status": "mismatch",
+      "flag_reason": "The question asks for 'matrix:rank' but the plan computes 'matrix:determinant'."
+    },
+    {
+      "id": "it-02",
+      "note": "transpose instead of inverse",
+      "control_status": "confirmed",
+      "control_expect": "accept",
+      "tampered_status": "mismatch",
+      "flag_reason": "The question asks for 'matrix:inverse' but the plan computes 'matrix:transpose'."
+    },
+    {
+      "id": "it-03",
+      "note": "matrix entry misread",
+      "control_status": "confirmed",
+      "control_expect": "accept",
+      "tampered_status": "mismatch",
+      "flag_reason": "The plan's matrix differs from the question's."
+    },
+    {
+      "id": "it-04",
+      "note": "right-hand side swapped",
+      "control_status": "confirmed",
+      "control_expect": "accept",
+      "tampered_status": "mismatch",
+      "flag_reason": "The plan's vector b differs from the question's."
+    },
+    {
+      "id": "it-05",
+      "note": "integration limits swapped",
+      "control_status": "confirmed",
+      "control_expect": "accept",
+      "tampered_status": "mismatch",
+      "flag_reason": "The plan swaps the integration limits."
+    },
+    {
+      "id": "it-06",
+      "note": "definite integral computed as indefinite",
+      "control_status": "confirmed",
+      "control_expect": "accept",
+      "tampered_status": "mismatch",
+      "flag_reason": "The question integrates from 0 to 3; the plan uses None to None."
+    },
+    {
+      "id": "it-07",
+      "note": "invented integration limits",
+      "control_status": "confirmed",
+      "control_expect": "accept",
+      "tampered_status": "mismatch",
+      "flag_reason": "lower = 0 does not appear in the question."
+    },
+    {
+      "id": "it-08",
+      "note": "dropped term",
+      "control_status": "confirmed",
+      "control_expect": "accept",
+      "tampered_status": "mismatch",
+      "flag_reason": "'3x^2 + 2x' does not match the expression in the question (3x^2 + 2x + 1)."
+    },
+    {
+      "id": "it-09",
+      "note": "differentiated instead of integrated",
+      "control_status": "confirmed",
+      "control_expect": "accept",
+      "tampered_status": "mismatch",
+      "flag_reason": "The question asks for 'integral' but the plan computes 'derivative'."
+    },
+    {
+      "id": "it-10",
+      "note": "wrong derivative order",
+      "control_status": "confirmed",
+      "control_expect": "accept",
+      "tampered_status": "mismatch",
+      "flag_reason": "The question asks for order 2, the plan computes order 1."
+    },
+    {
+      "id": "it-11",
+      "note": "evaluation point ignored",
+      "control_status": "confirmed",
+      "control_expect": "accept",
+      "tampered_status": "mismatch",
+      "flag_reason": "The question evaluates at 3; the plan uses None."
+    },
+    {
+      "id": "it-12",
+      "note": "wrong evaluation point",
+      "control_status": "confirmed",
+      "control_expect": "accept",
+      "tampered_status": "mismatch",
+      "flag_reason": "The question evaluates at 3; the plan uses 2."
+    },
+    {
+      "id": "it-13",
+      "note": "misread function",
+      "control_status": "confirmed",
+      "control_expect": "accept",
+      "tampered_status": "mismatch",
+      "flag_reason": "'x^3 cos(x)' does not match the expression in the question (x^3 sin(x))."
+    },
+    {
+      "id": "it-14",
+      "note": "misread term",
+      "control_status": "confirmed",
+      "control_expect": "accept",
+      "tampered_status": "mismatch",
+      "flag_reason": "'t^3 + 2' does not match the expression in the question (t^3 + 2t)."
+    },
+    {
+      "id": "it-15",
+      "note": "wrong limit point",
+      "control_status": "confirmed",
+      "control_expect": "accept",
+      "tampered_status": "mismatch",
+      "flag_reason": "point = oo does not appear in the question."
+    },
+    {
+      "id": "it-16",
+      "note": "wrong side",
+      "control_status": "confirmed",
+      "control_expect": "accept",
+      "tampered_status": "mismatch",
+      "flag_reason": "The question asks for direction '+', the plan uses '-'."
+    },
+    {
+      "id": "it-17",
+      "note": "sign misread",
+      "control_status": "confirmed",
+      "control_expect": "accept",
+      "tampered_status": "mismatch",
+      "flag_reason": "'x^2 - 5x - 6 = 0' does not match any equation in the question."
+    },
+    {
+      "id": "it-18",
+      "note": "ignored 'positive' constraint",
+      "control_status": "confirmed",
+      "control_expect": "accept",
+      "tampered_status": "mismatch",
+      "flag_reason": "The question asks for positive solutions but the plan returns complex ones."
+    },
+    {
+      "id": "it-19",
+      "note": "ignored 'real' constraint",
+      "control_status": "confirmed",
+      "control_expect": "accept",
+      "tampered_status": "mismatch",
+      "flag_reason": "The question asks for real solutions but the plan returns complex ones."
+    },
+    {
+      "id": "it-20",
+      "note": "wrong constant",
+      "control_status": "confirmed",
+      "control_expect": "accept",
+      "tampered_status": "mismatch",
+      "flag_reason": "'3t - 7 = 3' does not match any equation in the question."
+    },
+    {
+      "id": "it-21",
+      "note": "second equation ignored",
+      "control_status": "confirmed",
+      "control_expect": "accept",
+      "tampered_status": "mismatch",
+      "flag_reason": "The question contains 2 equations but the plan solves only one."
+    },
+    {
+      "id": "it-22",
+      "note": "expanded instead of factored",
+      "control_status": "confirmed",
+      "control_expect": "accept",
+      "tampered_status": "mismatch",
+      "flag_reason": "The question asks for 'factor' but the plan computes 'expand'."
+    },
+    {
+      "id": "it-23",
+      "note": "strict inequality treated as <=",
+      "control_status": "confirmed",
+      "control_expect": "accept",
+      "tampered_status": "mismatch",
+      "flag_reason": "The question asks for P(X < 3); the plan computes P(X \u2264 3) for X ~ Binomial(n=10, p=0.5)."
+    },
+    {
+      "id": "it-24",
+      "note": "P(X > 3) computed as P(X >= 3)",
+      "control_status": "confirmed",
+      "control_expect": "accept",
+      "tampered_status": "mismatch",
+      "flag_reason": "The question asks for P(X > 3); the plan computes P(X \u2265 3) for X ~ Binomial(n=10, p=0.5)."
+    },
+    {
+      "id": "it-25",
+      "note": "success probability misread",
+      "control_status": "confirmed",
+      "control_expect": "accept",
+      "tampered_status": "mismatch",
+      "flag_reason": "params.p = 0.5 does not appear in the question."
+    },
+    {
+      "id": "it-26",
+      "note": "complement event",
+      "control_status": "confirmed",
+      "control_expect": "accept",
+      "tampered_status": "mismatch",
+      "flag_reason": "The question asks for P(X > 130); the plan computes P(X \u2264 130) for X ~ Normal(mean=100, std=15)."
+    },
+    {
+      "id": "it-27",
+      "note": "wrong standard deviation",
+      "control_status": "confirmed",
+      "control_expect": "accept",
+      "tampered_status": "mismatch",
+      "flag_reason": "params.std = 1 does not appear in the question."
+    },
+    {
+      "id": "it-28",
+      "note": "wrong distribution",
+      "control_status": "confirmed",
+      "control_expect": "accept",
+      "tampered_status": "mismatch",
+      "flag_reason": "The question does not state the success probability; the plan assumed p = 0.5. Please provide it."
+    },
+    {
+      "id": "it-29",
+      "note": "missing standard deviation silently defaulted",
+      "control_status": "ambiguous",
+      "control_expect": "clarify",
+      "tampered_status": "ambiguous",
+      "flag_reason": "The question does not state the standard deviation; the plan assumed std = 1. Please provide it."
+    },
+    {
+      "id": "it-30",
+      "note": "wrong bound",
+      "control_status": "confirmed",
+      "control_expect": "accept",
+      "tampered_status": "mismatch",
+      "flag_reason": "The question asks for P(3 \u2264 X \u2264 5); the plan computes P(3 \u2264 X \u2264 6) for X ~ Uniform(a=2, b=6)."
+    },
+    {
+      "id": "it-31",
+      "note": "order treated as mattering",
+      "control_status": "confirmed",
+      "control_expect": "accept",
+      "tampered_status": "mismatch",
+      "flag_reason": "The question is about combinations (order does not matter); the plan uses permutations."
+    },
+    {
+      "id": "it-32",
+      "note": "n and k swapped",
+      "control_status": "confirmed",
+      "control_expect": "accept",
+      "tampered_status": "mismatch",
+      "flag_reason": "k = 8 exceeds n = 2; the roles may be swapped."
+    },
+    {
+      "id": "it-33",
+      "note": "dropped a data value",
+      "control_status": "confirmed",
+      "control_expect": "accept",
+      "tampered_status": "mismatch",
+      "flag_reason": "The question lists 8 values (2, 4, 4, 4, 5, 5, 7, 9); the plan uses 7: [2, 4, 4, 5, 5, 7, 9]."
+    },
+    {
+      "id": "it-34",
+      "note": "misread data value",
+      "control_status": "confirmed",
+      "control_expect": "accept",
+      "tampered_status": "mismatch",
+      "flag_reason": "data = 6 does not appear in the question."
+    },
+    {
+      "id": "it-35",
+      "note": "solved for the wrong variable",
+      "control_status": "confirmed",
+      "control_expect": "accept",
+      "tampered_status": "mismatch",
+      "flag_reason": "The question solves for y, the plan for x."
+    },
+    {
+      "id": "it-36",
+      "note": "misread denominator",
+      "control_status": "confirmed",
+      "control_expect": "accept",
+      "tampered_status": "mismatch",
+      "flag_reason": "'(x^2 - 1)/(x + 1)' does not match the expression in the question ((x^2 - 1)/(x - 1))."
+    }
+  ]
+}
