@@ -280,7 +280,7 @@ def plan_with_llm(problem: str, context: str | None = None) -> ToolCall | None:
                 retries += 1
                 continue
             raise LLMPlanError(
-                f"{type(exc).__name__}: {str(exc)[:200]}" + (f" (after {retries} retry)" if retries else "")
+                f"{type(exc).__name__}: {str(exc)[:600]}" + (f" (after {retries} retry)" if retries else "")
             ) from exc
     if isinstance(result, dict) and "parsed" in result:
         _record_usage(problem, result.get("raw"), time.perf_counter() - t0, retries)
@@ -293,6 +293,6 @@ def plan_with_llm(problem: str, context: str | None = None) -> ToolCall | None:
         try:
             result = PlannerOutput.model_validate(result)
         except Exception as exc:
-            raise LLMPlanError(f"invalid structured output: {str(exc)[:200]}") from exc
+            raise LLMPlanError(f"invalid structured output: {str(exc)[:600]}") from exc
     _cache_put(key, problem, result.model_dump())
     return plan_output_to_tool_call(result)

@@ -245,7 +245,8 @@ def _llm_accounting(state: dict[str, Any]) -> dict[str, Any]:
     if plan is not None:
         out["llm_plan"] = {"tool": plan.tool, "args": plan.args, "ambiguities": plan.ambiguities}
     if err:
-        out["llm"], out["llm_error"] = "error", err
+        # account identifiers are not credentials, but reports are committed: redact them
+        out["llm"], out["llm_error"] = "error", re.sub(r"org_[A-Za-z0-9]+", "org_<redacted>", err)
     elif plan is None and state.get("planner") == "llm" and state.get("status") == "unsupported":
         out["llm"] = "declared_unsupported"
     elif plan is None:

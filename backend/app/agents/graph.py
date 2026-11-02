@@ -98,7 +98,7 @@ def plan_node(state: SolverState) -> SolverState:
         return {"status": "unsupported", "error": str(exc), "planner": "llm", "llm_used": True}
     except Exception as exc:  # provider/network/validation errors -> offline planners, recorded (never silent)
         log.warning("LLM planning failed, using offline planners: %s", exc)
-        llm_call, llm_error = None, f"{type(exc).__name__}: {exc}"[:300]
+        llm_call, llm_error = None, f"{type(exc).__name__}: {exc}"[:700]
 
     candidates = [
         c for c in (llm_call.model_copy(update={"source": "llm"}) if llm_call else None, rules_call, nl_call) if c
