@@ -3,7 +3,8 @@ services:
     build: ./backend
     environment:
       GROQ_API_KEY: ${GROQ_API_KEY:-}
-      LLM_MODEL: ${LLM_MODEL:-llama-3.3-70b-versatile}
+      LLM_MODEL: ${LLM_MODEL:-openai/gpt-oss-120b}
+      GROQ_AUTH: ${GROQ_AUTH:-api_key}
       CORS_ORIGINS: http://localhost:8080
     ports:
       - "8000:8000"

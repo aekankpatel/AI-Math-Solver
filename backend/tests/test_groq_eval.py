@@ -86,7 +86,7 @@ class _FakeModel:
     def __init__(self, result=None, exc=None):
         self.model_name, self.result, self.exc = "fake-model", result, exc
 
-    def with_structured_output(self, schema):
+    def with_structured_output(self, schema, **kwargs):
         return self
 
     def invoke(self, messages):
@@ -100,7 +100,7 @@ class _FakeModel:
     [
         (_FakeModel(result=None), "no structured plan"),
         (_FakeModel(exc=RuntimeError("429 Too Many Requests")), "429"),
-        (_FakeModel(result={"tool": "integrate"}), "invalid structured output"),
+        (_FakeModel(result={"tool": "not_a_tool"}), "invalid structured output"),
     ],
 )
 def test_llm_failures_raise_explicit_errors(monkeypatch, model, reason):
@@ -423,3 +423,15 @@ def test_auth_check_sends_nothing_without_permission(proxy_auth, monkeypatch, ca
     monkeypatch.setattr(groq, "Groq", lambda *a, **k: (_ for _ in ()).throw(AssertionError("network")))
     assert check_main([]) == 0
     assert "Nothing was sent" in capsys.readouterr().out
+
+
+def test_planner_output_without_category_is_accepted():
+    # gpt-oss-120b on Groq omitted 'category' and Groq rejected the call (400) while it was required.
+    from langchain_core.utils.function_calling import convert_to_openai_tool
+
+    from app.agents.llm_planner import plan_output_to_tool_call
+
+    required = convert_to_openai_tool(PlannerOutput)["function"]["parameters"].get("required", [])
+    assert required == ["tool"]
+    call = plan_output_to_tool_call(PlannerOutput(tool="integrate", expression="x^2", lower="0", upper="3"))
+    assert call.category == PC.INTEGRALS

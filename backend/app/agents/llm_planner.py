@@ -12,6 +12,7 @@ import inspect
 import json
 import os
 import threading
+import time
 from pathlib import Path
 from typing import Any, Literal
 
@@ -80,11 +81,15 @@ supported=false and explain why in `clarification`. Prefer asking over guessing.
 
 
 class PlannerOutput(BaseModel):
-    supported: bool = Field(description="False if no tool can faithfully solve the problem.")
+    supported: bool = Field(default=True, description="False if no tool can faithfully solve the problem.")
     clarification: str | None = Field(
         default=None, description="Why unsupported/ambiguous, or a question for the user."
     )
-    category: Literal["algebra", "calculus", "integrals", "linear_algebra", "probability_statistics", "unsupported"]
+    # Optional: it is determined by the tool. Some models (e.g. gpt-oss on Groq) omit it, and Groq
+    # rejects tool calls that miss a *required* property with HTTP 400.
+    category: (
+        Literal["algebra", "calculus", "integrals", "linear_algebra", "probability_statistics", "unsupported"] | None
+    ) = None
     tool: Literal[
         "solve_equation",
         "solve_system",
@@ -137,6 +142,22 @@ class LLMPlanError(RuntimeError):
     """The LLM call failed or returned no usable structured plan."""
 
 
+_TOOL_CATEGORY = {
+    "solve_equation": "algebra",
+    "solve_system": "algebra",
+    "simplify_expression": "algebra",
+    "factor_expression": "algebra",
+    "expand_expression": "algebra",
+    "differentiate": "calculus",
+    "limit": "calculus",
+    "integrate": "integrals",
+    "matrix_operation": "linear_algebra",
+    "descriptive_statistics": "probability_statistics",
+    "probability_distribution": "probability_statistics",
+    "combinatorics": "probability_statistics",
+}
+
+
 def plan_output_to_tool_call(out: PlannerOutput) -> ToolCall:
     if not out.supported or out.tool == "none":
         raise LLMPlanUnsupported(out.clarification or "The problem is not supported.")
@@ -145,13 +166,39 @@ def plan_output_to_tool_call(out: PlannerOutput) -> ToolCall:
     args: dict[str, Any] = {k: v for k, v in fields.items() if k in allowed}
     return ToolCall(
         tool=out.tool,
-        category=ProblemCategory(out.category),
+        category=ProblemCategory(out.category or _TOOL_CATEGORY[out.tool]),
         args=args,
         rationale=out.rationale,
         interpretation=out.interpretation,
         assumptions=out.assumptions,
         ambiguities=out.ambiguities,
     )
+
+
+# ---- per-call usage log (read by the benchmark runner; keyed by problem text)
+_USAGE_LOCK = threading.Lock()
+_USAGE: dict[str, dict[str, Any]] = {}
+
+
+def pop_call_stats(problem: str) -> dict[str, Any] | None:
+    """Token usage / latency of the last real planner call for ``problem`` (None if cached or no call)."""
+    with _USAGE_LOCK:
+        return _USAGE.pop(problem, None)
+
+
+def _record_usage(problem: str, raw: Any, seconds: float) -> None:
+    usage = getattr(raw, "usage_metadata", None) or {}
+    meta = getattr(raw, "response_metadata", None) or {}
+    token_usage = meta.get("token_usage") or {}
+    stats = {
+        "input_tokens": usage.get("input_tokens", token_usage.get("prompt_tokens")),
+        "output_tokens": usage.get("output_tokens", token_usage.get("completion_tokens")),
+        "total_tokens": usage.get("total_tokens", token_usage.get("total_tokens")),
+        "seconds": round(seconds, 3),
+        "model": meta.get("model_name"),
+    }
+    with _USAGE_LOCK:
+        _USAGE[problem] = stats
 
 
 # ---- optional response cache (used by the benchmark to make Groq runs reproducible)
@@ -195,12 +242,19 @@ def plan_with_llm(problem: str, context: str | None = None) -> ToolCall | None:
     cached = _cache_get(key)
     if cached is not None:
         return plan_output_to_tool_call(PlannerOutput.model_validate(cached))
-    structured = model.with_structured_output(PlannerOutput)
+    # include_raw keeps the provider response so token usage can be measured
+    structured = model.with_structured_output(PlannerOutput, include_raw=True)
     user = problem if not context else f"Previous context:\n{context}\n\nNew request: {problem}"
+    t0 = time.perf_counter()
     try:
         result = structured.invoke([("system", PLANNER_SYSTEM_PROMPT), ("human", user)])
-    except Exception as exc:  # network, rate limit after retries, malformed tool call (400), parse error
+    except Exception as exc:  # network, rate limit after retries, malformed tool call (400)
         raise LLMPlanError(f"{type(exc).__name__}: {str(exc)[:200]}") from exc
+    if isinstance(result, dict) and "parsed" in result:
+        _record_usage(problem, result.get("raw"), time.perf_counter() - t0)
+        if result.get("parsing_error") is not None:
+            raise LLMPlanError(f"invalid structured output: {str(result['parsing_error'])[:200]}")
+        result = result.get("parsed")
     if result is None:  # the model answered in prose instead of calling the planning tool
         raise LLMPlanError("the model returned no structured plan")
     if not isinstance(result, PlannerOutput):

@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     # "proxy": an egress proxy injects the Authorization header for api.groq.com
     # (e.g. a cloud network secret); no key is stored in this process.
     groq_auth: Literal["api_key", "proxy"] = "api_key"
-    llm_model: str = "llama-3.3-70b-versatile"
+    llm_model: str = "openai/gpt-oss-120b"  # any Groq model with tool calling; see README
     llm_temperature: float = 0.0
     llm_timeout_seconds: float = 30.0
     llm_max_retries: int = 2  # SDK-level retries (rate limits, transient errors)

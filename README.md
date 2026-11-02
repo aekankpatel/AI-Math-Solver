@@ -144,7 +144,7 @@ Open http://localhost:5173.
 | Variable | Default | Purpose |
 |---|---|---|
 | `GROQ_API_KEY` | *(empty)* | Free key from https://console.groq.com/keys. Without one, the deterministic planner and template explanations are used. |
-| `LLM_MODEL` | `llama-3.3-70b-versatile` | Any Groq chat model that supports tool calling |
+| `LLM_MODEL` | `openai/gpt-oss-120b` | Any Groq chat model that supports tool calling (the default was changed after llama-3.3-70b-versatile turned out to be unavailable on the account used for testing) |
 | `LLM_ENABLED` | `true` | Set to `false` to force offline mode |
 | `CORS_ORIGINS` | `http://localhost:5173,http://localhost:8080` | Allowed browser origins |
 

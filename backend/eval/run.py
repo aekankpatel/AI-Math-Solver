@@ -243,6 +243,30 @@ def _llm_summary(records: list[dict[str, Any]]) -> dict[str, Any]:
             len(refuse),
         ),
         "llm_plan_answered_should_refuse_input": _m(sum(1 for r in refuse if r.get("llm") == "accepted"), len(refuse)),
+        "tool_selection_of_llm_plans": _m(
+            sum(
+                1
+                for r in ran
+                if r["expect"] == "answer" and "llm_plan" in r and r["llm_plan"].get("tool") == r.get("expected_tool")
+            ),
+            sum(1 for r in ran if r["expect"] == "answer" and "llm_plan" in r),
+        ),
+        "token_usage": _usage_totals(ran),
+    }
+
+
+def _usage_totals(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    used = [r["llm_usage"] for r in rows if r.get("llm_usage")]
+    tot = lambda k: sum(u.get(k) or 0 for u in used)  # noqa: E731
+    secs = sorted(u["seconds"] for u in used if u.get("seconds") is not None)
+    return {
+        "measured_calls": len(used),
+        "input_tokens": tot("input_tokens"),
+        "output_tokens": tot("output_tokens"),
+        "total_tokens": tot("total_tokens"),
+        "mean_tokens_per_call": round(tot("total_tokens") / len(used)) if used else None,
+        "llm_call_seconds_p50": secs[len(secs) // 2] if secs else None,
+        "llm_call_seconds_max": secs[-1] if secs else None,
     }
 
 
@@ -493,6 +517,8 @@ def to_markdown(
             f"| Should-refuse inputs: LLM refused or its plan was rejected | "
             f"{_fmt(g['llm_refused_or_was_rejected_on_should_refuse_inputs'])} |",
             f"| Should-refuse inputs: LLM plan accepted (bad) | {_fmt(g['llm_plan_answered_should_refuse_input'])} |",
+            f"| Tool selection of LLM plans (before intent check) | {_fmt(g['tool_selection_of_llm_plans'])} |",
+            f"| Token usage (measured calls) | {g['token_usage']} |",
         ]
     if summary.get("incomplete"):
         lines += ["", f"**INCOMPLETE RUN:** {summary['incomplete']}"]
@@ -694,7 +720,12 @@ def main(argv: list[str] | None = None) -> int:
             t_call = time.perf_counter()
             rec = _run_case(case, args.mode)
             if args.mode == "groq":
+                from app.agents.llm_planner import pop_call_stats
+
                 rec["llm_cached"] = cached
+                stats = pop_call_stats(case["problem"])
+                if stats:
+                    rec["llm_usage"] = stats
                 print(
                     f"[{idx}/{len(cases)}] {case['id']}: llm={rec.get('llm')} outcome={rec.get('outcome')} "
                     f"correct={rec.get('correct')}" + (" (cached)" if cached else ""),
@@ -713,7 +744,9 @@ def main(argv: list[str] | None = None) -> int:
                 print(incomplete, file=sys.stderr)
                 break
             if pace and not cached:
-                time.sleep(max(0.0, delay - (time.perf_counter() - t_call)))
+                used = (rec.get("llm_usage") or {}).get("total_tokens") or per_call
+                wait = max(60.0 / args.rpm, used * 60.0 / args.tpm)  # pace on the tokens actually used
+                time.sleep(max(0.0, wait - (time.perf_counter() - t_call)))
     except KeyboardInterrupt:
         incomplete = "interrupted; re-run the same command to resume (cached planner responses are reused)"
         print(incomplete, file=sys.stderr)
