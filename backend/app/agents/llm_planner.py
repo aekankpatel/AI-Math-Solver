@@ -164,6 +164,16 @@ _TOOL_CATEGORY = {
 }
 
 
+_KNOWN_CATEGORIES = {*_TOOL_CATEGORY.values(), "unsupported"}
+
+
+def _category_for(out: PlannerOutput) -> str:
+    """A recognisable category (any case / spacing) is kept so that a contradiction with the tool is
+    detected by the intent check; a missing or unrecognisable one is derived from the tool."""
+    raw = (out.category or "").strip().lower().replace(" ", "_").replace("-", "_")
+    return raw if raw in _KNOWN_CATEGORIES else _TOOL_CATEGORY[out.tool]
+
+
 def plan_output_to_tool_call(out: PlannerOutput) -> ToolCall:
     if not out.supported:
         raise LLMPlanUnsupported(out.clarification or "The problem is not supported.")
@@ -174,7 +184,7 @@ def plan_output_to_tool_call(out: PlannerOutput) -> ToolCall:
     args: dict[str, Any] = {k: v for k, v in fields.items() if k in allowed}
     return ToolCall(
         tool=out.tool,
-        category=ProblemCategory(out.category if out.category in _TOOL_CATEGORY.values() else _TOOL_CATEGORY[out.tool]),
+        category=ProblemCategory(_category_for(out)),
         args=args,
         rationale=out.rationale,
         interpretation=out.interpretation,

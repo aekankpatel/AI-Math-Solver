@@ -658,20 +658,38 @@ def main(argv: list[str] | None = None) -> int:
     name = args.out_name or (f"{args.mode}_smoke" if args.subset == "smoke" else args.mode)
 
     model_name = ""
-    delay = 0.0
     if args.mode == "groq":
         from app.config import get_settings
 
         model_name = os.environ.get("LLM_MODEL") or get_settings().llm_model
         per_call = _tokens_per_call()
-        delay = max(60.0 / args.rpm, per_call * 60.0 / args.tpm)
         if args.dry_run:
-            calls = len(cases) * (2 if args.llm_explanations else 1)
+            from app.agents.llm_planner import _cache_get, _cache_key
+
+            previous = os.environ.get("MATHFORGE_LLM_CACHE")
+            os.environ["MATHFORGE_LLM_CACHE"] = args.cache  # read-only lookup, restored right after
+            try:
+                cached_n = sum(1 for c in cases if _cache_get(_cache_key(model_name, c["problem"], None)) is not None)
+            finally:
+                if previous is None:
+                    os.environ.pop("MATHFORGE_LLM_CACHE", None)
+                else:
+                    os.environ["MATHFORGE_LLM_CACHE"] = previous
+            measured = None
+            smoke = REPORT_DIR / "groq_smoke.json"
+            if smoke.exists():
+                smoke_summary = json.loads(smoke.read_text())["summary"]
+                usage = smoke_summary.get("llm_planner", {}).get("token_usage", {})
+                if smoke_summary.get("environment", {}).get("model") == model_name:  # same model only
+                    measured = usage.get("mean_tokens_per_call")
+            per = measured or per_call
+            new_calls = (len(cases) - cached_n) * (2 if args.llm_explanations else 1)
+            wait = max(60.0 / args.rpm, per * 60.0 / args.tpm)
             print(
-                f"groq dry run: {len(cases)} problems -> up to {calls} chat completions with model {model_name}, "
-                f"~{per_call} tokens each (~{calls * per_call:,} tokens). Pacing: one uncached call every "
-                f"{delay:.1f}s (rpm={args.rpm:g}, tpm={args.tpm:g}) => at most ~{calls * delay / 60:.0f} min. "
-                f"Cached responses in {args.cache} are reused and cost nothing. Nothing was sent."
+                f"groq dry run: {len(cases)} problems, {cached_n} already cached -> {new_calls} new chat completions "
+                f"with {model_name}. Tokens per call: {per} ({'measured in the smoke run' if measured else 'estimate'}), "
+                f"~{new_calls * per:,} tokens in total. Pacing: one call every {wait:.1f}s (rpm={args.rpm:g}, "
+                f"tpm={args.tpm:g}) => ~{new_calls * wait / 60:.0f} min plus call latency. Nothing was sent."
             )
             return 0
         if not args.replay:

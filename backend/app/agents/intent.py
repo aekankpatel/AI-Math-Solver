@@ -686,7 +686,7 @@ def _self_consistency(call: ToolCall) -> list[str]:
     """Contradictions inside an LLM plan: its category vs its tool, and its own
     restatement vs its arguments. The question text is not used here."""
     problems: list[str] = []
-    if call.source == "llm" and call.category.value not in (_TOOL_CATEGORY[call.tool], "unsupported"):
+    if call.source == "llm" and call.category.value != _TOOL_CATEGORY[call.tool]:
         problems.append(f"the plan's category '{call.category.value}' contradicts its tool '{call.tool}'")
     if call.interpretation:
         told = extract_intent(call.interpretation)

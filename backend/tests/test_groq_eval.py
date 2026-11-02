@@ -518,3 +518,82 @@ def test_missing_category_is_derived_not_trusted():
     bad = plan_output_to_tool_call(PlannerOutput(tool="differentiate", category="linear_algebra", expression="x^2"))
     iv, _ = check_intent("derivative of x^2", bad.model_copy(update={"source": "llm"}))
     assert iv.status == IS.MISMATCH and "contradicts its tool" in iv.clarification
+
+
+# ---- category handling (validated without re-running the smoke test)
+
+
+@pytest.mark.parametrize(
+    "category, expected, contradictory",
+    [
+        (None, PC.CALCULUS, False),  # missing -> derived
+        ("", PC.CALCULUS, False),
+        ("combinatorics", PC.CALCULUS, False),  # unrecognisable (what gpt-oss sent) -> derived
+        ("math", PC.CALCULUS, False),
+        ("calculus", PC.CALCULUS, False),
+        ("Calculus", PC.CALCULUS, False),  # recognisable spelling of the right category
+        ("linear_algebra", PC.LINEAR_ALGEBRA, True),  # explicit contradiction
+        ("Linear Algebra", PC.LINEAR_ALGEBRA, True),  # contradiction in another spelling is still caught
+        ("unsupported", PC.UNSUPPORTED, True),  # "unsupported" yet an executable plan
+    ],
+)
+def test_category_is_derived_or_contradiction_rejected(category, expected, contradictory):
+    from app.agents.llm_planner import plan_output_to_tool_call
+
+    call = plan_output_to_tool_call(PlannerOutput(tool="differentiate", category=category, expression="x^2"))
+    assert call.category == expected
+    iv, fixes = check_intent("derivative of x^2", call.model_copy(update={"source": "llm"}))
+    if contradictory:
+        assert iv.status == IS.MISMATCH and "contradicts its tool" in iv.clarification and fixes == {}
+    else:
+        assert iv.status == IS.CONFIRMED
+
+
+@pytest.mark.parametrize(
+    "problem, output, expect_status, expect_llm",
+    [
+        # targeted gpt-oss-style outputs through the whole graph (fake model, no network)
+        (
+            "how many ways to choose 2 people from 8",
+            {"tool": "combinatorics", "category": "combinatorics", "operation": "combinations", "n": 8, "k": 2},
+            "solved",
+            "accepted",
+        ),  # out-of-enum category: derived, plan runs
+        (
+            "Integrate x^2 from 0 to 3",
+            {"tool": "integrate", "expression": "x^2", "lower": "0", "upper": "3"},
+            "solved",
+            "accepted",
+        ),  # no category at all
+        (
+            "Integrate x^2 from 0 to 3",
+            {"tool": "integrate", "category": "linear_algebra", "expression": "x^2", "lower": "0", "upper": "3"},
+            "solved",
+            "rejected_fallback",
+        ),  # contradictory: rejected, faithful offline plan used
+        ("Integrate x^2 from 0 to 3", {"tool": "integrate"}, "solved", "rejected_fallback"),  # missing arguments
+        ("Integrate x^2 from 0 to 3", {"supported": True}, "solved", "error"),  # executable but no tool
+        (
+            "Normal distribution with mean 10: what is P(X < 12)?",
+            {"supported": False, "clarification": "What is the standard deviation?"},
+            "unsupported",
+            "declared_unsupported",
+        ),
+    ],
+)
+def test_gpt_oss_style_outputs_through_the_graph(monkeypatch, problem, output, expect_status, expect_llm):
+    monkeypatch.setattr(
+        llm_planner,
+        "get_chat_model",
+        lambda: _FakeModel(result={"raw": None, "parsed": PlannerOutput.model_validate(output), "parsing_error": None}),
+    )
+    tools_run = []
+    real = graph.run_tool
+    monkeypatch.setattr(graph, "run_tool", lambda name, args: tools_run.append((name, args)) or real(name, args))
+    state = graph.run_solver(problem)
+    acct = _llm_accounting(state)
+    assert state["status"] == expect_status and acct["llm"] == expect_llm
+    # an invalid / contradictory / tool-less LLM plan is never what gets executed
+    if expect_llm != "accepted":
+        assert all(args != output.get("args") for _, args in tools_run)
+        assert state.get("tool_call") is None or state["tool_call"].source != "llm"
