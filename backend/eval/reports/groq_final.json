@@ -2,47 +2,47 @@
   "summary": {
     "mode": "groq",
     "counts": {
-      "benchmark_items": 348,
-      "problems": 278,
-      "answerable": 238,
-      "should_refuse": 40,
+      "benchmark_items": 378,
+      "problems": 308,
+      "answerable": 264,
+      "should_refuse": 44,
       "tampered_solutions": 34,
       "tampered_interpretations": 36,
-      "problems_run": 278,
+      "problems_run": 308,
       "problems_skipped": 0,
       "skipped_reason": null
     },
     "all_problems": {
-      "answerable": 238,
-      "should_refuse": 40,
+      "answerable": 264,
+      "should_refuse": 44,
       "answer_accuracy": {
-        "n": 236,
-        "d": 238,
-        "rate": 0.9916
+        "n": 262,
+        "d": 264,
+        "rate": 0.9924
       },
       "refusal_accuracy": {
-        "n": 40,
-        "d": 40,
+        "n": 44,
+        "d": 44,
         "rate": 1.0
       },
       "overall_accuracy": {
-        "n": 276,
-        "d": 278,
-        "rate": 0.9928
+        "n": 306,
+        "d": 308,
+        "rate": 0.9935
       },
       "tool_selection_accuracy": {
-        "n": 237,
-        "d": 238,
-        "rate": 0.9958
+        "n": 263,
+        "d": 264,
+        "rate": 0.9962
       },
       "wrong_answers": {
         "n": 0,
-        "d": 238,
+        "d": 264,
         "rate": 0.0
       },
       "answered_when_should_refuse": {
         "n": 0,
-        "d": 40,
+        "d": 44,
         "rate": 0.0
       }
     },
@@ -150,51 +150,51 @@
         }
       },
       "dev_nl": {
-        "answerable": 12,
-        "should_refuse": 0,
+        "answerable": 38,
+        "should_refuse": 4,
         "answer_accuracy": {
-          "n": 12,
-          "d": 12,
+          "n": 38,
+          "d": 38,
           "rate": 1.0
         },
         "refusal_accuracy": {
-          "n": 0,
-          "d": 0,
-          "rate": null
+          "n": 4,
+          "d": 4,
+          "rate": 1.0
         },
         "overall_accuracy": {
-          "n": 12,
-          "d": 12,
+          "n": 42,
+          "d": 42,
           "rate": 1.0
         },
         "tool_selection_accuracy": {
-          "n": 12,
-          "d": 12,
+          "n": 38,
+          "d": 38,
           "rate": 1.0
         },
         "wrong_answers": {
           "n": 0,
-          "d": 12,
+          "d": 38,
           "rate": 0.0
         },
         "answered_when_should_refuse": {
           "n": 0,
-          "d": 0,
-          "rate": null
+          "d": 4,
+          "rate": 0.0
         }
       }
     },
     "math_verification": {
       "scope": "answers produced on benchmark problems (tamper controls excluded)",
       "verified_precision": {
-        "n": 210,
-        "d": 210,
+        "n": 232,
+        "d": 232,
         "rate": 1.0
       },
       "verified_recall": {
-        "n": 210,
-        "d": 236,
-        "rate": 0.8898
+        "n": 232,
+        "d": 262,
+        "rate": 0.8855
       },
       "incorrect_answers_marked_verified": {
         "n": 0,
@@ -202,8 +202,8 @@
         "rate": null
       },
       "status_on_correct": {
-        "verified": 210,
-        "approximate": 26
+        "verified": 232,
+        "approximate": 30
       },
       "status_on_incorrect": {}
     },
@@ -230,21 +230,21 @@
       }
     },
     "latency_ms": {
-      "mean": 211.4,
-      "p50": 28.6,
-      "p95": 1515.4,
-      "max": 2685.2
+      "mean": 252.8,
+      "p50": 23.6,
+      "p95": 1673.9,
+      "max": 2907.2
     },
     "crashes": {
       "n": 0,
-      "d": 278,
+      "d": 308,
       "rate": 0.0
     },
     "accuracy_by_category": {
       "algebra": "51/51",
       "ambiguous": "8/8",
       "calculus": "28/28",
-      "dev_nl": "12/12",
+      "dev_nl": "42/42",
       "edge": "13/13",
       "integrals": "21/21",
       "linear_algebra": "17/17",
@@ -255,15 +255,15 @@
       "unsupported": "8/8"
     },
     "accuracy_by_tool": {
-      "combinatorics": "13/14",
-      "descriptive_statistics": "14/14",
-      "differentiate": "28/28",
+      "combinatorics": "16/17",
+      "descriptive_statistics": "16/16",
+      "differentiate": "30/30",
       "expand_expression": "8/8",
       "factor_expression": "9/9",
-      "integrate": "29/29",
-      "limit": "17/17",
-      "matrix_operation": "28/28",
-      "probability_distribution": "30/30",
+      "integrate": "33/33",
+      "limit": "20/20",
+      "matrix_operation": "31/31",
+      "probability_distribution": "39/39",
       "simplify_expression": "10/10",
       "solve_equation": "39/40",
       "solve_system": "11/11"
@@ -271,14 +271,14 @@
     "end_to_end_trust": {
       "scope": "answers produced on benchmark problems; 'fully verified' = math verified AND intent confirmed",
       "fully_verified_precision": {
-        "n": 187,
-        "d": 187,
+        "n": 205,
+        "d": 205,
         "rate": 1.0
       },
       "fully_verified_recall": {
-        "n": 187,
-        "d": 236,
-        "rate": 0.7924
+        "n": 205,
+        "d": 262,
+        "rate": 0.7824
       },
       "incorrect_answers_fully_verified": {
         "n": 0,
@@ -291,14 +291,14 @@
         "rate": null
       },
       "intent_status_on_correct": {
-        "confirmed": 209,
-        "assumed": 27
+        "confirmed": 231,
+        "assumed": 31
       },
       "intent_status_on_incorrect": {},
       "clarification_requests": {
-        "n": 13,
-        "d": 278,
-        "rate": 0.0468
+        "n": 15,
+        "d": 308,
+        "rate": 0.0487
       }
     },
     "tampered_interpretations": {
@@ -337,86 +337,84 @@
       "account_rate_limits": {
         "x-ratelimit-limit-requests": "1000",
         "x-ratelimit-limit-tokens": "8000",
-        "x-ratelimit-remaining-requests": "957",
-        "x-ratelimit-remaining-tokens": "7158",
-        "x-ratelimit-reset-requests": "1h1m55.2s",
-        "x-ratelimit-reset-tokens": "6.314s",
-        "retry-after": "641"
+        "x-ratelimit-remaining-requests": "939",
+        "x-ratelimit-remaining-tokens": "6157",
+        "x-ratelimit-reset-requests": "1h27m50.4s",
+        "x-ratelimit-reset-tokens": "13.822s"
       }
     },
-    "incomplete": "daily Groq quota reached (resets in 10m40.656s.); progress is cached - re-run the same command after the reset to resume (278/308 problems done)",
     "llm_planner": {
       "scope": "every problem run; end-to-end metrics above include offline fallbacks, these isolate the LLM",
       "outcomes": {
         "accepted": {
-          "n": 218,
-          "d": 278,
-          "rate": 0.7842
+          "n": 240,
+          "d": 308,
+          "rate": 0.7792
         },
         "declared_unsupported": {
-          "n": 18,
-          "d": 278,
-          "rate": 0.0647
+          "n": 19,
+          "d": 308,
+          "rate": 0.0617
         },
         "error": {
-          "n": 24,
-          "d": 278,
-          "rate": 0.0863
+          "n": 28,
+          "d": 308,
+          "rate": 0.0909
         },
         "rejected_clarify": {
-          "n": 7,
-          "d": 278,
-          "rate": 0.0252
+          "n": 9,
+          "d": 308,
+          "rate": 0.0292
         },
         "rejected_fallback": {
-          "n": 11,
-          "d": 278,
-          "rate": 0.0396
+          "n": 12,
+          "d": 308,
+          "rate": 0.039
         }
       },
       "llm_errors": {
-        "n": 24,
-        "d": 278,
-        "rate": 0.0863
+        "n": 28,
+        "d": 308,
+        "rate": 0.0909
       },
       "llm_plans_accepted_by_intent_check": {
-        "n": 218,
-        "d": 236,
-        "rate": 0.9237
+        "n": 240,
+        "d": 261,
+        "rate": 0.9195
       },
       "accuracy_of_accepted_llm_plans": {
-        "n": 210,
-        "d": 210,
+        "n": 232,
+        "d": 232,
         "rate": 1.0
       },
       "llm_plans_repaired": {
         "n": 0,
-        "d": 218,
+        "d": 240,
         "rate": 0.0
       },
       "llm_refused_or_was_rejected_on_should_refuse_inputs": {
-        "n": 24,
-        "d": 40,
-        "rate": 0.6
+        "n": 27,
+        "d": 44,
+        "rate": 0.6136
       },
       "llm_plan_answered_should_refuse_input": {
         "n": 8,
-        "d": 40,
-        "rate": 0.2
+        "d": 44,
+        "rate": 0.1818
       },
       "tool_selection_of_llm_plans": {
-        "n": 221,
-        "d": 222,
-        "rate": 0.9955
+        "n": 244,
+        "d": 245,
+        "rate": 0.9959
       },
       "token_usage": {
-        "measured_calls": 16,
-        "input_tokens": 26720,
-        "output_tokens": 2824,
-        "total_tokens": 29544,
-        "mean_tokens_per_call": 1846,
-        "llm_call_seconds_p50": 1.192,
-        "llm_call_seconds_max": 1.978
+        "measured_calls": 26,
+        "input_tokens": 43512,
+        "output_tokens": 5566,
+        "total_tokens": 49078,
+        "mean_tokens_per_call": 1888,
+        "llm_call_seconds_p50": 1.165,
+        "llm_call_seconds_max": 2.885
       }
     }
   },
@@ -442,7 +440,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 897.3,
+      "latency_ms": 764.2,
       "outcome": "answered",
       "answer": "x = 2, x = 3",
       "verification": "verified",
@@ -472,7 +470,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 40.6,
+      "latency_ms": 35.2,
       "outcome": "answered",
       "answer": "x = 4",
       "verification": "verified",
@@ -502,7 +500,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 45.1,
+      "latency_ms": 34.2,
       "outcome": "answered",
       "answer": "t = 3",
       "verification": "verified",
@@ -524,7 +522,7 @@
       "overall": "verified",
       "llm": "error",
       "llm_error": "LLMPlanError: the plan names no tool",
-      "latency_ms": 101.8,
+      "latency_ms": 63.1,
       "outcome": "answered",
       "answer": "x = 1, x = 2, x = 3",
       "verification": "verified",
@@ -554,7 +552,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 64.8,
+      "latency_ms": 36.5,
       "outcome": "answered",
       "answer": "x = -I, x = I",
       "verification": "verified",
@@ -585,7 +583,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 135.1,
+      "latency_ms": 119.2,
       "outcome": "answered",
       "answer": "x = 2, x = -1 - sqrt(3)*I, x = -1 + sqrt(3)*I",
       "verification": "verified",
@@ -615,7 +613,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 89.8,
+      "latency_ms": 62.8,
       "outcome": "answered",
       "answer": "x = -2, x = -1, x = 1, x = 2",
       "verification": "verified",
@@ -645,7 +643,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 76.1,
+      "latency_ms": 44.1,
       "outcome": "answered",
       "answer": "x = 1",
       "verification": "verified",
@@ -675,7 +673,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 63.8,
+      "latency_ms": 42.8,
       "outcome": "answered",
       "answer": "x = -sqrt(2), x = sqrt(2)",
       "verification": "verified",
@@ -705,7 +703,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 80.2,
+      "latency_ms": 51.7,
       "outcome": "answered",
       "answer": "x = -2, x = 1/2",
       "verification": "verified",
@@ -735,7 +733,7 @@
         "ambiguities": []
       },
       "llm": "rejected_fallback",
-      "latency_ms": 130.0,
+      "latency_ms": 81.0,
       "outcome": "answered",
       "answer": "x = 4",
       "verification": "verified",
@@ -765,7 +763,7 @@
         "ambiguities": []
       },
       "llm": "rejected_fallback",
-      "latency_ms": 88.8,
+      "latency_ms": 80.0,
       "outcome": "answered",
       "answer": "x = log(5)",
       "verification": "verified",
@@ -795,7 +793,7 @@
         "ambiguities": []
       },
       "llm": "rejected_fallback",
-      "latency_ms": 107.2,
+      "latency_ms": 81.7,
       "outcome": "answered",
       "answer": "x = exp(2)",
       "verification": "verified",
@@ -825,7 +823,7 @@
         "ambiguities": []
       },
       "llm": "rejected_fallback",
-      "latency_ms": 1463.6,
+      "latency_ms": 944.9,
       "outcome": "answered",
       "answer": "x = 0.739085133215161",
       "verification": "approximate",
@@ -855,7 +853,7 @@
         "ambiguities": []
       },
       "llm": "rejected_fallback",
-      "latency_ms": 86.3,
+      "latency_ms": 42.9,
       "outcome": "answered",
       "answer": "x = 2*pi*k, x = 2*pi*k + pi (k any integer)",
       "verification": "verified",
@@ -885,7 +883,7 @@
         "ambiguities": []
       },
       "llm": "rejected_fallback",
-      "latency_ms": 128.2,
+      "latency_ms": 89.2,
       "outcome": "answered",
       "answer": "x = 2*pi*k + pi/3, x = 2*pi*k + 5*pi/3 (k any integer)",
       "verification": "verified",
@@ -915,7 +913,7 @@
         "ambiguities": []
       },
       "llm": "rejected_fallback",
-      "latency_ms": 88.0,
+      "latency_ms": 70.8,
       "outcome": "answered",
       "answer": "x = pi*k + pi/4 (k any integer)",
       "verification": "verified",
@@ -945,7 +943,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 75.5,
+      "latency_ms": 58.9,
       "outcome": "answered",
       "answer": "x = -2",
       "verification": "verified",
@@ -975,7 +973,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 54.2,
+      "latency_ms": 45.0,
       "outcome": "answered",
       "answer": "x = -2, x = 1, x = 3",
       "verification": "verified",
@@ -1005,7 +1003,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 35.6,
+      "latency_ms": 32.5,
       "outcome": "answered",
       "answer": "x = 5",
       "verification": "verified",
@@ -1035,7 +1033,7 @@
         "ambiguities": []
       },
       "llm": "rejected_fallback",
-      "latency_ms": 66.7,
+      "latency_ms": 60.8,
       "outcome": "answered",
       "answer": "x = -1, x = 3",
       "verification": "verified",
@@ -1066,7 +1064,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 43.3,
+      "latency_ms": 39.5,
       "outcome": "answered",
       "answer": "x = -1, x = 0, x = 1",
       "verification": "verified",
@@ -1096,7 +1094,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 121.4,
+      "latency_ms": 82.7,
       "outcome": "answered",
       "answer": "x = 3",
       "verification": "verified",
@@ -1125,7 +1123,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 89.0,
+      "latency_ms": 77.5,
       "outcome": "answered",
       "answer": "x = -2 - 3*I, x = -2 + 3*I",
       "verification": "verified",
@@ -1155,7 +1153,7 @@
         "ambiguities": []
       },
       "llm": "rejected_fallback",
-      "latency_ms": 644.6,
+      "latency_ms": 636.4,
       "outcome": "answered",
       "answer": "x = -LambertW(-1/3), x = -LambertW(-1/3, -1)",
       "verification": "approximate",
@@ -1187,7 +1185,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 33.8,
+      "latency_ms": 27.4,
       "outcome": "answered",
       "answer": "(x = 2, y = 1)",
       "verification": "verified",
@@ -1223,7 +1221,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 35.7,
+      "latency_ms": 31.7,
       "outcome": "answered",
       "answer": "(x = 2, y = 3)",
       "verification": "verified",
@@ -1261,7 +1259,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 42.5,
+      "latency_ms": 25.5,
       "outcome": "answered",
       "answer": "(x = 2, y = 2, z = 2)",
       "verification": "verified",
@@ -1293,7 +1291,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 62.2,
+      "latency_ms": 47.2,
       "outcome": "answered",
       "answer": "(x = -3, y = -4) or (x = 4, y = 3)",
       "verification": "verified",
@@ -1325,7 +1323,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 29.8,
+      "latency_ms": 24.7,
       "outcome": "answered",
       "answer": "(x = 0, y = 0) or (x = 2, y = 4)",
       "verification": "verified",
@@ -1361,7 +1359,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 42.8,
+      "latency_ms": 29.7,
       "outcome": "answered",
       "answer": "(a = 2, b = -1)",
       "verification": "verified",
@@ -1393,7 +1391,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 44.4,
+      "latency_ms": 32.5,
       "outcome": "answered",
       "answer": "(x = 3, y = 2)",
       "verification": "verified",
@@ -1425,7 +1423,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 33.0,
+      "latency_ms": 34.5,
       "outcome": "answered",
       "answer": "(x = 2, y = 3) or (x = 3, y = 2)",
       "verification": "verified",
@@ -1454,7 +1452,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 53.9,
+      "latency_ms": 56.9,
       "outcome": "answered",
       "answer": "1",
       "verification": "verified",
@@ -1483,7 +1481,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 43.9,
+      "latency_ms": 35.2,
       "outcome": "answered",
       "answer": "x + 1",
       "verification": "verified",
@@ -1512,7 +1510,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 37.7,
+      "latency_ms": 37.6,
       "outcome": "answered",
       "answer": "x + 1",
       "verification": "verified",
@@ -1541,7 +1539,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 25.2,
+      "latency_ms": 20.2,
       "outcome": "answered",
       "answer": "6 - 2*x",
       "verification": "verified",
@@ -1570,7 +1568,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 13.5,
+      "latency_ms": 11.2,
       "outcome": "answered",
       "answer": "x",
       "verification": "verified",
@@ -1599,7 +1597,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 20.9,
+      "latency_ms": 6.7,
       "outcome": "answered",
       "answer": "5/6",
       "verification": "verified",
@@ -1628,7 +1626,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 14.3,
+      "latency_ms": 11.8,
       "outcome": "answered",
       "answer": "5*sqrt(2)",
       "verification": "verified",
@@ -1657,7 +1655,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 19.7,
+      "latency_ms": 15.8,
       "outcome": "answered",
       "answer": "(x - 3)*(x + 3)",
       "verification": "verified",
@@ -1686,7 +1684,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 19.5,
+      "latency_ms": 18.0,
       "outcome": "answered",
       "answer": "(x - 2)*(x**2 + 2*x + 4)",
       "verification": "verified",
@@ -1715,7 +1713,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 23.6,
+      "latency_ms": 17.5,
       "outcome": "answered",
       "answer": "(x + 2)*(x + 3)",
       "verification": "verified",
@@ -1744,7 +1742,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 22.9,
+      "latency_ms": 31.6,
       "outcome": "answered",
       "answer": "2*(x - 2)*(x + 2)",
       "verification": "verified",
@@ -1773,7 +1771,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 43.8,
+      "latency_ms": 20.0,
       "outcome": "answered",
       "answer": "(x - 1)*(x + 1)*(x**2 + 1)",
       "verification": "verified",
@@ -1802,7 +1800,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 24.8,
+      "latency_ms": 20.6,
       "outcome": "answered",
       "answer": "(x + 1)**3",
       "verification": "verified",
@@ -1831,7 +1829,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 17.5,
+      "latency_ms": 13.0,
       "outcome": "answered",
       "answer": "x**3 + 3*x**2 + 3*x + 1",
       "verification": "verified",
@@ -1860,7 +1858,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 30.4,
+      "latency_ms": 15.8,
       "outcome": "answered",
       "answer": "x**2 + 3*x - 10",
       "verification": "verified",
@@ -1889,7 +1887,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 33.2,
+      "latency_ms": 19.9,
       "outcome": "answered",
       "answer": "a**2 + 2*a*b + b**2",
       "verification": "verified",
@@ -1918,7 +1916,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 34.6,
+      "latency_ms": 18.1,
       "outcome": "answered",
       "answer": "4*x**2 - 4*x + 1",
       "verification": "verified",
@@ -1947,7 +1945,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 31.1,
+      "latency_ms": 15.7,
       "outcome": "answered",
       "answer": "x**3 + 3*x**2 + 2*x",
       "verification": "verified",
@@ -1977,7 +1975,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 262.6,
+      "latency_ms": 266.9,
       "outcome": "answered",
       "answer": "x**2*(x*cos(x) + 3*sin(x))",
       "verification": "verified",
@@ -2007,7 +2005,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 47.2,
+      "latency_ms": 51.6,
       "outcome": "answered",
       "answer": "2*exp(2*x)",
       "verification": "verified",
@@ -2037,7 +2035,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 51.1,
+      "latency_ms": 36.1,
       "outcome": "answered",
       "answer": "2*x/(x**2 + 1)",
       "verification": "verified",
@@ -2097,7 +2095,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 86.9,
+      "latency_ms": 72.0,
       "outcome": "answered",
       "answer": "cos(x)**(-2)",
       "verification": "verified",
@@ -2127,7 +2125,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 55.3,
+      "latency_ms": 42.3,
       "outcome": "answered",
       "answer": "(x + 1)*exp(x)",
       "verification": "verified",
@@ -2157,7 +2155,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 92.2,
+      "latency_ms": 67.2,
       "outcome": "answered",
       "answer": "2*x*cos(x**2)",
       "verification": "verified",
@@ -2187,7 +2185,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 81.6,
+      "latency_ms": 75.8,
       "outcome": "answered",
       "answer": "(-x**2 + 2*x*(x - 1) - 1)/(x - 1)**2",
       "verification": "verified",
@@ -2217,7 +2215,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 68.6,
+      "latency_ms": 69.4,
       "outcome": "answered",
       "answer": "x**x*(log(x) + 1)",
       "verification": "verified",
@@ -2248,7 +2246,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 19.0,
+      "latency_ms": 14.8,
       "outcome": "answered",
       "answer": "12*x**2",
       "verification": "approximate",
@@ -2279,7 +2277,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 27.4,
+      "latency_ms": 18.8,
       "outcome": "answered",
       "answer": "-sin(x)",
       "verification": "approximate",
@@ -2309,7 +2307,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 17.1,
+      "latency_ms": 18.1,
       "outcome": "answered",
       "answer": "60*x**2",
       "verification": "approximate",
@@ -2339,7 +2337,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 16.5,
+      "latency_ms": 17.5,
       "outcome": "answered",
       "answer": "2*x; at x = 3: 6",
       "verification": "verified",
@@ -2369,7 +2367,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 24.2,
+      "latency_ms": 15.7,
       "outcome": "answered",
       "answer": "cos(x); at x = pi/3: 1/2",
       "verification": "verified",
@@ -2399,7 +2397,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 25.7,
+      "latency_ms": 21.3,
       "outcome": "answered",
       "answer": "3*t**2 + 2",
       "verification": "verified",
@@ -2429,7 +2427,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 40.2,
+      "latency_ms": 34.3,
       "outcome": "answered",
       "answer": "1/(x**2 + 1)",
       "verification": "verified",
@@ -2461,7 +2459,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 16.4,
+      "latency_ms": 13.8,
       "outcome": "answered",
       "answer": "1",
       "verification": "approximate",
@@ -2492,7 +2490,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 20.1,
+      "latency_ms": 14.6,
       "outcome": "answered",
       "answer": "E",
       "verification": "approximate",
@@ -2524,7 +2522,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 36.1,
+      "latency_ms": 24.3,
       "outcome": "answered",
       "answer": "2",
       "verification": "approximate",
@@ -2556,7 +2554,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 47.1,
+      "latency_ms": 37.0,
       "outcome": "answered",
       "answer": "1/2",
       "verification": "approximate",
@@ -2588,7 +2586,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 75.3,
+      "latency_ms": 64.3,
       "outcome": "answered",
       "answer": "1",
       "verification": "approximate",
@@ -2620,7 +2618,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 28.6,
+      "latency_ms": 18.9,
       "outcome": "answered",
       "answer": "0",
       "verification": "approximate",
@@ -2652,7 +2650,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 27.3,
+      "latency_ms": 19.1,
       "outcome": "answered",
       "answer": "3",
       "verification": "approximate",
@@ -2684,7 +2682,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 12.7,
+      "latency_ms": 9.9,
       "outcome": "answered",
       "answer": "oo",
       "verification": "approximate",
@@ -2716,7 +2714,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 16.6,
+      "latency_ms": 13.7,
       "outcome": "answered",
       "answer": "-oo",
       "verification": "approximate",
@@ -2748,7 +2746,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 76.7,
+      "latency_ms": 60.5,
       "outcome": "answered",
       "answer": "1/2",
       "verification": "approximate",
@@ -2780,7 +2778,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 42.2,
+      "latency_ms": 23.5,
       "outcome": "answered",
       "answer": "1",
       "verification": "approximate",
@@ -2812,7 +2810,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 11.2,
+      "latency_ms": 10.0,
       "outcome": "answered",
       "answer": "oo",
       "verification": "approximate",
@@ -2842,7 +2840,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 16.0,
+      "latency_ms": 12.8,
       "outcome": "answered",
       "answer": "x**3/3 + C",
       "verification": "verified",
@@ -2872,7 +2870,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 47.5,
+      "latency_ms": 34.3,
       "outcome": "answered",
       "answer": "(x - 1)*exp(x) + C",
       "verification": "verified",
@@ -2902,7 +2900,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 17.0,
+      "latency_ms": 11.6,
       "outcome": "answered",
       "answer": "sin(x) + C",
       "verification": "verified",
@@ -2932,7 +2930,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 18.9,
+      "latency_ms": 10.4,
       "outcome": "answered",
       "answer": "log(x) + C",
       "verification": "verified",
@@ -2962,7 +2960,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 44.1,
+      "latency_ms": 31.2,
       "outcome": "answered",
       "answer": "x*sin(x) + cos(x) + C",
       "verification": "verified",
@@ -2992,7 +2990,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 39.5,
+      "latency_ms": 33.3,
       "outcome": "answered",
       "answer": "atan(x) + C",
       "verification": "verified",
@@ -3022,7 +3020,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 65.4,
+      "latency_ms": 36.9,
       "outcome": "answered",
       "answer": "x/2 - sin(x)*cos(x)/2 + C",
       "verification": "verified",
@@ -3052,7 +3050,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 28.9,
+      "latency_ms": 17.6,
       "outcome": "answered",
       "answer": "x**3 + x**2 + x + C",
       "verification": "verified",
@@ -3082,7 +3080,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 33.9,
+      "latency_ms": 25.0,
       "outcome": "answered",
       "answer": "exp(3*x)/3 + C",
       "verification": "verified",
@@ -3114,7 +3112,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 27.3,
+      "latency_ms": 16.6,
       "outcome": "answered",
       "answer": "9",
       "verification": "verified",
@@ -3146,7 +3144,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 30.8,
+      "latency_ms": 19.3,
       "outcome": "answered",
       "answer": "2",
       "verification": "verified",
@@ -3178,7 +3176,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 238.4,
+      "latency_ms": 173.9,
       "outcome": "answered",
       "answer": "sqrt(pi)",
       "verification": "verified",
@@ -3210,7 +3208,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 44.5,
+      "latency_ms": 33.0,
       "outcome": "answered",
       "answer": "1",
       "verification": "verified",
@@ -3242,7 +3240,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 29.9,
+      "latency_ms": 20.6,
       "outcome": "answered",
       "answer": "2",
       "verification": "verified",
@@ -3274,7 +3272,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 84.9,
+      "latency_ms": 57.7,
       "outcome": "answered",
       "answer": "pi",
       "verification": "verified",
@@ -3306,7 +3304,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 42.3,
+      "latency_ms": 34.4,
       "outcome": "answered",
       "answer": "1",
       "verification": "verified",
@@ -3338,7 +3336,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 37.1,
+      "latency_ms": 24.0,
       "outcome": "answered",
       "answer": "0",
       "verification": "verified",
@@ -3370,7 +3368,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 75.4,
+      "latency_ms": 53.1,
       "outcome": "answered",
       "answer": "5/2",
       "verification": "approximate",
@@ -3402,7 +3400,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 727.8,
+      "latency_ms": 450.2,
       "outcome": "answered",
       "answer": "sqrt(2)*sqrt(pi)*fresnels(sqrt(2)/sqrt(pi))/2",
       "verification": "verified",
@@ -3434,7 +3432,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 40.8,
+      "latency_ms": 33.2,
       "outcome": "answered",
       "answer": "diverges (oo)",
       "verification": "approximate",
@@ -3466,7 +3464,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 78.0,
+      "latency_ms": 67.2,
       "outcome": "answered",
       "answer": "1",
       "verification": "verified",
@@ -3505,7 +3503,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 11.0,
+      "latency_ms": 11.4,
       "outcome": "answered",
       "answer": "-2",
       "verification": "verified",
@@ -3551,7 +3549,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 10.8,
+      "latency_ms": 12.3,
       "outcome": "answered",
       "answer": "18",
       "verification": "verified",
@@ -3597,7 +3595,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 11.9,
+      "latency_ms": 13.4,
       "outcome": "answered",
       "answer": "0",
       "verification": "verified",
@@ -3636,7 +3634,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 154.4,
+      "latency_ms": 140.0,
       "outcome": "answered",
       "answer": "[[3/5, -7/10], [-1/5, 2/5]]",
       "verification": "verified",
@@ -3682,7 +3680,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 22.3,
+      "latency_ms": 13.0,
       "outcome": "answered",
       "answer": "[[1, -2, 0], [0, 1, 0], [0, 0, 1/2]]",
       "verification": "verified",
@@ -3721,7 +3719,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 164.2,
+      "latency_ms": 131.9,
       "outcome": "answered",
       "answer": "3, 1",
       "verification": "verified",
@@ -3760,7 +3758,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 16.0,
+      "latency_ms": 13.1,
       "outcome": "answered",
       "answer": "5, 2",
       "verification": "verified",
@@ -3799,7 +3797,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 12.9,
+      "latency_ms": 9.9,
       "outcome": "answered",
       "answer": "1 (multiplicity 2)",
       "verification": "verified",
@@ -3838,7 +3836,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 15.5,
+      "latency_ms": 10.9,
       "outcome": "answered",
       "answer": "-I, I",
       "verification": "verified",
@@ -3884,7 +3882,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 21.1,
+      "latency_ms": 15.0,
       "outcome": "answered",
       "answer": "2, 11, 1",
       "verification": "verified",
@@ -3923,7 +3921,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 15.9,
+      "latency_ms": 9.7,
       "outcome": "answered",
       "answer": "1",
       "verification": "verified",
@@ -3969,7 +3967,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 15.9,
+      "latency_ms": 10.0,
       "outcome": "answered",
       "answer": "3",
       "verification": "verified",
@@ -4010,7 +4008,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 15.7,
+      "latency_ms": 10.6,
       "outcome": "answered",
       "answer": "[[1, 4], [2, 5], [3, 6]]",
       "verification": "verified",
@@ -4059,7 +4057,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 19.4,
+      "latency_ms": 12.1,
       "outcome": "answered",
       "answer": "[[19, 22], [43, 50]]",
       "verification": "verified",
@@ -4081,7 +4079,7 @@
       "overall": "verified",
       "llm": "error",
       "llm_error": "LLMPlanError: the plan names no tool",
-      "latency_ms": 14.5,
+      "latency_ms": 8.8,
       "outcome": "answered",
       "answer": "[4/5, 7/5]",
       "verification": "verified",
@@ -4132,7 +4130,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 24.0,
+      "latency_ms": 15.3,
       "outcome": "answered",
       "answer": "[5, 3, -2]",
       "verification": "verified",
@@ -4173,7 +4171,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 16.9,
+      "latency_ms": 10.4,
       "outcome": "answered",
       "answer": "[[1, 0, -1], [0, 1, 2]]",
       "verification": "verified",
@@ -4211,7 +4209,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 19.0,
+      "latency_ms": 11.6,
       "outcome": "answered",
       "answer": "mean = 5 (\u22485.00000), median = 9/2, sample std = 2.13809, population std = 2.00000",
       "verification": "verified",
@@ -4246,7 +4244,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 15.0,
+      "latency_ms": 8.8,
       "outcome": "answered",
       "answer": "mean = 3 (\u22483.00000), median = 3, sample std = 1.58114, population std = 1.41421",
       "verification": "verified",
@@ -4279,7 +4277,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 12.8,
+      "latency_ms": 7.8,
       "outcome": "answered",
       "answer": "mean = 20 (\u224820.0000), median = 20, sample std = 10.0000, population std = 8.16497",
       "verification": "verified",
@@ -4312,7 +4310,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 13.1,
+      "latency_ms": 8.2,
       "outcome": "answered",
       "answer": "mean = 5/2 (\u22482.50000), median = 5/2, sample std = 1.00000, population std = 0.816497",
       "verification": "verified",
@@ -4346,7 +4344,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 13.7,
+      "latency_ms": 8.6,
       "outcome": "answered",
       "answer": "mean = 3/2 (\u22481.50000), median = 3/2, sample std = 3.87298, population std = 3.35410",
       "verification": "verified",
@@ -4380,7 +4378,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 12.7,
+      "latency_ms": 7.7,
       "outcome": "answered",
       "answer": "mean = 7 (\u22487.00000), median = 7, sample std = 0, population std = 0",
       "verification": "verified",
@@ -4418,7 +4416,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 21.9,
+      "latency_ms": 12.6,
       "outcome": "answered",
       "answer": "mean = 31/8 (\u22483.87500), median = 7/2, sample std = 2.74838, population std = 2.57087",
       "verification": "verified",
@@ -4446,7 +4444,7 @@
         "ambiguities": []
       },
       "llm": "rejected_fallback",
-      "latency_ms": 12.5,
+      "latency_ms": 7.5,
       "outcome": "answered",
       "answer": "mean = 150 (\u2248150.000), median = 150, sample std = 70.7107, population std = 50.0000",
       "verification": "verified",
@@ -4481,7 +4479,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 15.2,
+      "latency_ms": 12.1,
       "outcome": "answered",
       "answer": "mean = 13 (\u224813.0000), median = 13, sample std = 1.58114, population std = 1.41421",
       "verification": "verified",
@@ -4516,7 +4514,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 20.9,
+      "latency_ms": 17.5,
       "outcome": "answered",
       "answer": "P(X = 3) = 15/128 \u2248 0.117188",
       "verification": "verified",
@@ -4551,7 +4549,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 28.3,
+      "latency_ms": 19.9,
       "outcome": "answered",
       "answer": "P(X \u2264 3) = 11/64 \u2248 0.171875",
       "verification": "verified",
@@ -4586,7 +4584,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 28.6,
+      "latency_ms": 18.8,
       "outcome": "answered",
       "answer": "P(X \u2265 5) = 19062305528059958931/25000000000000000000 \u2248 0.762492",
       "verification": "verified",
@@ -4621,7 +4619,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 17.2,
+      "latency_ms": 9.9,
       "outcome": "answered",
       "answer": "P(X = 5) = 63/256 \u2248 0.246094",
       "verification": "verified",
@@ -4656,7 +4654,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 30.2,
+      "latency_ms": 17.2,
       "outcome": "answered",
       "answer": "P(X \u2265 2) = 821/3125 \u2248 0.26272",
       "verification": "verified",
@@ -4690,7 +4688,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 34.1,
+      "latency_ms": 19.9,
       "outcome": "answered",
       "answer": "P(X \u2264 2) = 17*exp(-3)/2 \u2248 0.42319",
       "verification": "verified",
@@ -4724,7 +4722,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 13.4,
+      "latency_ms": 10.4,
       "outcome": "answered",
       "answer": "P(X = 0) = exp(-2) \u2248 0.135335",
       "verification": "verified",
@@ -4758,7 +4756,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 26.7,
+      "latency_ms": 20.6,
       "outcome": "answered",
       "answer": "P(X \u2265 2) = 1 - 5*exp(-4) \u2248 0.908422",
       "verification": "verified",
@@ -4793,7 +4791,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 30.1,
+      "latency_ms": 25.4,
       "outcome": "answered",
       "answer": "P(X \u2264 49/25) = erf(49*sqrt(2)/50)/2 + 1/2 \u2248 0.975002",
       "verification": "verified",
@@ -4828,7 +4826,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 22.6,
+      "latency_ms": 20.0,
       "outcome": "answered",
       "answer": "P(X > 130) = 1/2 - erf(sqrt(2))/2 \u2248 0.0227501",
       "verification": "verified",
@@ -4864,7 +4862,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 13.4,
+      "latency_ms": 12.1,
       "outcome": "answered",
       "answer": "P(-1 \u2264 X \u2264 1) = erf(sqrt(2)/2) \u2248 0.682689",
       "verification": "verified",
@@ -4900,7 +4898,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 16.7,
+      "latency_ms": 13.8,
       "outcome": "answered",
       "answer": "P(40 \u2264 X \u2264 60) = erf(sqrt(2)/2) \u2248 0.682689",
       "verification": "verified",
@@ -4935,7 +4933,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 10.6,
+      "latency_ms": 9.3,
       "outcome": "answered",
       "answer": "P(X \u2264 3) = 3/10 \u2248 0.3",
       "verification": "verified",
@@ -4971,7 +4969,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 10.6,
+      "latency_ms": 9.1,
       "outcome": "answered",
       "answer": "P(3 \u2264 X \u2264 5) = 1/2 \u2248 0.5",
       "verification": "verified",
@@ -5005,7 +5003,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 10.6,
+      "latency_ms": 11.6,
       "outcome": "answered",
       "answer": "P(X > 1) = exp(-2) \u2248 0.135335",
       "verification": "verified",
@@ -5039,7 +5037,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 21.2,
+      "latency_ms": 20.8,
       "outcome": "answered",
       "answer": "P(X \u2264 2) = 1 - exp(-1) \u2248 0.632121",
       "verification": "verified",
@@ -5070,7 +5068,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 9.5,
+      "latency_ms": 5.7,
       "outcome": "answered",
       "answer": "120",
       "verification": "verified",
@@ -5101,7 +5099,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 8.3,
+      "latency_ms": 5.2,
       "outcome": "answered",
       "answer": "2598960",
       "verification": "verified",
@@ -5131,7 +5129,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 9.2,
+      "latency_ms": 4.7,
       "outcome": "answered",
       "answer": "120",
       "verification": "verified",
@@ -5161,7 +5159,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 7.7,
+      "latency_ms": 4.7,
       "outcome": "answered",
       "answer": "3628800",
       "verification": "verified",
@@ -5192,7 +5190,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 8.0,
+      "latency_ms": 4.6,
       "outcome": "answered",
       "answer": "20",
       "verification": "verified",
@@ -5214,7 +5212,7 @@
       "overall": "verified",
       "llm": "error",
       "llm_error": "LLMPlanError: the plan names no tool",
-      "latency_ms": 9.2,
+      "latency_ms": 9.3,
       "outcome": "answered",
       "answer": "28",
       "verification": "verified",
@@ -5244,7 +5242,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 5.7,
+      "latency_ms": 5.4,
       "outcome": "answered",
       "answer": "1",
       "verification": "verified",
@@ -5275,7 +5273,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 5.3,
+      "latency_ms": 5.5,
       "outcome": "answered",
       "answer": "720",
       "verification": "verified",
@@ -5306,7 +5304,7 @@
       "llm_repaired": false,
       "outcome": "rejected",
       "error": "The equation has no solutions (it does not depend on x).",
-      "latency_ms": 9.2,
+      "latency_ms": 7.8,
       "llm_cached": true
     },
     {
@@ -5331,7 +5329,7 @@
       "llm": "rejected_clarify",
       "outcome": "clarify",
       "error": "'2*(x + 1) = 2*x + 2' does not match any equation in the question.",
-      "latency_ms": 12.6,
+      "latency_ms": 8.0,
       "llm_cached": true
     },
     {
@@ -5356,7 +5354,7 @@
       "llm_repaired": false,
       "outcome": "rejected",
       "error": "The equation has no solutions (the solution set is empty).",
-      "latency_ms": 50.9,
+      "latency_ms": 29.9,
       "llm_cached": true
     },
     {
@@ -5383,7 +5381,7 @@
       "llm_repaired": false,
       "outcome": "rejected",
       "error": "The equation has no real solutions.",
-      "latency_ms": 173.4,
+      "latency_ms": 131.8,
       "llm_cached": true
     },
     {
@@ -5401,7 +5399,7 @@
       "llm_error": "LLMPlanError: the plan names no tool",
       "outcome": "rejected",
       "error": "The matrix is singular (determinant 0), so it has no inverse.",
-      "latency_ms": 6.5,
+      "latency_ms": 4.8,
       "llm_cached": true
     },
     {
@@ -5440,7 +5438,7 @@
       "llm_repaired": false,
       "outcome": "rejected",
       "error": "The linear system is inconsistent: no solution exists.",
-      "latency_ms": 19.6,
+      "latency_ms": 12.6,
       "llm_cached": true
     },
     {
@@ -5455,7 +5453,7 @@
       "llm": "declared_unsupported",
       "outcome": "rejected",
       "error": "Determinant is defined only for square matrices; the provided matrix is 2x3. Please provide a square matrix.",
-      "latency_ms": 5.0,
+      "latency_ms": 3.0,
       "llm_cached": true
     },
     {
@@ -5487,7 +5485,7 @@
       "llm_repaired": false,
       "outcome": "rejected",
       "error": "The system has no solution (it is inconsistent).",
-      "latency_ms": 43.9,
+      "latency_ms": 28.1,
       "llm_cached": true
     },
     {
@@ -5515,7 +5513,7 @@
       "llm_repaired": false,
       "outcome": "rejected",
       "error": "The limit does not exist: the function oscillates between -1 and 1.",
-      "latency_ms": 23.2,
+      "latency_ms": 15.7,
       "llm_cached": true
     },
     {
@@ -5542,7 +5540,7 @@
       "llm_repaired": false,
       "outcome": "rejected",
       "error": "The two-sided limit does not exist: the left-hand limit is -oo and the right-hand limit is oo.",
-      "latency_ms": 15.9,
+      "latency_ms": 17.1,
       "llm_cached": true
     },
     {
@@ -5570,7 +5568,7 @@
       "llm_repaired": false,
       "outcome": "rejected",
       "error": "The integral diverges: the integrand has a non-integrable singularity at x = 0 inside the interval.",
-      "latency_ms": 71.9,
+      "latency_ms": 50.5,
       "llm_cached": true
     },
     {
@@ -5588,7 +5586,7 @@
       "llm_error": "LLMPlanError: the plan names no tool",
       "outcome": "rejected",
       "error": "k must be an integer with 0 <= k <= n.",
-      "latency_ms": 10.7,
+      "latency_ms": 6.8,
       "llm_cached": true
     },
     {
@@ -5603,7 +5601,7 @@
       "llm": "declared_unsupported",
       "outcome": "rejected",
       "error": "The probability parameter p for a binomial distribution must be between 0 and 1; you gave p = 1.5. Please provide a valid p.",
-      "latency_ms": 5.2,
+      "latency_ms": 2.8,
       "llm_cached": true
     },
     {
@@ -5629,7 +5627,7 @@
       "llm": "rejected_clarify",
       "outcome": "clarify",
       "error": "The equation has several unknowns (a, b) but only one equation. Which variable should be solved for, or is there another equation?",
-      "latency_ms": 11.5,
+      "latency_ms": 6.3,
       "llm_cached": true
     },
     {
@@ -5644,7 +5642,7 @@
       "llm": "declared_unsupported",
       "outcome": "rejected",
       "error": "Please provide the matrix for which you want to compute the determinant.",
-      "latency_ms": 3.6,
+      "latency_ms": 2.0,
       "llm_cached": true
     },
     {
@@ -5659,7 +5657,7 @@
       "llm": "declared_unsupported",
       "outcome": "rejected",
       "error": "For a binomial distribution, please provide the number of trials (n) and the probability of success (p) to compute P(X = 3).",
-      "latency_ms": 5.3,
+      "latency_ms": 2.9,
       "llm_cached": true
     },
     {
@@ -5674,7 +5672,7 @@
       "llm": "declared_unsupported",
       "outcome": "rejected",
       "error": "What is the point (and direction, if any) at which you want to evaluate the limit of 1/x?",
-      "latency_ms": 6.1,
+      "latency_ms": 3.2,
       "llm_cached": true
     },
     {
@@ -5689,7 +5687,7 @@
       "llm": "declared_unsupported",
       "outcome": "rejected",
       "error": "Please provide the integrand expression, the variable of integration, and any limits (if a definite integral).",
-      "latency_ms": 5.2,
+      "latency_ms": 2.6,
       "llm_cached": true
     },
     {
@@ -5704,7 +5702,7 @@
       "llm": "declared_unsupported",
       "outcome": "rejected",
       "error": "Please provide the equation or system you would like solved.",
-      "latency_ms": 5.1,
+      "latency_ms": 2.7,
       "llm_cached": true
     },
     {
@@ -5719,7 +5717,7 @@
       "llm": "declared_unsupported",
       "outcome": "rejected",
       "error": "What are the mean and standard deviation of the normal distribution?",
-      "latency_ms": 5.2,
+      "latency_ms": 2.8,
       "llm_cached": true
     },
     {
@@ -5734,7 +5732,7 @@
       "llm": "declared_unsupported",
       "outcome": "rejected",
       "error": "What is the upper limit of integration? You provided a lower limit of 0 but no upper limit.",
-      "latency_ms": 5.4,
+      "latency_ms": 3.1,
       "llm_cached": true
     },
     {
@@ -5749,7 +5747,7 @@
       "llm": "declared_unsupported",
       "outcome": "rejected",
       "error": "The request is for a poem, which is a creative writing task and not a mathematical problem that can be handled by the available computational tools.",
-      "latency_ms": 4.7,
+      "latency_ms": 2.6,
       "llm_cached": true
     },
     {
@@ -5764,7 +5762,7 @@
       "llm": "declared_unsupported",
       "outcome": "rejected",
       "error": "The problem is a second-order ordinary differential equation, which is not supported by the available tools.",
-      "latency_ms": 3.0,
+      "latency_ms": 1.5,
       "llm_cached": true
     },
     {
@@ -5780,7 +5778,7 @@
       "llm_error": "LLMPlanError: BadRequestError: Error code: 400 - {'error': {'message': \"Tool call validation failed: tool call validation failed: attempted to call tool 'json' which was not in request.tools\", 'type': 'invalid_request_error', 'code': 'tool_use_failed', 'failed_generation': '{\"name\": \"json\", \"arguments\": {\\n  \"supported\": false,\\n  \"clarification\": \"The request is to provide a proof that sqrt(2) is irrational, which is a mathematical proof rather than a computation that can be handled by the available tools.\"\\n}}'}} (after 1 retry)",
       "outcome": "rejected",
       "error": "I couldn't recognise this as a supported problem (algebra, calculus, integrals, linear algebra, probability or statistics). Try rephrasing, e.g. 'solve x^2 - 4 = 0'.",
-      "latency_ms": 1875.1,
+      "latency_ms": 1537.0,
       "llm_cached": false
     },
     {
@@ -5798,7 +5796,7 @@
       "llm_error": "LLMPlanError: BadRequestError: Error code: 400 - {'error': {'message': 'Tool choice is required, but model did not call a tool', 'type': 'invalid_request_error', 'code': 'tool_use_failed', 'failed_generation': ''}}",
       "outcome": "clarify",
       "error": "The plan was rejected: 'equation' is not a valid mathematical expression (Expected an expression, not an equation or inequality.).",
-      "latency_ms": 787.4,
+      "latency_ms": 990.4,
       "llm_cached": false
     },
     {
@@ -5813,7 +5811,7 @@
       "llm": "declared_unsupported",
       "outcome": "rejected",
       "error": "The request is not a mathematical problem and cannot be processed.",
-      "latency_ms": 3.8,
+      "latency_ms": 3.9,
       "llm_cached": true
     },
     {
@@ -5828,7 +5826,7 @@
       "llm": "declared_unsupported",
       "outcome": "rejected",
       "error": "The question asks for factual information (the capital of France) which is not a mathematical problem that can be solved with the available tools.",
-      "latency_ms": 3.3,
+      "latency_ms": 5.2,
       "llm_cached": true
     },
     {
@@ -5843,7 +5841,7 @@
       "llm": "declared_unsupported",
       "outcome": "rejected",
       "error": "The problem asks for a double integral over the unit square, but the available integrate tool handles only single-variable integration. Please provide a single-variable integral or specify if an iterated integral can be split into separate steps.",
-      "latency_ms": 5.1,
+      "latency_ms": 8.9,
       "llm_cached": true
     },
     {
@@ -5867,7 +5865,7 @@
       "llm": "rejected_clarify",
       "outcome": "clarify",
       "error": "The plan reduces the question to the constant 'sqrt(36)', which is not written in the question: the steps that produced it were done outside the math engine and cannot be verified.",
-      "latency_ms": 5.2,
+      "latency_ms": 10.5,
       "llm_cached": true
     },
     {
@@ -5893,7 +5891,7 @@
       "llm": "rejected_clarify",
       "outcome": "clarify",
       "error": "The plan restricts to real solutions, which the question does not ask for.",
-      "latency_ms": 6.0,
+      "latency_ms": 9.1,
       "llm_cached": true
     },
     {
@@ -5918,7 +5916,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 36.4,
+      "latency_ms": 50.4,
       "outcome": "answered",
       "answer": "x = 4",
       "verification": "verified",
@@ -5949,7 +5947,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 45.8,
+      "latency_ms": 43.0,
       "outcome": "answered",
       "answer": "x = -4, x = 4",
       "verification": "verified",
@@ -5985,7 +5983,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 32.5,
+      "latency_ms": 34.9,
       "outcome": "answered",
       "answer": "(x = 2, y = 1)",
       "verification": "verified",
@@ -6014,7 +6012,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 42.3,
+      "latency_ms": 50.0,
       "outcome": "answered",
       "answer": "x - 2",
       "verification": "verified",
@@ -6043,7 +6041,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 20.0,
+      "latency_ms": 21.3,
       "outcome": "answered",
       "answer": "(x - 4)*(x - 3)",
       "verification": "verified",
@@ -6072,7 +6070,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 19.8,
+      "latency_ms": 21.6,
       "outcome": "answered",
       "answer": "x**2 - 9",
       "verification": "verified",
@@ -6103,7 +6101,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 19.4,
+      "latency_ms": 18.0,
       "outcome": "answered",
       "answer": "3*x**2; at x = 2: 12",
       "verification": "verified",
@@ -6133,7 +6131,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 15.7,
+      "latency_ms": 15.8,
       "outcome": "answered",
       "answer": "cos(x); at x = 0: 1",
       "verification": "verified",
@@ -6163,7 +6161,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 62.1,
+      "latency_ms": 64.8,
       "outcome": "answered",
       "answer": "x*(x + 2)*exp(x)",
       "verification": "verified",
@@ -6193,7 +6191,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 38.5,
+      "latency_ms": 38.3,
       "outcome": "answered",
       "answer": "-3*sin(3*x)",
       "verification": "verified",
@@ -6225,7 +6223,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 22.5,
+      "latency_ms": 23.8,
       "outcome": "answered",
       "answer": "8/3",
       "verification": "verified",
@@ -6257,7 +6255,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 21.0,
+      "latency_ms": 20.0,
       "outcome": "answered",
       "answer": "1/4",
       "verification": "verified",
@@ -6287,7 +6285,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 17.6,
+      "latency_ms": 20.4,
       "outcome": "answered",
       "answer": "log(x + 1) + C",
       "verification": "verified",
@@ -6319,7 +6317,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 93.1,
+      "latency_ms": 67.2,
       "outcome": "answered",
       "answer": "1/2",
       "verification": "verified",
@@ -6350,7 +6348,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 238.9,
+      "latency_ms": 42.8,
       "outcome": "answered",
       "answer": "12",
       "verification": "approximate",
@@ -6382,7 +6380,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 20.1,
+      "latency_ms": 23.1,
       "outcome": "answered",
       "answer": "2",
       "verification": "approximate",
@@ -6421,7 +6419,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 10.0,
+      "latency_ms": 10.1,
       "outcome": "answered",
       "answer": "[[1/2, 0], [0, 1/4]]",
       "verification": "verified",
@@ -6460,7 +6458,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 12.5,
+      "latency_ms": 12.9,
       "outcome": "answered",
       "answer": "3, -1",
       "verification": "verified",
@@ -6482,7 +6480,7 @@
       "overall": "verified",
       "llm": "error",
       "llm_error": "LLMPlanError: the plan names no tool",
-      "latency_ms": 7.7,
+      "latency_ms": 8.1,
       "outcome": "answered",
       "answer": "[[2, 3], [4, 5]]",
       "verification": "verified",
@@ -6528,7 +6526,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 13.7,
+      "latency_ms": 14.6,
       "outcome": "answered",
       "answer": "2",
       "verification": "verified",
@@ -6574,7 +6572,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 15.9,
+      "latency_ms": 11.2,
       "outcome": "answered",
       "answer": "1",
       "verification": "verified",
@@ -6607,7 +6605,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 16.8,
+      "latency_ms": 8.4,
       "outcome": "answered",
       "answer": "mean = 80 (\u224880.0000), median = 80, sample std = 10.0000, population std = 8.16497",
       "verification": "verified",
@@ -6643,7 +6641,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 21.8,
+      "latency_ms": 11.5,
       "outcome": "answered",
       "answer": "mean = 18 (\u224818.0000), median = 31/2, sample std = 13.4907, population std = 12.3153",
       "verification": "verified",
@@ -6678,7 +6676,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 38.1,
+      "latency_ms": 20.1,
       "outcome": "answered",
       "answer": "P(X \u2264 2) = 37/256 \u2248 0.144531",
       "verification": "verified",
@@ -6713,7 +6711,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 34.2,
+      "latency_ms": 208.1,
       "outcome": "answered",
       "answer": "P(X > 190) = 1/2 - erf(sqrt(2))/2 \u2248 0.0227501",
       "verification": "verified",
@@ -6747,7 +6745,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 28.0,
+      "latency_ms": 19.9,
       "outcome": "answered",
       "answer": "P(X = 3) = 125*exp(-5)/6 \u2248 0.140374",
       "verification": "verified",
@@ -6782,7 +6780,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 40.0,
+      "latency_ms": 24.2,
       "outcome": "answered",
       "answer": "P(X \u2264 3/2) = erf(3*sqrt(2)/4)/2 + 1/2 \u2248 0.933193",
       "verification": "verified",
@@ -6812,7 +6810,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 11.5,
+      "latency_ms": 6.8,
       "outcome": "answered",
       "answer": "24",
       "verification": "verified",
@@ -6843,7 +6841,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 10.7,
+      "latency_ms": 6.5,
       "outcome": "answered",
       "answer": "120",
       "verification": "verified",
@@ -6874,7 +6872,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 10.5,
+      "latency_ms": 5.9,
       "outcome": "answered",
       "answer": "1365",
       "verification": "verified",
@@ -6905,7 +6903,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 84.1,
+      "latency_ms": 51.4,
       "outcome": "answered",
       "answer": "x = 5",
       "verification": "verified",
@@ -6936,7 +6934,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 110.6,
+      "latency_ms": 78.6,
       "outcome": "answered",
       "answer": "x = 1",
       "verification": "verified",
@@ -6967,7 +6965,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 92.3,
+      "latency_ms": 54.1,
       "outcome": "answered",
       "answer": "t = 3",
       "verification": "verified",
@@ -6989,7 +6987,7 @@
       "overall": "verified_with_assumptions",
       "llm": "error",
       "llm_error": "LLMPlanError: the plan names no tool",
-      "latency_ms": 32.4,
+      "latency_ms": 30.2,
       "outcome": "answered",
       "answer": "x = 11",
       "verification": "verified",
@@ -7019,7 +7017,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 39.1,
+      "latency_ms": 47.8,
       "outcome": "answered",
       "answer": "y = 9",
       "verification": "verified",
@@ -7055,7 +7053,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 31.8,
+      "latency_ms": 33.7,
       "outcome": "answered",
       "answer": "(x = 8, y = 4)",
       "verification": "verified",
@@ -7085,7 +7083,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 42.6,
+      "latency_ms": 52.7,
       "outcome": "answered",
       "answer": "t = 0, t = 4",
       "verification": "verified",
@@ -7115,7 +7113,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 120.5,
+      "latency_ms": 111.4,
       "outcome": "answered",
       "answer": "x = 4",
       "verification": "verified",
@@ -7146,7 +7144,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 28.6,
+      "latency_ms": 24.8,
       "outcome": "answered",
       "answer": "2*t + 3; at t = 1: 5",
       "verification": "verified",
@@ -7176,7 +7174,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 20.8,
+      "latency_ms": 17.5,
       "outcome": "answered",
       "answer": "3*x**2; at x = -2: 12",
       "verification": "verified",
@@ -7207,7 +7205,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 25.4,
+      "latency_ms": 26.3,
       "outcome": "answered",
       "answer": "6*x + 4",
       "verification": "approximate",
@@ -7237,7 +7235,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 22.7,
+      "latency_ms": 19.5,
       "outcome": "answered",
       "answer": "1/x",
       "verification": "verified",
@@ -7269,7 +7267,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 27.0,
+      "latency_ms": 25.0,
       "outcome": "answered",
       "answer": "9*exp(3*x); at x = 0: 9",
       "verification": "approximate",
@@ -7301,7 +7299,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 31.5,
+      "latency_ms": 24.3,
       "outcome": "answered",
       "answer": "20",
       "verification": "verified",
@@ -7333,7 +7331,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 30.2,
+      "latency_ms": 24.2,
       "outcome": "answered",
       "answer": "1",
       "verification": "verified",
@@ -7363,7 +7361,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 20.8,
+      "latency_ms": 14.8,
       "outcome": "answered",
       "answer": "2*x**3 + C",
       "verification": "verified",
@@ -7395,7 +7393,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 62.7,
+      "latency_ms": 48.5,
       "outcome": "answered",
       "answer": "1",
       "verification": "verified",
@@ -7426,7 +7424,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 20.5,
+      "latency_ms": 19.3,
       "outcome": "answered",
       "answer": "3",
       "verification": "approximate",
@@ -7457,7 +7455,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 37.0,
+      "latency_ms": 23.3,
       "outcome": "answered",
       "answer": "5/2",
       "verification": "approximate",
@@ -7489,7 +7487,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 67.9,
+      "latency_ms": 34.7,
       "outcome": "answered",
       "answer": "1/4",
       "verification": "approximate",
@@ -7528,7 +7526,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 19.2,
+      "latency_ms": 12.4,
       "outcome": "answered",
       "answer": "[[-2, 1], [3/2, -1/2]]",
       "verification": "verified",
@@ -7567,7 +7565,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 11.2,
+      "latency_ms": 10.8,
       "outcome": "answered",
       "answer": "-14",
       "verification": "verified",
@@ -7610,7 +7608,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 13.8,
+      "latency_ms": 11.7,
       "outcome": "answered",
       "answer": "[[1, 3, 5], [2, 4, 6]]",
       "verification": "verified",
@@ -7649,7 +7647,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 18.9,
+      "latency_ms": 16.4,
       "outcome": "answered",
       "answer": "6, 1",
       "verification": "verified",
@@ -7692,7 +7690,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 16.0,
+      "latency_ms": 11.1,
       "outcome": "answered",
       "answer": "[1, 2]",
       "verification": "verified",
@@ -7731,7 +7729,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 12.6,
+      "latency_ms": 9.6,
       "outcome": "answered",
       "answer": "1",
       "verification": "verified",
@@ -7766,7 +7764,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 9.0,
+      "latency_ms": 8.9,
       "outcome": "answered",
       "answer": "mean = 22 (\u224822.0000), median = 22, sample std = 2.23607, population std = 2.00000",
       "verification": "verified",
@@ -7800,7 +7798,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 10.7,
+      "latency_ms": 10.5,
       "outcome": "answered",
       "answer": "mean = 5 (\u22485.00000), median = 5, sample std = 2.58199, population std = 2.23607",
       "verification": "verified",
@@ -7834,7 +7832,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 11.9,
+      "latency_ms": 12.0,
       "outcome": "answered",
       "answer": "mean = 9/2 (\u22484.50000), median = 4, sample std = 3.41565, population std = 2.95804",
       "verification": "verified",
@@ -7869,7 +7867,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 9.8,
+      "latency_ms": 10.2,
       "outcome": "answered",
       "answer": "P(X = 7) = 66706983/250000000 \u2248 0.266828",
       "verification": "verified",
@@ -7904,7 +7902,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 22.0,
+      "latency_ms": 21.8,
       "outcome": "answered",
       "answer": "P(X \u2264 1) = 659002251789/1000000000000 \u2248 0.659002",
       "verification": "verified",
@@ -7939,7 +7937,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 21.8,
+      "latency_ms": 23.2,
       "outcome": "answered",
       "answer": "P(X \u2265 3) = 21/32 \u2248 0.65625",
       "verification": "verified",
@@ -7973,7 +7971,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 14.3,
+      "latency_ms": 14.6,
       "outcome": "answered",
       "answer": "P(X \u2264 1) = 5*exp(-4) \u2248 0.0915782",
       "verification": "verified",
@@ -8006,7 +8004,7 @@
         "ambiguities": []
       },
       "llm": "rejected_fallback",
-      "latency_ms": 29.2,
+      "latency_ms": 31.4,
       "outcome": "answered",
       "answer": "P(X \u2265 4) = 1 - 19*exp(-2)/3 \u2248 0.142877",
       "verification": "verified",
@@ -8041,7 +8039,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 21.6,
+      "latency_ms": 22.0,
       "outcome": "answered",
       "answer": "P(X \u2264 91) = erf(sqrt(2))/2 + 1/2 \u2248 0.97725",
       "verification": "verified",
@@ -8057,19 +8055,41 @@
       "expect": "answer",
       "split": "unseen",
       "planned_tool": "probability_distribution",
-      "planner": "rules",
+      "planner": "llm",
       "intent": "confirmed",
-      "interpretation": "P(85 \u2264 X \u2264 115) for X ~ Normal(mean=100, std=15).",
+      "interpretation": "P(85.0 \u2264 X \u2264 115.0) for X ~ Normal(mean=100.0, std=15.0).",
       "overall": "verified",
-      "llm": "error",
-      "llm_error": "LLMPlanError: BadRequestError: Error code: 400 - {'error': {'message': 'Tool choice is required, but model did not call a tool', 'type': 'invalid_request_error', 'code': 'tool_use_failed', 'failed_generation': ''}}",
-      "latency_ms": 1062.0,
+      "llm_plan": {
+        "tool": "probability_distribution",
+        "args": {
+          "distribution": "normal",
+          "params": {
+            "mean": 100.0,
+            "std": 15.0
+          },
+          "query": "between",
+          "x": 85.0,
+          "x2": 115.0
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 1172.9,
       "outcome": "answered",
       "answer": "P(85 \u2264 X \u2264 115) = erf(sqrt(2)/2) \u2248 0.682689",
       "verification": "verified",
       "correct": true,
       "detail": "got erf(sqrt(2)/2)",
-      "llm_cached": false
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1678,
+        "output_tokens": 252,
+        "total_tokens": 1930,
+        "seconds": 1.138,
+        "tool_call_retries": 0,
+        "model": "openai/gpt-oss-120b"
+      }
     },
     {
       "id": "unseen-37",
@@ -8098,21 +8118,13 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 1479.2,
+      "latency_ms": 23.7,
       "outcome": "answered",
       "answer": "P(X > -1) = erf(sqrt(2)/2)/2 + 1/2 \u2248 0.841345",
       "verification": "verified",
       "correct": true,
       "detail": "got erf(sqrt(2)/2)/2 + 1/2",
-      "llm_cached": false,
-      "llm_usage": {
-        "input_tokens": 1669,
-        "output_tokens": 261,
-        "total_tokens": 1930,
-        "seconds": 1.447,
-        "tool_call_retries": 0,
-        "model": "openai/gpt-oss-120b"
-      }
+      "llm_cached": true
     },
     {
       "id": "unseen-38",
@@ -8122,19 +8134,40 @@
       "expect": "answer",
       "split": "unseen",
       "planned_tool": "probability_distribution",
-      "planner": "nl",
+      "planner": "llm",
       "intent": "assumed",
-      "interpretation": "P(X > 15) for X ~ Uniform(a=0, b=20).",
+      "interpretation": "P(X > 15.0) for X ~ Uniform(a=0.0, b=20.0).",
       "overall": "verified_with_assumptions",
-      "llm": "error",
-      "llm_error": "LLMPlanError: BadRequestError: Error code: 400 - {'error': {'message': \"Tool call validation failed: tool call validation failed: attempted to call tool 'json' which was not in request.tools\", 'type': 'invalid_request_error', 'code': 'tool_use_failed', 'failed_generation': '{\"name\": \"json\", \"arguments\": {\\n  \"tool\": \"probability_distribution\",\\n  \"distribution\": \"uniform\",\\n  \"params\": {\\n    \"a\": 0,\\n    \"b\": 20\\n  },\\n  \"query\": \"greater\",\\n  \"x\": 15,\\n  \"interpretation\": \"Compute the probability that a uniformly random wait time between 0 and 20 minutes exceeds 15 minutes.\",\\n  \"assumptions\": [\"Uniform distribution is co (after 1 retry)",
-      "latency_ms": 1929.1,
+      "llm_plan": {
+        "tool": "probability_distribution",
+        "args": {
+          "distribution": "uniform",
+          "params": {
+            "a": 0.0,
+            "b": 20.0
+          },
+          "query": "greater",
+          "x": 15.0
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 1202.2,
       "outcome": "answered",
       "answer": "P(X > 15) = 1/4 \u2248 0.25",
       "verification": "verified",
       "correct": true,
       "detail": "got 1/4",
-      "llm_cached": false
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1681,
+        "output_tokens": 214,
+        "total_tokens": 1895,
+        "seconds": 1.185,
+        "tool_call_retries": 0,
+        "model": "openai/gpt-oss-120b"
+      }
     },
     {
       "id": "unseen-39",
@@ -8150,7 +8183,7 @@
       "overall": "verified_with_assumptions",
       "llm": "error",
       "llm_error": "LLMPlanError: BadRequestError: Error code: 400 - {'error': {'message': \"Tool call validation failed: tool call validation failed: attempted to call tool 'json' which was not in request.tools\", 'type': 'invalid_request_error', 'code': 'tool_use_failed', 'failed_generation': '{\"name\": \"json\", \"arguments\": {\\n  \"tool\": \"probability_distribution\",\\n  \"distribution\": \"exponential\",\\n  \"params\": {\\n    \"rate\": 0.2\\n  },\\n  \"query\": \"greater\",\\n  \"x\": 5,\\n  \"interpretation\": \"Compute the probability that an exponential random variable with rate 0.2 lasts more than 5 years.\",\\n  \"rationale\": \"The question asks for P(X > 5) for an e (after 1 retry)",
-      "latency_ms": 2685.2,
+      "latency_ms": 2098.2,
       "outcome": "answered",
       "answer": "P(X > 5) = exp(-1) \u2248 0.367879",
       "verification": "verified",
@@ -8181,21 +8214,13 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 1125.0,
+      "latency_ms": 7.1,
       "outcome": "answered",
       "answer": "2598960",
       "verification": "verified",
       "correct": true,
       "detail": "got 2598960",
-      "llm_cached": false,
-      "llm_usage": {
-        "input_tokens": 1673,
-        "output_tokens": 178,
-        "total_tokens": 1851,
-        "seconds": 1.107,
-        "tool_call_retries": 0,
-        "model": "openai/gpt-oss-120b"
-      }
+      "llm_cached": true
     },
     {
       "id": "unseen-41",
@@ -8210,7 +8235,7 @@
       "llm_error": "LLMPlanError: BadRequestError: Error code: 400 - {'error': {'message': 'Tool choice is required, but model did not call a tool', 'type': 'invalid_request_error', 'code': 'tool_use_failed', 'failed_generation': ''}}",
       "outcome": "clarify",
       "error": "How many are chosen (or ranked), and from how many in total?",
-      "latency_ms": 1514.5,
+      "latency_ms": 1063.6,
       "llm_cached": false
     },
     {
@@ -8227,7 +8252,7 @@
       "overall": "verified_with_assumptions",
       "llm": "error",
       "llm_error": "LLMPlanError: BadRequestError: Error code: 400 - {'error': {'message': \"Tool call validation failed: tool call validation failed: attempted to call tool 'json' which was not in request.tools\", 'type': 'invalid_request_error', 'code': 'tool_use_failed', 'failed_generation': '{\"name\": \"json\", \"arguments\": {\\n  \"tool\": \"combinatorics\",\\n  \"operation\": \"permutations\",\\n  \"n\": 7,\\n  \"interpretation\": \"Compute the number of permutations of 7 distinct people, i.e., 7!.\"\\n}}'}} (after 1 retry)",
-      "latency_ms": 1770.0,
+      "latency_ms": 2250.8,
       "outcome": "answered",
       "answer": "5040",
       "verification": "verified",
@@ -8243,19 +8268,34 @@
       "expect": "answer",
       "split": "unseen",
       "planned_tool": "expand_expression",
-      "planner": "rules",
+      "planner": "llm",
       "intent": "confirmed",
       "interpretation": "Expand (x + 2)^4.",
       "overall": "verified",
-      "llm": "error",
-      "llm_error": "LLMPlanError: BadRequestError: Error code: 400 - {'error': {'message': \"Tool call validation failed: tool call validation failed: attempted to call tool 'json' which was not in request.tools\", 'type': 'invalid_request_error', 'code': 'tool_use_failed', 'failed_generation': '{\"name\": \"json\", \"arguments\": {\\n  \"tool\": \"expand_expression\",\\n  \"expression\": \"(x + 2)^4\",\\n  \"interpretation\": \"Expand the binomial (x + 2)^4\",\\n  \"rationale\": \"The user asks to expand a polynomial expression.\"\\n}}'}} (after 1 retry)",
-      "latency_ms": 1531.7,
+      "llm_plan": {
+        "tool": "expand_expression",
+        "args": {
+          "expression": "(x + 2)^4"
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 963.6,
       "outcome": "answered",
       "answer": "x**4 + 8*x**3 + 24*x**2 + 32*x + 16",
       "verification": "verified",
       "correct": true,
       "detail": "got x**4 + 8*x**3 + 24*x**2 + 32*x + 16",
-      "llm_cached": false
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1664,
+        "output_tokens": 122,
+        "total_tokens": 1786,
+        "seconds": 0.924,
+        "tool_call_retries": 0,
+        "model": "openai/gpt-oss-120b"
+      }
     },
     {
       "id": "unseen-44",
@@ -8278,21 +8318,13 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 1778.5,
+      "latency_ms": 26.3,
       "outcome": "answered",
       "answer": "3*(x - 2)*(x + 2)",
       "verification": "verified",
       "correct": true,
       "detail": "got 3*(x - 2)*(x + 2)",
-      "llm_cached": false,
-      "llm_usage": {
-        "input_tokens": 1667,
-        "output_tokens": 112,
-        "total_tokens": 1779,
-        "seconds": 1.74,
-        "tool_call_retries": 1,
-        "model": "openai/gpt-oss-120b"
-      }
+      "llm_cached": true
     },
     {
       "id": "unseen-45",
@@ -8308,7 +8340,7 @@
       "overall": "verified",
       "llm": "error",
       "llm_error": "LLMPlanError: BadRequestError: Error code: 400 - {'error': {'message': \"Tool call validation failed: tool call validation failed: attempted to call tool 'json' which was not in request.tools\", 'type': 'invalid_request_error', 'code': 'tool_use_failed', 'failed_generation': '{\"name\": \"json\", \"arguments\": {\\n  \"tool\": \"simplify_expression\",\\n  \"expression\": \"(x^2 - 9)/(x^2 + 6x + 9)\",\\n  \"interpretation\": \"Simplify the rational expression (x^2 - 9)/(x^2 + 6x + 9).\",\\n  \"rationale\": \"The problem asks for simplification of an algebraic expression.\"\\n}}'}} (after 1 retry)",
-      "latency_ms": 2118.8,
+      "latency_ms": 1476.6,
       "outcome": "answered",
       "answer": "(x - 3)/(x + 3)",
       "verification": "verified",
@@ -8339,7 +8371,7 @@
       "llm": "rejected_clarify",
       "outcome": "clarify",
       "error": "The equation has several unknowns (x, y) but only one equation. Which variable should be solved for, or is there another equation?",
-      "latency_ms": 9.0,
+      "latency_ms": 6.6,
       "llm_cached": true
     },
     {
@@ -8352,10 +8384,10 @@
       "planned_tool": null,
       "planner": "nl",
       "llm": "error",
-      "llm_error": "LLMPlanError: BadRequestError: Error code: 400 - {'error': {'message': 'Tool choice is required, but model did not call a tool', 'type': 'invalid_request_error', 'code': 'tool_use_failed', 'failed_generation': ''}} (after 1 retry)",
+      "llm_error": "LLMPlanError: BadRequestError: Error code: 400 - {'error': {'message': 'Tool choice is required, but model did not call a tool', 'type': 'invalid_request_error', 'code': 'tool_use_failed', 'failed_generation': ''}}",
       "outcome": "clarify",
       "error": "Which expression should I use for the derivative?",
-      "latency_ms": 1545.9,
+      "latency_ms": 982.1,
       "llm_cached": false
     },
     {
@@ -8370,16 +8402,8 @@
       "llm": "declared_unsupported",
       "outcome": "rejected",
       "error": "To compute the probability of getting 3 heads, I need more details: How many coin flips are being considered, and is the coin fair (probability of heads = 0.5) or does it have a different bias?",
-      "latency_ms": 1344.2,
-      "llm_cached": false,
-      "llm_usage": {
-        "input_tokens": 1666,
-        "output_tokens": 192,
-        "total_tokens": 1858,
-        "seconds": 1.331,
-        "tool_call_retries": 0,
-        "model": "openai/gpt-oss-120b"
-      }
+      "latency_ms": 4.5,
+      "llm_cached": true
     },
     {
       "id": "unseen-49",
@@ -8393,16 +8417,8 @@
       "llm": "declared_unsupported",
       "outcome": "rejected",
       "error": "What is the upper limit of integration for \u222b x^2 dx starting from 1?",
-      "latency_ms": 1097.3,
-      "llm_cached": false,
-      "llm_usage": {
-        "input_tokens": 1664,
-        "output_tokens": 164,
-        "total_tokens": 1828,
-        "seconds": 1.086,
-        "tool_call_retries": 0,
-        "model": "openai/gpt-oss-120b"
-      }
+      "latency_ms": 4.1,
+      "llm_cached": true
     },
     {
       "id": "unseen-50",
@@ -8428,16 +8444,8 @@
       "llm": "rejected_clarify",
       "outcome": "clarify",
       "error": "The question does not say which point the variable approaches.",
-      "latency_ms": 1252.5,
-      "llm_cached": false,
-      "llm_usage": {
-        "input_tokens": 1673,
-        "output_tokens": 279,
-        "total_tokens": 1952,
-        "seconds": 1.231,
-        "tool_call_retries": 0,
-        "model": "openai/gpt-oss-120b"
-      }
+      "latency_ms": 8.1,
+      "llm_cached": true
     },
     {
       "id": "unseen-51",
@@ -8451,7 +8459,7 @@
       "llm": "declared_unsupported",
       "outcome": "rejected",
       "error": "What is the standard deviation of the normal distribution?",
-      "latency_ms": 4.9,
+      "latency_ms": 1.8,
       "llm_cached": true
     },
     {
@@ -8466,16 +8474,8 @@
       "llm": "declared_unsupported",
       "outcome": "rejected",
       "error": "Please provide the matrix for which you want to find the eigenvalues.",
-      "latency_ms": 740.6,
-      "llm_cached": false,
-      "llm_usage": {
-        "input_tokens": 1660,
-        "output_tokens": 85,
-        "total_tokens": 1745,
-        "seconds": 0.725,
-        "tool_call_retries": 0,
-        "model": "openai/gpt-oss-120b"
-      }
+      "latency_ms": 3.2,
+      "llm_cached": true
     },
     {
       "id": "unseen-53",
@@ -8485,15 +8485,31 @@
       "expect": "reject",
       "split": "unseen",
       "planned_tool": "differentiate",
-      "planner": "rules",
+      "planner": "llm",
       "intent": "ambiguous",
       "interpretation": "Derivative of a*b + c with respect to x.",
-      "llm": "error",
-      "llm_error": "LLMPlanError: BadRequestError: Error code: 400 - {'error': {'message': 'Tool choice is required, but model did not call a tool', 'type': 'invalid_request_error', 'code': 'tool_use_failed', 'failed_generation': ''}}",
+      "llm_plan": {
+        "tool": "differentiate",
+        "args": {
+          "expression": "a*b + c"
+        },
+        "ambiguities": [
+          "The variable with respect to which to differentiate is not specified."
+        ]
+      },
+      "llm": "rejected_clarify",
       "outcome": "clarify",
       "error": "The expression has several variables (a, b, c); with respect to which one?",
-      "latency_ms": 1262.7,
-      "llm_cached": false
+      "latency_ms": 1566.7,
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1662,
+        "output_tokens": 430,
+        "total_tokens": 2092,
+        "seconds": 1.552,
+        "tool_call_retries": 0,
+        "model": "openai/gpt-oss-120b"
+      }
     },
     {
       "id": "unseen-54",
@@ -8518,16 +8534,8 @@
       "llm": "rejected_clarify",
       "outcome": "clarify",
       "error": "The equation has several unknowns (a, b) but only one equation. Which variable should be solved for, or is there another equation?",
-      "latency_ms": 1822.1,
-      "llm_cached": false,
-      "llm_usage": {
-        "input_tokens": 1665,
-        "output_tokens": 406,
-        "total_tokens": 2071,
-        "seconds": 1.8,
-        "tool_call_retries": 0,
-        "model": "openai/gpt-oss-120b"
-      }
+      "latency_ms": 9.1,
+      "llm_cached": true
     },
     {
       "id": "unseen-55",
@@ -8542,7 +8550,7 @@
       "llm_error": "LLMPlanError: BadRequestError: Error code: 400 - {'error': {'message': 'Tool choice is required, but model did not call a tool', 'type': 'invalid_request_error', 'code': 'tool_use_failed', 'failed_generation': ''}}",
       "outcome": "clarify",
       "error": "Which data values should I use?",
-      "latency_ms": 925.4,
+      "latency_ms": 1016.7,
       "llm_cached": false
     },
     {
@@ -8558,7 +8566,7 @@
       "llm_error": "LLMPlanError: BadRequestError: Error code: 400 - {'error': {'message': \"Tool call validation failed: tool call validation failed: attempted to call tool 'json' which was not in request.tools\", 'type': 'invalid_request_error', 'code': 'tool_use_failed', 'failed_generation': '{\"name\": \"json\", \"arguments\": {\\n  \"supported\": false,\\n  \"clarification\": \"What is the size of the group from which 3 people are to be chosen?\"\\n}}'}} (after 1 retry)",
       "outcome": "clarify",
       "error": "How many are chosen (or ranked), and from how many in total?",
-      "latency_ms": 1564.5,
+      "latency_ms": 1720.2,
       "llm_cached": false
     },
     {
@@ -8583,21 +8591,13 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 980.7,
+      "latency_ms": 39.9,
       "outcome": "answered",
       "answer": "x = 3",
       "verification": "verified",
       "correct": true,
       "detail": "got [3]",
-      "llm_cached": false,
-      "llm_usage": {
-        "input_tokens": 1672,
-        "output_tokens": 119,
-        "total_tokens": 1791,
-        "seconds": 0.933,
-        "tool_call_retries": 0,
-        "model": "openai/gpt-oss-120b"
-      }
+      "llm_cached": true
     },
     {
       "id": "nl-02",
@@ -8621,21 +8621,13 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 1283.7,
+      "latency_ms": 61.2,
       "outcome": "answered",
       "answer": "x = 1, x = 3",
       "verification": "verified",
       "correct": true,
       "detail": "got [1, 3]",
-      "llm_cached": false,
-      "llm_usage": {
-        "input_tokens": 1675,
-        "output_tokens": 133,
-        "total_tokens": 1808,
-        "seconds": 1.192,
-        "tool_call_retries": 0,
-        "model": "openai/gpt-oss-120b"
-      }
+      "llm_cached": true
     },
     {
       "id": "nl-03",
@@ -8651,21 +8643,13 @@
       "overall": "verified_with_assumptions",
       "llm": "error",
       "llm_error": "LLMPlanError: the plan names no tool",
-      "latency_ms": 2066.7,
+      "latency_ms": 66.2,
       "outcome": "answered",
       "answer": "x = 4",
       "verification": "verified",
       "correct": true,
       "detail": "got [4]",
-      "llm_cached": false,
-      "llm_usage": {
-        "input_tokens": 1674,
-        "output_tokens": 169,
-        "total_tokens": 1843,
-        "seconds": 1.978,
-        "tool_call_retries": 1,
-        "model": "openai/gpt-oss-120b"
-      }
+      "llm_cached": true
     },
     {
       "id": "nl-04",
@@ -8690,21 +8674,13 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 980.7,
+      "latency_ms": 54.5,
       "outcome": "answered",
       "answer": "x = 0",
       "verification": "verified",
       "correct": true,
       "detail": "got [0]",
-      "llm_cached": false,
-      "llm_usage": {
-        "input_tokens": 1669,
-        "output_tokens": 152,
-        "total_tokens": 1821,
-        "seconds": 0.911,
-        "tool_call_retries": 0,
-        "model": "openai/gpt-oss-120b"
-      }
+      "llm_cached": true
     },
     {
       "id": "nl-05",
@@ -8728,21 +8704,13 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 940.8,
+      "latency_ms": 36.5,
       "outcome": "answered",
       "answer": "y = 3",
       "verification": "verified",
       "correct": true,
       "detail": "got [3]",
-      "llm_cached": false,
-      "llm_usage": {
-        "input_tokens": 1669,
-        "output_tokens": 120,
-        "total_tokens": 1789,
-        "seconds": 0.891,
-        "tool_call_retries": 0,
-        "model": "openai/gpt-oss-120b"
-      }
+      "llm_cached": true
     },
     {
       "id": "nl-06",
@@ -8772,21 +8740,13 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 1160.0,
+      "latency_ms": 36.0,
       "outcome": "answered",
       "answer": "(a = 3, b = 1)",
       "verification": "verified",
       "correct": true,
       "detail": "got [{'a': 3, 'b': 1}]",
-      "llm_cached": false,
-      "llm_usage": {
-        "input_tokens": 1679,
-        "output_tokens": 167,
-        "total_tokens": 1846,
-        "seconds": 1.104,
-        "tool_call_retries": 0,
-        "model": "openai/gpt-oss-120b"
-      }
+      "llm_cached": true
     },
     {
       "id": "nl-07",
@@ -8801,8 +8761,8 @@
       "interpretation": "Factor x^2 + 7x + 10.",
       "overall": "verified_with_assumptions",
       "llm": "error",
-      "llm_error": "LLMPlanError: BadRequestError: Error code: 400 - {'error': {'message': \"Tool call validation failed: tool call validation failed: attempted to call tool 'json' which was not in request.tools\", 'type': 'invalid_request_error', 'code': 'tool_use_failed', 'failed_generation': '{\"name\": \"json\", \"arguments\": {\\n  \"tool\": \"factor_expression\",\\n  \"expression\": \"x^2 + 7x + 10\",\\n  \"interpretation\": \"Factor the quadratic expression x^2 + 7x + 10.\",\\n  \"rationale\": \"The user asks to factor a polynomial, which matches the factor_expression tool.\"\\n}}'}} (after 1 retry)",
-      "latency_ms": 2241.4,
+      "llm_error": "LLMPlanError: BadRequestError: Error code: 400 - {'error': {'message': \"Tool call validation failed: tool call validation failed: attempted to call tool 'json' which was not in request.tools\", 'type': 'invalid_request_error', 'code': 'tool_use_failed', 'failed_generation': '{\"name\": \"json\", \"arguments\": {\\n  \"tool\": \"factor_expression\",\\n  \"expression\": \"x^2 + 7*x + 10\",\\n  \"interpretation\": \"Factor the quadratic expression x^2 + 7x + 10.\",\\n  \"rationale\": \"The user asks to factor a polynomial, which matches the factor_expression tool.\"\\n}}'}} (after 1 retry)",
+      "latency_ms": 2004.2,
       "outcome": "answered",
       "answer": "(x + 2)*(x + 5)",
       "verification": "verified",
@@ -8831,7 +8791,7 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 27.8,
+      "latency_ms": 25.0,
       "outcome": "answered",
       "answer": "2*x**2 - 5*x - 3",
       "verification": "verified",
@@ -8860,21 +8820,13 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 1373.0,
+      "latency_ms": 26.6,
       "outcome": "answered",
       "answer": "x**2 - 1",
       "verification": "verified",
       "correct": true,
       "detail": "got x**2 - 1",
-      "llm_cached": false,
-      "llm_usage": {
-        "input_tokens": 1668,
-        "output_tokens": 113,
-        "total_tokens": 1781,
-        "seconds": 1.332,
-        "tool_call_retries": 0,
-        "model": "openai/gpt-oss-120b"
-      }
+      "llm_cached": true
     },
     {
       "id": "nl-10",
@@ -8898,21 +8850,13 @@
       },
       "llm": "accepted",
       "llm_repaired": false,
-      "latency_ms": 1082.4,
+      "latency_ms": 17.7,
       "outcome": "answered",
       "answer": "2*x; at x = 3: 6",
       "verification": "verified",
       "correct": true,
       "detail": "got 6",
-      "llm_cached": false,
-      "llm_usage": {
-        "input_tokens": 1677,
-        "output_tokens": 174,
-        "total_tokens": 1851,
-        "seconds": 1.047,
-        "tool_call_retries": 0,
-        "model": "openai/gpt-oss-120b"
-      }
+      "llm_cached": true
     },
     {
       "id": "nl-11",
@@ -8922,19 +8866,35 @@
       "expect": "answer",
       "split": "dev_nl",
       "planned_tool": "differentiate",
-      "planner": "nl",
-      "intent": "assumed",
-      "interpretation": "Derivative of 4t^2 with respect to x, evaluated at x = 2.",
-      "overall": "verified_with_assumptions",
-      "llm": "error",
-      "llm_error": "LLMPlanError: BadRequestError: Error code: 400 - {'error': {'message': \"Tool call validation failed: tool call validation failed: attempted to call tool 'json' which was not in request.tools\", 'type': 'invalid_request_error', 'code': 'tool_use_failed', 'failed_generation': '{\"name\": \"json\", \"arguments\": {\\n  \"tool\": \"differentiate\",\\n  \"expression\": \"4*t^2\",\\n  \"variable\": \"t\",\\n  \"point\": \"2\",\\n  \"interpretation\": \"Compute the derivative of 4*t^2 with respect to t and evaluate it at t = 2.\",\\n  \"rationale\": \"The question asks for the rate of change of the function at a specific point, which is the derivative at that point. (after 1 retry)",
-      "latency_ms": 2325.4,
+      "planner": "llm",
+      "intent": "confirmed",
+      "interpretation": "Derivative of 4*t^2 with respect to x, evaluated at x = 2.",
+      "overall": "verified",
+      "llm_plan": {
+        "tool": "differentiate",
+        "args": {
+          "expression": "4*t^2",
+          "point": "2"
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 1479.6,
       "outcome": "answered",
       "answer": "8*t; at t = 2: 16",
       "verification": "verified",
       "correct": true,
       "detail": "got 16",
-      "llm_cached": false
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1671,
+        "output_tokens": 167,
+        "total_tokens": 1838,
+        "seconds": 1.444,
+        "tool_call_retries": 0,
+        "model": "openai/gpt-oss-120b"
+      }
     },
     {
       "id": "nl-12",
@@ -8944,18 +8904,1047 @@
       "expect": "answer",
       "split": "dev_nl",
       "planned_tool": "differentiate",
-      "planner": "nl",
-      "intent": "assumed",
-      "interpretation": "Derivative of x^4 - 3x with respect to x.",
-      "overall": "verified_with_assumptions",
-      "llm": "error",
-      "llm_error": "LLMPlanError: RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-120b` in organization `org_<redacted>` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 199651, Requested 1832. Please try again in 10m40.656s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}",
-      "latency_ms": 482.3,
+      "planner": "llm",
+      "intent": "confirmed",
+      "interpretation": "Derivative of x^4 - 3*x with respect to x.",
+      "overall": "verified",
+      "llm_plan": {
+        "tool": "differentiate",
+        "args": {
+          "expression": "x^4 - 3*x",
+          "variable": "x"
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 985.0,
       "outcome": "answered",
       "answer": "4*x**3 - 3",
       "verification": "verified",
       "correct": true,
       "detail": "got 4*x**3 - 3",
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1668,
+        "output_tokens": 148,
+        "total_tokens": 1816,
+        "seconds": 0.934,
+        "tool_call_retries": 0,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "nl-13",
+      "category": "dev_nl",
+      "problem": "What's the second derivative of cos(x)?",
+      "expected_tool": "differentiate",
+      "expect": "answer",
+      "split": "dev_nl",
+      "planned_tool": "differentiate",
+      "planner": "llm",
+      "intent": "confirmed",
+      "interpretation": "Second derivative of cos(x) with respect to x.",
+      "overall": "approximate",
+      "llm_plan": {
+        "tool": "differentiate",
+        "args": {
+          "expression": "cos(x)",
+          "variable": "x",
+          "order": 2
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 847.0,
+      "outcome": "answered",
+      "answer": "-cos(x)",
+      "verification": "approximate",
+      "correct": true,
+      "detail": "got -cos(x)",
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1664,
+        "output_tokens": 128,
+        "total_tokens": 1792,
+        "seconds": 0.813,
+        "tool_call_retries": 0,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "nl-14",
+      "category": "dev_nl",
+      "problem": "Differentiate g(x) = sqrt(x) + x with respect to x",
+      "expected_tool": "differentiate",
+      "expect": "answer",
+      "split": "dev_nl",
+      "planned_tool": "differentiate",
+      "planner": "llm",
+      "intent": "confirmed",
+      "interpretation": "Derivative of sqrt(x) + x with respect to x.",
+      "overall": "verified",
+      "llm_plan": {
+        "tool": "differentiate",
+        "args": {
+          "expression": "sqrt(x) + x",
+          "variable": "x"
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 967.0,
+      "outcome": "answered",
+      "answer": "1 + 1/(2*sqrt(x))",
+      "verification": "verified",
+      "correct": true,
+      "detail": "got 1 + 1/(2*sqrt(x))",
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1671,
+        "output_tokens": 138,
+        "total_tokens": 1809,
+        "seconds": 0.926,
+        "tool_call_retries": 0,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "nl-15",
+      "category": "dev_nl",
+      "problem": "What's the area under y = 3x^2 between x = 1 and x = 2?",
+      "expected_tool": "integrate",
+      "expect": "answer",
+      "split": "dev_nl",
+      "planned_tool": "integrate",
+      "planner": "llm",
+      "intent": "confirmed",
+      "interpretation": "Definite integral of 3*x^2 dx from 1 to 2.",
+      "overall": "verified",
+      "llm_plan": {
+        "tool": "integrate",
+        "args": {
+          "expression": "3*x^2",
+          "variable": "x",
+          "lower": "1",
+          "upper": "2"
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 1131.5,
+      "outcome": "answered",
+      "answer": "7",
+      "verification": "verified",
+      "correct": true,
+      "detail": "got 7",
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1678,
+        "output_tokens": 170,
+        "total_tokens": 1848,
+        "seconds": 1.092,
+        "tool_call_retries": 0,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "nl-16",
+      "category": "dev_nl",
+      "problem": "Integrate 4x^3 over the interval [0, 2]",
+      "expected_tool": "integrate",
+      "expect": "answer",
+      "split": "dev_nl",
+      "planned_tool": "integrate",
+      "planner": "llm",
+      "intent": "confirmed",
+      "interpretation": "Definite integral of 4*x^3 dx from 0 to 2.",
+      "overall": "verified",
+      "llm_plan": {
+        "tool": "integrate",
+        "args": {
+          "expression": "4*x^3",
+          "variable": "x",
+          "lower": "0",
+          "upper": "2"
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 1125.5,
+      "outcome": "answered",
+      "answer": "16",
+      "verification": "verified",
+      "correct": true,
+      "detail": "got 16",
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1672,
+        "output_tokens": 149,
+        "total_tokens": 1821,
+        "seconds": 1.089,
+        "tool_call_retries": 0,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "nl-17",
+      "category": "dev_nl",
+      "problem": "What's the antiderivative of sin(x)?",
+      "expected_tool": "integrate",
+      "expect": "answer",
+      "split": "dev_nl",
+      "planned_tool": "integrate",
+      "planner": "nl",
+      "intent": "assumed",
+      "interpretation": "Antiderivative of sin(x) with respect to x.",
+      "overall": "verified_with_assumptions",
+      "llm": "error",
+      "llm_error": "LLMPlanError: BadRequestError: Error code: 400 - {'error': {'message': 'Tool choice is required, but model did not call a tool', 'type': 'invalid_request_error', 'code': 'tool_use_failed', 'failed_generation': ''}} (after 1 retry)",
+      "latency_ms": 2203.1,
+      "outcome": "answered",
+      "answer": "-cos(x) + C",
+      "verification": "verified",
+      "correct": true,
+      "detail": "got -cos(x)",
+      "llm_cached": false
+    },
+    {
+      "id": "nl-18",
+      "category": "dev_nl",
+      "problem": "Find the integral of e^(2x) from 0 to 1",
+      "expected_tool": "integrate",
+      "expect": "answer",
+      "split": "dev_nl",
+      "planned_tool": "integrate",
+      "planner": "llm",
+      "intent": "confirmed",
+      "interpretation": "Definite integral of exp(2*x) dx from 0 to 1.",
+      "overall": "verified",
+      "llm_plan": {
+        "tool": "integrate",
+        "args": {
+          "expression": "exp(2*x)",
+          "variable": "x",
+          "lower": "0",
+          "upper": "1"
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 1044.3,
+      "outcome": "answered",
+      "answer": "-1/2 + exp(2)/2",
+      "verification": "verified",
+      "correct": true,
+      "detail": "got -1/2 + exp(2)/2",
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1671,
+        "output_tokens": 157,
+        "total_tokens": 1828,
+        "seconds": 0.985,
+        "tool_call_retries": 0,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "nl-19",
+      "category": "dev_nl",
+      "problem": "What does (x^2 - 4)/(x - 2) tend to as x tends to 2?",
+      "expected_tool": "limit",
+      "expect": "answer",
+      "split": "dev_nl",
+      "planned_tool": "limit",
+      "planner": "llm",
+      "intent": "confirmed",
+      "interpretation": "Limit of (x^2 - 4)/(x - 2) as x \u2192 2.",
+      "overall": "approximate",
+      "llm_plan": {
+        "tool": "limit",
+        "args": {
+          "expression": "(x^2 - 4)/(x - 2)",
+          "variable": "x",
+          "point": "2",
+          "direction": "+-"
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 1374.5,
+      "outcome": "answered",
+      "answer": "4",
+      "verification": "approximate",
+      "correct": true,
+      "detail": "got 4",
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1680,
+        "output_tokens": 201,
+        "total_tokens": 1881,
+        "seconds": 1.332,
+        "tool_call_retries": 0,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "nl-20",
+      "category": "dev_nl",
+      "problem": "As x goes to infinity, what does (3x + 1)/(x + 5) approach?",
+      "expected_tool": "limit",
+      "expect": "answer",
+      "split": "dev_nl",
+      "planned_tool": "limit",
+      "planner": "llm",
+      "intent": "confirmed",
+      "interpretation": "Limit of (3*x + 1)/(x + 5) as x \u2192 oo.",
+      "overall": "approximate",
+      "llm_plan": {
+        "tool": "limit",
+        "args": {
+          "expression": "(3*x + 1)/(x + 5)",
+          "variable": "x",
+          "point": "oo"
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 1008.6,
+      "outcome": "answered",
+      "answer": "3",
+      "verification": "approximate",
+      "correct": true,
+      "detail": "got 3",
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1678,
+        "output_tokens": 182,
+        "total_tokens": 1860,
+        "seconds": 0.975,
+        "tool_call_retries": 0,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "nl-21",
+      "category": "dev_nl",
+      "problem": "What is the limit of tan(x)/x when x approaches 0?",
+      "expected_tool": "limit",
+      "expect": "answer",
+      "split": "dev_nl",
+      "planned_tool": "limit",
+      "planner": "rules",
+      "intent": "confirmed",
+      "interpretation": "Limit of tan(x)/x as x \u2192 0.",
+      "overall": "approximate",
+      "llm": "error",
+      "llm_error": "LLMPlanError: BadRequestError: Error code: 400 - {'error': {'message': \"Tool call validation failed: tool call validation failed: attempted to call tool 'json' which was not in request.tools\", 'type': 'invalid_request_error', 'code': 'tool_use_failed', 'failed_generation': '{\"name\": \"json\", \"arguments\": {\\n  \"tool\": \"limit\",\\n  \"expression\": \"tan(x)/x\",\\n  \"variable\": \"x\",\\n  \"point\": \"0\",\\n  \"direction\": null,\\n  \"interpretation\": \"Compute the limit of tan(x)/x as x approaches 0.\",\\n  \"rationale\": \"The question asks for a limit of a single-variable expression at a point.\"\\n}}'}} (after 1 retry)",
+      "latency_ms": 1843.7,
+      "outcome": "answered",
+      "answer": "1",
+      "verification": "approximate",
+      "correct": true,
+      "detail": "got 1",
+      "llm_cached": false
+    },
+    {
+      "id": "nl-22",
+      "category": "dev_nl",
+      "problem": "Let A = [[2, 0], [0, 5]]. What's det(A)?",
+      "expected_tool": "matrix_operation",
+      "expect": "answer",
+      "split": "dev_nl",
+      "planned_tool": "matrix_operation",
+      "planner": "llm",
+      "intent": "confirmed",
+      "interpretation": "Determinant of A = [[2.0, 0.0], [0.0, 5.0]].",
+      "overall": "verified",
+      "llm_plan": {
+        "tool": "matrix_operation",
+        "args": {
+          "operation": "determinant",
+          "matrix": [
+            [
+              2.0,
+              0.0
+            ],
+            [
+              0.0,
+              5.0
+            ]
+          ]
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 953.6,
+      "outcome": "answered",
+      "answer": "10",
+      "verification": "verified",
+      "correct": true,
+      "detail": "got 10",
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1675,
+        "output_tokens": 137,
+        "total_tokens": 1812,
+        "seconds": 0.931,
+        "tool_call_retries": 0,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "nl-23",
+      "category": "dev_nl",
+      "problem": "Please invert the matrix [[2, 1], [1, 1]]",
+      "expected_tool": "matrix_operation",
+      "expect": "answer",
+      "split": "dev_nl",
+      "planned_tool": "matrix_operation",
+      "planner": "llm",
+      "intent": "confirmed",
+      "interpretation": "Inverse of A = [[2.0, 1.0], [1.0, 1.0]].",
+      "overall": "verified",
+      "llm_plan": {
+        "tool": "matrix_operation",
+        "args": {
+          "operation": "inverse",
+          "matrix": [
+            [
+              2.0,
+              1.0
+            ],
+            [
+              1.0,
+              1.0
+            ]
+          ]
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 952.8,
+      "outcome": "answered",
+      "answer": "[[1, -1], [-1, 2]]",
+      "verification": "verified",
+      "correct": true,
+      "detail": "got [[1, -1], [-1, 2]]",
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1672,
+        "output_tokens": 132,
+        "total_tokens": 1804,
+        "seconds": 0.93,
+        "tool_call_retries": 0,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "nl-24",
+      "category": "dev_nl",
+      "problem": "Compute the eigenvalues of A = [[6, 2], [2, 3]]",
+      "expected_tool": "matrix_operation",
+      "expect": "answer",
+      "split": "dev_nl",
+      "planned_tool": "matrix_operation",
+      "planner": "llm",
+      "intent": "confirmed",
+      "interpretation": "Eigenvalues of A = [[6.0, 2.0], [2.0, 3.0]].",
+      "overall": "verified",
+      "llm_plan": {
+        "tool": "matrix_operation",
+        "args": {
+          "operation": "eigenvalues",
+          "matrix": [
+            [
+              6.0,
+              2.0
+            ],
+            [
+              2.0,
+              3.0
+            ]
+          ]
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 1018.4,
+      "outcome": "answered",
+      "answer": "7, 2",
+      "verification": "verified",
+      "correct": true,
+      "detail": "got [7, 2]",
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1675,
+        "output_tokens": 139,
+        "total_tokens": 1814,
+        "seconds": 0.99,
+        "tool_call_retries": 0,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "nl-25",
+      "category": "dev_nl",
+      "problem": "Here are some numbers: 4, 7, 10. What is their average?",
+      "expected_tool": "descriptive_statistics",
+      "expect": "answer",
+      "split": "dev_nl",
+      "planned_tool": "descriptive_statistics",
+      "planner": "rules",
+      "intent": "confirmed",
+      "interpretation": "Summary statistics of the data [4, 7, 10].",
+      "overall": "verified",
+      "llm": "error",
+      "llm_error": "LLMPlanError: BadRequestError: Error code: 400 - {'error': {'message': \"Tool call validation failed: tool call validation failed: attempted to call tool 'json' which was not in request.tools\", 'type': 'invalid_request_error', 'code': 'tool_use_failed', 'failed_generation': '{\"name\": \"json\", \"arguments\": {\\n  \"tool\": \"descriptive_statistics\",\\n  \"data\": [4, 7, 10],\\n  \"interpretation\": \"Compute the average (mean) of the numbers 4, 7, and 10.\",\\n  \"rationale\": \"The question asks for the average of a list of numbers, which is a descriptive statistics operation.\"\\n}}'}} (after 1 retry)",
+      "latency_ms": 2069.4,
+      "outcome": "answered",
+      "answer": "mean = 7 (\u22487.00000), median = 7, sample std = 3.00000, population std = 2.44949",
+      "verification": "verified",
+      "correct": true,
+      "detail": "ok",
+      "llm_cached": false
+    },
+    {
+      "id": "nl-26",
+      "category": "dev_nl",
+      "problem": "Find the standard deviation of the sample 1, 3, 5",
+      "expected_tool": "descriptive_statistics",
+      "expect": "answer",
+      "split": "dev_nl",
+      "planned_tool": "descriptive_statistics",
+      "planner": "llm",
+      "intent": "assumed",
+      "interpretation": "Summary statistics of the data [1.0, 3.0, 5.0].",
+      "overall": "verified_with_assumptions",
+      "llm_plan": {
+        "tool": "descriptive_statistics",
+        "args": {
+          "data": [
+            1.0,
+            3.0,
+            5.0
+          ]
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 1723.1,
+      "outcome": "answered",
+      "answer": "mean = 3 (\u22483.00000), median = 3, sample std = 2.00000, population std = 1.63299",
+      "verification": "verified",
+      "correct": true,
+      "detail": "ok",
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1671,
+        "output_tokens": 450,
+        "total_tokens": 2121,
+        "seconds": 1.705,
+        "tool_call_retries": 0,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "nl-27",
+      "category": "dev_nl",
+      "problem": "A coin is fair. Tossing it 6 times, what is the probability of exactly 2 heads?",
+      "expected_tool": "probability_distribution",
+      "expect": "answer",
+      "split": "dev_nl",
+      "planned_tool": "probability_distribution",
+      "planner": "rules",
+      "intent": "confirmed",
+      "interpretation": "P(X = 2) for X ~ Binomial(n=6, p=0.5).",
+      "overall": "verified",
+      "llm": "error",
+      "llm_error": "LLMPlanError: BadRequestError: Error code: 400 - {'error': {'message': \"Tool call validation failed: tool call validation failed: attempted to call tool 'json' which was not in request.tools\", 'type': 'invalid_request_error', 'code': 'tool_use_failed', 'failed_generation': '{\"name\": \"json\", \"arguments\": {\\n  \"tool\": \"probability_distribution\",\\n  \"distribution\": \"binomial\",\\n  \"params\": {\\n    \"n\": 6,\\n    \"p\": 0.5\\n  },\\n  \"query\": \"pmf\",\\n  \"x\": 2,\\n  \"interpretation\": \"Compute the probability of getting exactly 2 heads in 6 tosses of a fair coin.\",\\n  \"assumptions\": [\"Fair coin implies probability of heads p = 0.5\"],\\n   (after 1 retry)",
+      "latency_ms": 2369.2,
+      "outcome": "answered",
+      "answer": "P(X = 2) = 15/64 \u2248 0.234375",
+      "verification": "verified",
+      "correct": true,
+      "detail": "got 15/64",
+      "llm_cached": false
+    },
+    {
+      "id": "nl-28",
+      "category": "dev_nl",
+      "problem": "A machine produces defects with probability 0.05. In 20 independent items, what is the chance of no more than 1 defect?",
+      "expected_tool": "probability_distribution",
+      "expect": "answer",
+      "split": "dev_nl",
+      "planned_tool": "probability_distribution",
+      "planner": "llm",
+      "intent": "confirmed",
+      "interpretation": "P(X \u2264 1.0) for X ~ Binomial(n=20.0, p=0.05).",
+      "overall": "verified",
+      "llm_plan": {
+        "tool": "probability_distribution",
+        "args": {
+          "distribution": "binomial",
+          "params": {
+            "n": 20.0,
+            "p": 0.05
+          },
+          "query": "cdf",
+          "x": 1.0
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 1099.5,
+      "outcome": "answered",
+      "answer": "P(X \u2264 1) = 77158366570752229975835181/104857600000000000000000000 \u2248 0.73584",
+      "verification": "verified",
+      "correct": true,
+      "detail": "got 77158366570752229975835181/104857600000000000000000000",
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1685,
+        "output_tokens": 206,
+        "total_tokens": 1891,
+        "seconds": 1.06,
+        "tool_call_retries": 0,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "nl-29",
+      "category": "dev_nl",
+      "problem": "A shooter hits the target 80% of the time. Out of 5 shots, what is the probability of at least 4 hits?",
+      "expected_tool": "probability_distribution",
+      "expect": "answer",
+      "split": "dev_nl",
+      "planned_tool": "probability_distribution",
+      "planner": "nl",
+      "intent": "assumed",
+      "interpretation": "P(X \u2265 4) for X ~ Binomial(n=5, p=0.8).",
+      "overall": "verified_with_assumptions",
+      "llm": "error",
+      "llm_error": "LLMPlanError: BadRequestError: Error code: 400 - {'error': {'message': 'Tool choice is required, but model did not call a tool', 'type': 'invalid_request_error', 'code': 'tool_use_failed', 'failed_generation': ''}}",
+      "latency_ms": 1302.8,
+      "outcome": "answered",
+      "answer": "P(X \u2265 4) = 2304/3125 \u2248 0.73728",
+      "verification": "verified",
+      "correct": true,
+      "detail": "got 2304/3125",
+      "llm_cached": false
+    },
+    {
+      "id": "nl-30",
+      "category": "dev_nl",
+      "problem": "Customers arrive at a rate of 3 per hour (Poisson). What is the probability that exactly 2 arrive in an hour?",
+      "expected_tool": "probability_distribution",
+      "expect": "answer",
+      "split": "dev_nl",
+      "planned_tool": "probability_distribution",
+      "planner": "rules",
+      "intent": "confirmed",
+      "interpretation": "P(X = 2) for X ~ Poisson(lambda=3).",
+      "overall": "verified",
+      "llm": "error",
+      "llm_error": "LLMPlanError: BadRequestError: Error code: 400 - {'error': {'message': 'Tool choice is required, but model did not call a tool', 'type': 'invalid_request_error', 'code': 'tool_use_failed', 'failed_generation': ''}} (after 1 retry)",
+      "latency_ms": 2010.5,
+      "outcome": "answered",
+      "answer": "P(X = 2) = 9*exp(-3)/2 \u2248 0.224042",
+      "verification": "verified",
+      "correct": true,
+      "detail": "got 9*exp(-3)/2",
+      "llm_cached": false
+    },
+    {
+      "id": "nl-31",
+      "category": "dev_nl",
+      "problem": "Typos occur on average 2 per page (Poisson). Probability of more than 1 typo on a page?",
+      "expected_tool": "probability_distribution",
+      "expect": "answer",
+      "split": "dev_nl",
+      "planned_tool": "probability_distribution",
+      "planner": "nl",
+      "intent": "assumed",
+      "interpretation": "P(X \u2265 2) for X ~ Poisson(lambda=2).",
+      "overall": "verified_with_assumptions",
+      "llm_plan": {
+        "tool": "probability_distribution",
+        "args": {
+          "distribution": "poisson",
+          "params": {
+            "lambda": 2.0
+          },
+          "query": "greater",
+          "x": 1.0
+        },
+        "ambiguities": []
+      },
+      "llm": "rejected_fallback",
+      "latency_ms": 1259.3,
+      "outcome": "answered",
+      "answer": "P(X \u2265 2) = 1 - 3*exp(-2) \u2248 0.593994",
+      "verification": "verified",
+      "correct": true,
+      "detail": "got 1 - 3*exp(-2)",
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1680,
+        "output_tokens": 179,
+        "total_tokens": 1859,
+        "seconds": 1.223,
+        "tool_call_retries": 0,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "nl-32",
+      "category": "dev_nl",
+      "problem": "Weights are normal with mean 60 and standard deviation 5. What fraction weigh more than 70?",
+      "expected_tool": "probability_distribution",
+      "expect": "answer",
+      "split": "dev_nl",
+      "planned_tool": "probability_distribution",
+      "planner": "nl",
+      "intent": "assumed",
+      "interpretation": "P(X > 70) for X ~ Normal(mean=60, std=5).",
+      "overall": "verified_with_assumptions",
+      "llm": "error",
+      "llm_error": "LLMPlanError: BadRequestError: Error code: 400 - {'error': {'message': 'Tool choice is required, but model did not call a tool', 'type': 'invalid_request_error', 'code': 'tool_use_failed', 'failed_generation': ''}} (after 1 retry)",
+      "latency_ms": 1937.8,
+      "outcome": "answered",
+      "answer": "P(X > 70) = 1/2 - erf(sqrt(2))/2 \u2248 0.0227501",
+      "verification": "verified",
+      "correct": true,
+      "detail": "got 1/2 - erf(sqrt(2))/2",
+      "llm_cached": false
+    },
+    {
+      "id": "nl-33",
+      "category": "dev_nl",
+      "problem": "Scores follow a normal distribution with mean 500 and sd 100. Probability a score is between 400 and 600?",
+      "expected_tool": "probability_distribution",
+      "expect": "answer",
+      "split": "dev_nl",
+      "planned_tool": "probability_distribution",
+      "planner": "llm",
+      "intent": "confirmed",
+      "interpretation": "P(400.0 \u2264 X \u2264 600.0) for X ~ Normal(mean=500.0, std=100.0).",
+      "overall": "verified",
+      "llm_plan": {
+        "tool": "probability_distribution",
+        "args": {
+          "distribution": "normal",
+          "params": {
+            "mean": 500.0,
+            "std": 100.0
+          },
+          "query": "between",
+          "x": 400.0,
+          "x2": 600.0
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 1617.3,
+      "outcome": "answered",
+      "answer": "P(400 \u2264 X \u2264 600) = erf(sqrt(2)/2) \u2248 0.682689",
+      "verification": "verified",
+      "correct": true,
+      "detail": "got erf(sqrt(2)/2)",
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1681,
+        "output_tokens": 180,
+        "total_tokens": 1861,
+        "seconds": 1.592,
+        "tool_call_retries": 0,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "nl-34",
+      "category": "dev_nl",
+      "problem": "A train arrives uniformly between 0 and 30 minutes. Probability it arrives within 10 minutes?",
+      "expected_tool": "probability_distribution",
+      "expect": "answer",
+      "split": "dev_nl",
+      "planned_tool": "probability_distribution",
+      "planner": "nl",
+      "intent": "assumed",
+      "interpretation": "P(X \u2264 10) for X ~ Uniform(a=0, b=30).",
+      "overall": "verified_with_assumptions",
+      "llm": "error",
+      "llm_error": "LLMPlanError: BadRequestError: Error code: 400 - {'error': {'message': 'Tool choice is required, but model did not call a tool', 'type': 'invalid_request_error', 'code': 'tool_use_failed', 'failed_generation': ''}}",
+      "latency_ms": 1403.5,
+      "outcome": "answered",
+      "answer": "P(X \u2264 10) = 1/3 \u2248 0.333333",
+      "verification": "verified",
+      "correct": true,
+      "detail": "got 1/3",
+      "llm_cached": false
+    },
+    {
+      "id": "nl-35",
+      "category": "dev_nl",
+      "problem": "Waiting times are exponential with rate 0.5 per minute. What is the probability of waiting more than 4 minutes?",
+      "expected_tool": "probability_distribution",
+      "expect": "answer",
+      "split": "dev_nl",
+      "planned_tool": "probability_distribution",
+      "planner": "llm",
+      "intent": "confirmed",
+      "interpretation": "P(X > 4.0) for X ~ Exponential(rate=0.5).",
+      "overall": "verified",
+      "llm_plan": {
+        "tool": "probability_distribution",
+        "args": {
+          "distribution": "exponential",
+          "params": {
+            "rate": 0.5
+          },
+          "query": "greater",
+          "x": 4.0
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 1287.8,
+      "outcome": "answered",
+      "answer": "P(X > 4) = exp(-2) \u2248 0.135335",
+      "verification": "verified",
+      "correct": true,
+      "detail": "got exp(-2)",
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1681,
+        "output_tokens": 219,
+        "total_tokens": 1900,
+        "seconds": 1.261,
+        "tool_call_retries": 0,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "nl-36",
+      "category": "dev_nl",
+      "problem": "How many ways can 5 books be arranged on a shelf?",
+      "expected_tool": "combinatorics",
+      "expect": "answer",
+      "split": "dev_nl",
+      "planned_tool": "combinatorics",
+      "planner": "llm",
+      "intent": "confirmed",
+      "interpretation": "P(5, 5) (order matters).",
+      "overall": "verified",
+      "llm_plan": {
+        "tool": "combinatorics",
+        "args": {
+          "operation": "permutations",
+          "n": 5,
+          "k": 5
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 2907.2,
+      "outcome": "answered",
+      "answer": "120",
+      "verification": "verified",
+      "correct": true,
+      "detail": "got 120",
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1669,
+        "output_tokens": 271,
+        "total_tokens": 1940,
+        "seconds": 2.885,
+        "tool_call_retries": 1,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "nl-37",
+      "category": "dev_nl",
+      "problem": "How many ways are there to choose 4 cards from 10?",
+      "expected_tool": "combinatorics",
+      "expect": "answer",
+      "split": "dev_nl",
+      "planned_tool": "combinatorics",
+      "planner": "llm",
+      "intent": "confirmed",
+      "interpretation": "C(10, 4) (order does not matter).",
+      "overall": "verified",
+      "llm_plan": {
+        "tool": "combinatorics",
+        "args": {
+          "operation": "combinations",
+          "n": 10,
+          "k": 4
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 1181.0,
+      "outcome": "answered",
+      "answer": "210",
+      "verification": "verified",
+      "correct": true,
+      "detail": "got 210",
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1670,
+        "output_tokens": 184,
+        "total_tokens": 1854,
+        "seconds": 1.165,
+        "tool_call_retries": 0,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "nl-38",
+      "category": "dev_nl",
+      "problem": "A club of 12 people elects a president and a treasurer. How many possible outcomes?",
+      "expected_tool": "combinatorics",
+      "expect": "answer",
+      "split": "dev_nl",
+      "planned_tool": "combinatorics",
+      "planner": "llm",
+      "intent": "confirmed",
+      "interpretation": "P(12, 2) (order matters).",
+      "overall": "verified",
+      "llm_plan": {
+        "tool": "combinatorics",
+        "args": {
+          "operation": "permutations",
+          "n": 12,
+          "k": 2
+        },
+        "ambiguities": []
+      },
+      "llm": "accepted",
+      "llm_repaired": false,
+      "latency_ms": 1423.9,
+      "outcome": "answered",
+      "answer": "132",
+      "verification": "verified",
+      "correct": true,
+      "detail": "got 132",
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1676,
+        "output_tokens": 256,
+        "total_tokens": 1932,
+        "seconds": 1.411,
+        "tool_call_retries": 0,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "nl-39",
+      "category": "dev_nl",
+      "problem": "Integrate sin(x) from 0",
+      "expected_tool": null,
+      "expect": "reject",
+      "split": "dev_nl",
+      "planned_tool": "integrate",
+      "planner": "rules",
+      "intent": "mismatch",
+      "interpretation": "Antiderivative of sin(x) from 0 with respect to x.",
+      "llm": "error",
+      "llm_error": "LLMPlanError: BadRequestError: Error code: 400 - {'error': {'message': \"Tool call validation failed: tool call validation failed: attempted to call tool 'json' which was not in request.tools\", 'type': 'invalid_request_error', 'code': 'tool_use_failed', 'failed_generation': '{\"name\": \"json\", \"arguments\": {\\n  \"supported\": false,\\n  \"clarification\": \"What is the upper limit of integration for sin(x)?\"\\n}}'}} (after 1 retry)",
+      "outcome": "clarify",
+      "error": "The plan was rejected: 'expression' is not a valid mathematical expression (Unknown identifier 'from'. Use standard math functions.).",
+      "latency_ms": 1779.2,
+      "llm_cached": false
+    },
+    {
+      "id": "nl-40",
+      "category": "dev_nl",
+      "problem": "A coin is tossed several times. What is the probability of 2 heads?",
+      "expected_tool": null,
+      "expect": "reject",
+      "split": "dev_nl",
+      "planned_tool": null,
+      "planner": "llm",
+      "llm": "declared_unsupported",
+      "outcome": "rejected",
+      "error": "How many times is the coin tossed?",
+      "latency_ms": 1809.4,
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1672,
+        "output_tokens": 169,
+        "total_tokens": 1841,
+        "seconds": 1.795,
+        "tool_call_retries": 1,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "nl-41",
+      "category": "dev_nl",
+      "problem": "Solve 2x + 3y = 6",
+      "expected_tool": null,
+      "expect": "reject",
+      "split": "dev_nl",
+      "planned_tool": "solve_equation",
+      "planner": "llm",
+      "intent": "ambiguous",
+      "interpretation": "Solve 2*x + 3*y = 6 for the unknown.",
+      "llm_plan": {
+        "tool": "solve_equation",
+        "args": {
+          "domain": "complex",
+          "equation": "2*x + 3*y = 6"
+        },
+        "ambiguities": [
+          "The equation involves two variables (x and y) but the request does not specify which variable to solve for."
+        ]
+      },
+      "llm": "rejected_clarify",
+      "outcome": "clarify",
+      "error": "The equation has several unknowns (x, y) but only one equation. Which variable should be solved for, or is there another equation?",
+      "latency_ms": 1843.5,
+      "llm_cached": false,
+      "llm_usage": {
+        "input_tokens": 1667,
+        "output_tokens": 586,
+        "total_tokens": 2253,
+        "seconds": 1.822,
+        "tool_call_retries": 0,
+        "model": "openai/gpt-oss-120b"
+      }
+    },
+    {
+      "id": "nl-42",
+      "category": "dev_nl",
+      "problem": "Find the inverse",
+      "expected_tool": null,
+      "expect": "reject",
+      "split": "dev_nl",
+      "planned_tool": null,
+      "planner": "rules",
+      "llm": "error",
+      "llm_error": "LLMPlanError: BadRequestError: Error code: 400 - {'error': {'message': 'Tool choice is required, but model did not call a tool', 'type': 'invalid_request_error', 'code': 'tool_use_failed', 'failed_generation': ''}}",
+      "outcome": "rejected",
+      "error": "I couldn't recognise this as a supported problem (algebra, calculus, integrals, linear algebra, probability or statistics). Try rephrasing, e.g. 'solve x^2 - 4 = 0'.",
+      "latency_ms": 1617.4,
       "llm_cached": false
     }
   ],
@@ -8966,7 +9955,7 @@
       "note": "wrong root",
       "control_status": "verified",
       "tampered_status": "failed",
-      "latency_ms": 74.1
+      "latency_ms": 57.2
     },
     {
       "id": "tam-02",
@@ -8974,7 +9963,7 @@
       "note": "missing real root",
       "control_status": "verified",
       "tampered_status": "failed",
-      "latency_ms": 52.8
+      "latency_ms": 61.9
     },
     {
       "id": "tam-03",
@@ -8982,7 +9971,7 @@
       "note": "missing complex roots",
       "control_status": "verified",
       "tampered_status": "failed",
-      "latency_ms": 114.4
+      "latency_ms": 101.7
     },
     {
       "id": "tam-04",
@@ -8990,7 +9979,7 @@
       "note": "incomplete periodic family",
       "control_status": "verified",
       "tampered_status": "failed",
-      "latency_ms": 63.3
+      "latency_ms": 49.5
     },
     {
       "id": "tam-05",
@@ -8998,7 +9987,7 @@
       "note": "inaccurate numeric root",
       "control_status": "approximate",
       "tampered_status": "failed",
-      "latency_ms": 1117.0
+      "latency_ms": 1103.0
     },
     {
       "id": "tam-06",
@@ -9006,7 +9995,7 @@
       "note": "extraneous root",
       "control_status": "verified",
       "tampered_status": "failed",
-      "latency_ms": 91.4
+      "latency_ms": 92.3
     },
     {
       "id": "tam-07",
@@ -9014,7 +10003,7 @@
       "note": "missing conjugate root",
       "control_status": "verified",
       "tampered_status": "failed",
-      "latency_ms": 88.8
+      "latency_ms": 117.3
     },
     {
       "id": "tam-08",
@@ -9022,7 +10011,7 @@
       "note": "wrong system solution",
       "control_status": "verified",
       "tampered_status": "failed",
-      "latency_ms": 7.0
+      "latency_ms": 8.3
     },
     {
       "id": "tam-09",
@@ -9030,7 +10019,7 @@
       "note": "wrong factorisation",
       "control_status": "verified",
       "tampered_status": "failed",
-      "latency_ms": 23.2
+      "latency_ms": 36.5
     },
     {
       "id": "tam-10",
@@ -9038,7 +10027,7 @@
       "note": "dropped term",
       "control_status": "verified",
       "tampered_status": "failed",
-      "latency_ms": 34.2
+      "latency_ms": 29.9
     },
     {
       "id": "tam-11",
@@ -9046,7 +10035,7 @@
       "note": "sign error",
       "control_status": "verified",
       "tampered_status": "failed",
-      "latency_ms": 45.8
+      "latency_ms": 50.3
     },
     {
       "id": "tam-12",
@@ -9054,7 +10043,7 @@
       "note": "product rule misapplied",
       "control_status": "verified",
       "tampered_status": "failed",
-      "latency_ms": 250.7
+      "latency_ms": 292.4
     },
     {
       "id": "tam-13",
@@ -9062,7 +10051,7 @@
       "note": "chain rule forgotten",
       "control_status": "verified",
       "tampered_status": "failed",
-      "latency_ms": 47.2
+      "latency_ms": 44.1
     },
     {
       "id": "tam-14",
@@ -9070,7 +10059,7 @@
       "note": "first instead of second derivative",
       "control_status": "approximate",
       "tampered_status": "failed",
-      "latency_ms": 7.4
+      "latency_ms": 16.3
     },
     {
       "id": "tam-15",
@@ -9078,7 +10067,7 @@
       "note": "evaluated f instead of f'",
       "control_status": "verified",
       "tampered_status": "failed",
-      "latency_ms": 7.2
+      "latency_ms": 10.6
     },
     {
       "id": "tam-16",
@@ -9086,7 +10075,7 @@
       "note": "missing inner derivative",
       "control_status": "verified",
       "tampered_status": "failed",
-      "latency_ms": 56.4
+      "latency_ms": 78.8
     },
     {
       "id": "tam-17",
@@ -9094,7 +10083,7 @@
       "note": "incomplete integration by parts",
       "control_status": "verified",
       "tampered_status": "failed",
-      "latency_ms": 29.6
+      "latency_ms": 33.4
     },
     {
       "id": "tam-18",
@@ -9102,7 +10091,7 @@
       "note": "arithmetic slip",
       "control_status": "verified",
       "tampered_status": "failed",
-      "latency_ms": 10.3
+      "latency_ms": 13.0
     },
     {
       "id": "tam-19",
@@ -9110,7 +10099,7 @@
       "note": "missing square root",
       "control_status": "verified",
       "tampered_status": "failed",
-      "latency_ms": 70.7
+      "latency_ms": 85.3
     },
     {
       "id": "tam-20",
@@ -9118,7 +10107,7 @@
       "note": "convergent integral claimed divergent",
       "control_status": "verified",
       "tampered_status": "failed",
-      "latency_ms": 19.4
+      "latency_ms": 18.8
     },
     {
       "id": "tam-21",
@@ -9126,7 +10115,7 @@
       "note": "sign of cosine",
       "control_status": "verified",
       "tampered_status": "failed",
-      "latency_ms": 14.6
+      "latency_ms": 11.1
     },
     {
       "id": "tam-22",
@@ -9134,7 +10123,7 @@
       "note": "wrong limit",
       "control_status": "approximate",
       "tampered_status": "failed",
-      "latency_ms": 5.4
+      "latency_ms": 3.7
     },
     {
       "id": "tam-23",
@@ -9142,7 +10131,7 @@
       "note": "wrong sign of infinity",
       "control_status": "approximate",
       "tampered_status": "failed",
-      "latency_ms": 3.7
+      "latency_ms": 2.8
     },
     {
       "id": "tam-24",
@@ -9150,7 +10139,7 @@
       "note": "1^oo fallacy",
       "control_status": "approximate",
       "tampered_status": "failed",
-      "latency_ms": 11.4
+      "latency_ms": 9.0
     },
     {
       "id": "tam-25",
@@ -9158,7 +10147,7 @@
       "note": "ad + bc",
       "control_status": "verified",
       "tampered_status": "failed",
-      "latency_ms": 1.9
+      "latency_ms": 1.3
     },
     {
       "id": "tam-26",
@@ -9166,7 +10155,7 @@
       "note": "transposed inverse",
       "control_status": "verified",
       "tampered_status": "failed",
-      "latency_ms": 4.8
+      "latency_ms": 3.4
     },
     {
       "id": "tam-27",
@@ -9174,7 +10163,7 @@
       "note": "wrong eigenvalue",
       "control_status": "verified",
       "tampered_status": "failed",
-      "latency_ms": 8.9
+      "latency_ms": 6.2
     },
     {
       "id": "tam-28",
@@ -9182,7 +10171,7 @@
       "note": "rank of singular matrix",
       "control_status": "verified",
       "tampered_status": "failed",
-      "latency_ms": 2.1
+      "latency_ms": 1.6
     },
     {
       "id": "tam-29",
@@ -9190,7 +10179,7 @@
       "note": "wrong solution vector",
       "control_status": "verified",
       "tampered_status": "failed",
-      "latency_ms": 5.0
+      "latency_ms": 3.4
     },
     {
       "id": "tam-30",
@@ -9198,7 +10187,7 @@
       "note": "one wrong entry",
       "control_status": "verified",
       "tampered_status": "failed",
-      "latency_ms": 3.8
+      "latency_ms": 2.3
     },
     {
       "id": "tam-31",
@@ -9206,7 +10195,7 @@
       "note": "wrong mean",
       "control_status": "verified",
       "tampered_status": "failed",
-      "latency_ms": 5.8
+      "latency_ms": 4.0
     },
     {
       "id": "tam-32",
@@ -9214,7 +10203,7 @@
       "note": "population std reported as sample std",
       "control_status": "verified",
       "tampered_status": "failed",
-      "latency_ms": 10.9
+      "latency_ms": 7.5
     },
     {
       "id": "tam-33",
@@ -9222,7 +10211,7 @@
       "note": "wrong probability",
       "control_status": "verified",
       "tampered_status": "failed",
-      "latency_ms": 7.7
+      "latency_ms": 6.6
     },
     {
       "id": "tam-34",
@@ -9230,7 +10219,7 @@
       "note": "permutations instead of combinations",
       "control_status": "verified",
       "tampered_status": "failed",
-      "latency_ms": 1.1
+      "latency_ms": 0.8
     }
   ],
   "intent_tamper": [

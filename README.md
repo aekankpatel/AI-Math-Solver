@@ -279,7 +279,29 @@ offline graph tests, but not re-measured against Groq. The category rules:
 Raw planner response caches (`*cache*.jsonl`) stay on the local machine and are git-ignored. The committed reports hold
 the sanitized record: structured plans, statuses, usage and truncated error messages. `--replay` needs the local cache.
 
-### Groq planner evaluation (full benchmark prepared, not run)
+### Full Groq benchmark (308 questions, `openai/gpt-oss-120b`)
+
+Report: `eval/reports/groq_final.{json,md}`. This is the complete run, validated with the provenance check. The interim
+report `groq.md` (246 questions, before the fix) and its offline re-score `groq_rescored_246.md` are kept for comparison.
+The run took three sessions because the free tier allows 200,000 tokens per day on a rolling 24-hour window. About 490k
+tokens over about 264 live calls; cached questions were never called twice. Pacing was 10 RPM / 6,000 TPM, and the account
+limits were 1,000 requests per day and 8,000 tokens per minute.
+
+| Question set | End-to-end answers | End-to-end refusals | Groq plans accepted | Accepted plans correct | Groq tool choice |
+|---|---|---|---|---|---|
+| Development (179) | 150/150 | 29/29 | 145 | 137/137 | 146/147 |
+| Held-out paraphrases (31) | 30/31 | – | 29 | 29/29 | 30/30 |
+| Unseen (56) | 44/45 | 11/11 | 39 | 39/39 | 40/40 |
+| NL tuning (42) | 38/38 | 4/4 | 27 | 27/27 | 28/28 |
+| **All 308** | **262/264** | **44/44** | **240** | **232/232** | **244/245** |
+
+- **No wrong answers end to end.** The two missed answers are clarification requests: an all-words equation, and a ranking question ("first, second and third").
+- **Fully verified ⇒ correct: 205/205.** Math-verified ⇒ correct: 232/232. Tampered solutions detected: 34/34. Tampered interpretations flagged: 36/36, with 0/35 false alarms.
+- **Groq call failures: 28/308.** Ten were calls to a non-existent `json` tool, ten were plain-text replies, and eight were plans that named no tool. The offline planners handled all of them.
+- **Intent-check rejections of Groq plans: 21.** Ten were an unrequested `domain=real`; seven were missing information, where asking is correct. Four were genuine misreadings: P(X > k) planned as P(X ≥ k) twice, a statistics question turned into arithmetic, and the triangle-area precomputation.
+- **Latency:** Groq calls take 1.15 s typical (1.89 s at p95). End to end it's 1.19 s typical (2.0 s at p95).
+
+### Groq planner evaluation (how to re-run)
 
 Dry run for `openai/gpt-oss-120b` at `--rpm 10 --tpm 6000`, sending nothing:
 
