@@ -8,21 +8,31 @@ const OVERALL: Record<OverallStatus, { label: string; icon: string; cls: string;
     hint: 'The math was independently verified and the interpretation matches every part of the question',
   },
   verified_with_assumptions: {
-    label: 'Verified · with assumptions',
+    label: 'Verified with assumptions',
     icon: '✓',
     cls: 'assumed',
     hint: 'The math is verified, but the interpretation relies on the assumptions listed below',
   },
-  approximate: { label: 'Approximate', icon: '≈', cls: 'approximate', hint: 'Confirmed numerically only' },
+  approximate: {
+    label: 'Approximate',
+    icon: '≈',
+    cls: 'approximate',
+    hint: 'Confirmed numerically within tolerance, not symbolically',
+  },
   unverified: { label: 'Unverified', icon: '?', cls: 'unverified', hint: 'No independent check was possible' },
   failed: { label: 'Verification failed', icon: '✕', cls: 'failed', hint: 'Do not trust this result' },
-  needs_clarification: { label: 'Needs clarification', icon: '?', cls: 'unverified', hint: 'More information is needed' },
+  needs_clarification: {
+    label: 'Needs clarification',
+    icon: '?',
+    cls: 'clarify',
+    hint: 'More information is needed; nothing was computed',
+  },
 }
 
-export function OverallBadge({ status }: { status: OverallStatus }) {
+export function OverallBadge({ status, testId = 'overall-badge' }: { status: OverallStatus; testId?: string }) {
   const meta = OVERALL[status]
   return (
-    <span className={`badge badge-${meta.cls}`} title={meta.hint} data-testid="overall-badge">
+    <span className={`badge badge-${meta.cls}`} title={meta.hint} data-testid={testId}>
       <span aria-hidden>{meta.icon}</span> {meta.label}
     </span>
   )
@@ -67,6 +77,25 @@ export function IntentPanel({ intent }: { intent: IntentVerification }) {
       {failed.length === 0 && intent.assumptions.length === 0 && (
         <p className="muted small">Every number and condition in the question was matched to the computation.</p>
       )}
+    </details>
+  )
+}
+
+const LEGEND: OverallStatus[] = ['verified', 'verified_with_assumptions', 'approximate', 'needs_clarification']
+
+/** Explains the trust levels shown on every answer. */
+export function StatusLegend() {
+  return (
+    <details className="legend" data-testid="status-legend">
+      <summary>What do the badges mean?</summary>
+      <ul>
+        {LEGEND.map((s) => (
+          <li key={s}>
+            <OverallBadge status={s} testId="legend-badge" />
+            <span className="muted">{OVERALL[s].hint}.</span>
+          </li>
+        ))}
+      </ul>
     </details>
   )
 }

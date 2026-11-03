@@ -32,9 +32,17 @@ export function Plot({ figure }: { figure: PlotlyFigure }) {
     const el = ref.current
     if (!el) return
     const layout = figure.layout as Record<string, Record<string, unknown>>
+    const narrow = el.clientWidth < 480
     const merged = {
       ...layout,
       ...THEME,
+      // on phones: smaller title placed left of the toolbar, which only appears on tap
+      ...(narrow
+        ? {
+            title: { ...(layout.title ?? {}), font: { size: 13 }, x: 0.02, xanchor: 'left' },
+            margin: { l: 42, r: 10, t: 46, b: 40 },
+          }
+        : {}),
       xaxis: { ...(layout.xaxis ?? {}), ...THEME.xaxis },
       yaxis: { ...(layout.yaxis ?? {}), ...THEME.yaxis },
       autosize: true,
@@ -45,6 +53,7 @@ export function Plot({ figure }: { figure: PlotlyFigure }) {
         return Plotly.react(el, figure.data as Plotly.Data[], merged as Partial<Plotly.Layout>, {
           responsive: true,
           displaylogo: false,
+          displayModeBar: !narrow,
           modeBarButtonsToRemove: ['lasso2d', 'select2d'],
         })
       })

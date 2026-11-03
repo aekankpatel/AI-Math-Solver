@@ -57,7 +57,9 @@ describe('App', () => {
     expect(screen.getAllByTestId('verification-badge')[0]).toHaveTextContent('Verified')
     expect(screen.getByText('Factor')).toBeInTheDocument()
     expect(screen.getByTestId('plot')).toBeInTheDocument()
-    expect(screen.getByText('Offline planner (no LLM key)')).toBeInTheDocument()
+    expect(screen.getByTestId('llm-status')).toHaveTextContent('Offline planner')
+    expect(screen.getByTestId('planner-badge')).toHaveTextContent('offline planner')
+    expect(screen.queryByTestId('planner-notice')).not.toBeInTheDocument()
   })
 
   it('supports follow-up questions in the same session', async () => {
@@ -150,6 +152,95 @@ describe('intent verification UI', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Solve' }))
     expect(await screen.findByTestId('overall-badge')).toHaveTextContent('with assumptions')
     expect(screen.getByTestId('intent-panel')).toHaveTextContent('2023')
+  })
+})
+
+describe('deployment UX', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  function solveWith(routes: Record<string, unknown>, problem = 'Integrate x^2 from 0 to 3') {
+    vi.stubGlobal('fetch', mockFetch(routes))
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('Math problem'), { target: { value: problem } })
+    fireEvent.click(screen.getByRole('button', { name: 'Solve' }))
+  }
+
+  it('shows when the Groq planner produced the solution', async () => {
+    solveWith({
+      '/api/health': { status: 'ok', llm_configured: true, model: 'openai/gpt-oss-120b', llm_state: 'available' },
+      '/api/solve': { ...solved, planner: 'llm', llm_used: true, llm_status: 'used' },
+    })
+    expect(await screen.findByTestId('planner-badge')).toHaveTextContent('Planned by Groq LLM')
+    expect(screen.getByTestId('llm-status')).toHaveTextContent('Groq planner · openai/gpt-oss-120b')
+  })
+
+  it('explains a switch to the offline planner and updates the header', async () => {
+    solveWith({
+      '/api/health': { status: 'ok', llm_configured: true, model: 'openai/gpt-oss-120b', llm_state: 'available' },
+      '/api/solve': {
+        ...solved,
+        planner: 'rules',
+        llm_status: 'budget',
+        planner_notice: "The AI planner has reached today's free usage budget, so the offline planner answered.",
+      },
+    })
+    expect(await screen.findByTestId('planner-notice')).toHaveTextContent('offline planner answered')
+    expect(screen.getByTestId('planner-badge')).toHaveTextContent('offline planner')
+    await waitFor(() => expect(screen.getByTestId('llm-status')).toHaveTextContent('daily AI budget used'))
+  })
+
+  it('reports timeouts as a clear error card', async () => {
+    solveWith(
+      {
+        '/api/solve': {
+          ...solved,
+          status: 'error',
+          error_code: 'timeout',
+          answer_text: null,
+          answer_latex: null,
+          error: 'This computation was stopped because it exceeded the 10-second time limit.',
+        },
+      },
+      'expand (x+1)^900',
+    )
+    const card = await screen.findByTestId('error-card')
+    expect(card).toHaveTextContent('Time limit reached')
+    expect(card).toHaveTextContent('10-second time limit')
+  })
+
+  it('turns rate limiting into a friendly message', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) =>
+        url.endsWith('/api/solve')
+          ? new Response(JSON.stringify({ detail: 'Too many requests.' }), {
+              status: 429,
+              headers: { 'Content-Type': 'application/json', 'Retry-After': '42' },
+            })
+          : new Response('{}', { status: 404 }),
+      ),
+    )
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('Math problem'), { target: { value: 'x=1' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Solve' }))
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('wait 42 s'))
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('explains the trust badges before the first answer', async () => {
+    vi.stubGlobal('fetch', mockFetch({}))
+    render(<App />)
+    const legend = screen.getByTestId('status-legend')
+    for (const label of ['Fully verified', 'Verified with assumptions', 'Approximate', 'Needs clarification']) {
+      expect(legend).toHaveTextContent(label)
+    }
+  })
+
+  it('limits input length to the API limit', () => {
+    vi.stubGlobal('fetch', mockFetch({}))
+    render(<App />)
+    expect(screen.getByLabelText('Math problem')).toHaveAttribute('maxLength', '1000')
   })
 })
 

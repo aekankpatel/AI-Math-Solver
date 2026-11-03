@@ -81,10 +81,28 @@ export interface SolveResponse {
   error: string | null
   llm_used: boolean
   planner: 'llm' | 'rules' | 'nl'
+  llm_status?: LlmStatus
+  planner_notice?: string | null
+  error_code?: 'timeout' | 'memory' | 'too_large' | 'busy' | null
 }
+
+export type LlmStatus =
+  | 'used'
+  | 'rejected'
+  | 'disabled'
+  | 'budget'
+  | 'cooldown'
+  | 'client_quota'
+  | 'error'
+  | 'unsupported'
+  | 'not_needed'
+
+export type LlmState = 'available' | 'disabled' | 'budget' | 'cooldown'
 
 export interface Health {
   status: 'ok'
   llm_configured: boolean
   model: string
+  llm_available?: boolean
+  llm_state?: LlmState
 }

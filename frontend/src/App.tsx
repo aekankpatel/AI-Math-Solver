@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
-import { api, ApiError } from './api'
+import { api, ApiError, MAX_PROBLEM_CHARS } from './api'
+import { StatusLegend } from './components/IntentPanel'
+import { HealthPill } from './components/PlannerInfo'
 import { SolutionCard } from './components/SolutionCard'
 import type { Health, SolveResponse } from './types'
 
@@ -25,12 +27,19 @@ export default function App() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [health, setHealth] = useState<Health | null>(null)
+  const [reachable, setReachable] = useState(true)
   const [examples, setExamples] = useState<Record<string, string[]>>(FALLBACK_EXAMPLES)
   const nextId = useRef(1)
   const bottom = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    api.health().then(setHealth).catch(() => setHealth(null))
+    api
+      .health()
+      .then(setHealth)
+      .catch(() => {
+        setHealth(null)
+        setReachable(false)
+      })
     api.examples().then(setExamples).catch(() => undefined)
   }, [])
 
@@ -43,10 +52,18 @@ export default function App() {
     setError(null)
     try {
       const result = await action()
+      setReachable(true)
       setSessionId(result.session_id)
+      if (result.llm_status === 'budget' || result.llm_status === 'cooldown') {
+        const state = result.llm_status
+        setHealth((h) => (h ? { ...h, llm_available: false, llm_state: state } : h))
+      } else if (result.llm_status === 'used') {
+        setHealth((h) => (h ? { ...h, llm_available: true, llm_state: 'available' } : h))
+      }
       setTurns((t) => [...t, { id: nextId.current++, result, followUp: isFollowUp }])
       return true
     } catch (e) {
+      if (e instanceof ApiError && e.status === 0) setReachable(false)
       setError(e instanceof ApiError ? e.message : 'Unexpected error.')
       return false
     } finally {
@@ -89,14 +106,7 @@ export default function App() {
             <p className="tagline">Solve · Verify · Explain — every answer is independently checked.</p>
           </div>
         </div>
-        <div className="status" data-testid="llm-status">
-          <span className={`dot ${health ? (health.llm_configured ? 'on' : 'off') : 'down'}`} />
-          {health
-            ? health.llm_configured
-              ? `LLM: ${health.model}`
-              : 'Offline planner (no LLM key)'
-            : 'API unreachable'}
-        </div>
+        <HealthPill health={health} reachable={reachable} />
       </header>
 
       <main>
@@ -111,12 +121,21 @@ export default function App() {
             onKeyDown={onKeyDown}
             placeholder="Type a problem, e.g. “integrate x·sin(x) from 0 to pi” or “eigenvalues of [[2,1],[1,2]]”"
             rows={2}
-            maxLength={2000}
+            maxLength={MAX_PROBLEM_CHARS}
+            aria-describedby="problem-hint"
           />
           <button type="submit" disabled={loading || !problem.trim()}>
             {loading && !sessionId ? 'Solving…' : 'Solve'}
           </button>
         </form>
+        <div className="composer-hint" id="problem-hint">
+          <span>Enter to solve · Shift+Enter for a new line</span>
+          {problem.length > MAX_PROBLEM_CHARS * 0.8 && (
+            <span>
+              {problem.length}/{MAX_PROBLEM_CHARS}
+            </span>
+          )}
+        </div>
 
         <section className="examples" aria-label="Examples">
           {Object.entries(examples).map(([cat, items]) => (
@@ -133,9 +152,14 @@ export default function App() {
 
         {error && (
           <div className="banner" role="alert">
-            {error}
+            <span>{error}</span>
+            <button type="button" className="banner-close" onClick={() => setError(null)} aria-label="Dismiss">
+              ×
+            </button>
           </div>
         )}
+
+        {turns.length === 0 && !loading && <StatusLegend />}
 
         <div className="turns">
           {turns.map((t) => (
@@ -155,7 +179,7 @@ export default function App() {
               value={followUp}
               onChange={(e) => setFollowUp(e.target.value)}
               placeholder="Ask a follow-up: “now integrate it”, “explain the steps”, “how was this verified?”"
-              maxLength={2000}
+              maxLength={MAX_PROBLEM_CHARS}
             />
             <button type="submit" disabled={loading || !followUp.trim()}>
               Ask
@@ -165,7 +189,8 @@ export default function App() {
       </main>
 
       <footer className="foot">
-        Computation by SymPy, NumPy &amp; SciPy · orchestration by LangGraph · the LLM never does the arithmetic.
+        Computation by SymPy, NumPy &amp; SciPy · orchestration by LangGraph · the LLM only plans, it never does
+        the arithmetic. Every answer is checked independently; please still double-check important results.
       </footer>
     </div>
   )

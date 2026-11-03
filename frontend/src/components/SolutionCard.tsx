@@ -1,5 +1,6 @@
 import type { SolveResponse } from '../types'
 import { IntentPanel, OverallBadge } from './IntentPanel'
+import { PlannerBadge, PlannerNotice } from './PlannerInfo'
 import { Plot } from './Plot'
 import { RichText, Tex } from './Tex'
 import { VerificationBadge, VerificationPanel } from './VerificationPanel'
@@ -38,6 +39,7 @@ export function SolutionCard({ result, isFollowUp }: { result: SolveResponse; is
         <p>
           <strong>{result.error}</strong>
         </p>
+        <PlannerNotice result={result} />
         {result.intent?.interpretation && (
           <p className="muted">
             Closest reading I could form: {result.intent.interpretation} I did not compute it, because it may not be what
@@ -50,13 +52,27 @@ export function SolutionCard({ result, isFollowUp }: { result: SolveResponse; is
   }
 
   if (result.status !== 'solved') {
+    const label =
+      result.status === 'unsupported'
+        ? 'Not supported'
+        : result.error_code === 'timeout'
+          ? 'Time limit reached'
+          : result.error_code === 'memory' || result.error_code === 'too_large'
+            ? 'Too large to compute'
+            : 'Could not solve'
     return (
       <article className="card error-card" role="alert" data-testid="error-card">
         <header className="card-head">
-          <span className="chip chip-warn">{result.status === 'unsupported' ? 'Not supported' : 'Could not solve'}</span>
+          <span className="chip chip-warn">{label}</span>
           <h3 className="problem">{result.problem}</h3>
         </header>
         <p>{result.error}</p>
+        {result.status === 'unsupported' && (
+          <p className="muted small">
+            Supported: equations and systems, simplify/factor/expand, derivatives, integrals, limits, matrices,
+            statistics, probability distributions and counting.
+          </p>
+        )}
       </article>
     )
   }
@@ -70,8 +86,11 @@ export function SolutionCard({ result, isFollowUp }: { result: SolveResponse; is
         ) : (
           result.verification && <VerificationBadge status={result.verification.status} />
         )}
+        <PlannerBadge result={result} />
         <h3 className="problem">{result.problem}</h3>
       </header>
+
+      <PlannerNotice result={result} />
 
       <section className="answer" aria-label="Answer">
         <span className="answer-label">Answer</span>
@@ -122,7 +141,11 @@ export function SolutionCard({ result, isFollowUp }: { result: SolveResponse; is
         </span>
         <span>
           Planner:{' '}
-          {result.planner === 'llm' ? 'LLM (Groq)' : result.planner === 'nl' ? 'language analysis' : 'deterministic rules'}
+          {result.planner === 'llm'
+            ? 'Groq LLM (plan only — it never computes)'
+            : result.planner === 'nl'
+              ? 'offline language analysis'
+              : 'offline deterministic rules'}
         </span>
         {result.tool_call?.rationale && <span className="muted">{result.tool_call.rationale}</span>}
       </footer>
