@@ -15,6 +15,7 @@ minimal ``global_dict`` / ``local_dict`` so no builtins are reachable.
 
 from __future__ import annotations
 
+import math
 import re
 from functools import lru_cache
 
@@ -215,6 +216,32 @@ def _check_identifier(match: re.Match[str]) -> str:
     raise ExpressionError(f"Unknown identifier {ident!r}. Use standard math functions.")
 
 
+MAX_INTEGER_DIGITS = 60
+MAX_EXPONENT = 1000
+MAX_FACTORIAL = 5000
+_INT_LITERAL = re.compile(r"\d+")
+_EXPONENT = re.compile(r"(?:\^|\*\*)\s*\(?\s*(\d+)")
+_TOWER = re.compile(r"(?:\^|\*\*)\s*\(?\s*(\d+)\s*\)?\s*(?:\^|\*\*)\s*\(?\s*(\d+)")
+_FACTORIAL = re.compile(r"factorial\s*\(\s*(\d+)|(\d+)\s*!")
+
+
+def check_cost(cleaned: str) -> None:
+    """Fast static limits on inputs whose evaluation explodes (e.g. 9^9^9^9, (x+1)^5000).
+
+    These give an immediate, clear error; the sandbox time and memory limits remain the
+    backstop for anything expensive that gets past them."""
+    if any(len(m) > MAX_INTEGER_DIGITS for m in _INT_LITERAL.findall(cleaned)):
+        raise ExpressionError(f"Numbers longer than {MAX_INTEGER_DIGITS} digits are not supported.")
+    if any(int(m) > MAX_EXPONENT for m in _EXPONENT.findall(cleaned)):
+        raise ExpressionError(f"Exponents larger than {MAX_EXPONENT} are not supported.")
+    for b, c in _TOWER.findall(cleaned):  # a^b^c = a^(b^c): the effective exponent is b^c
+        if int(b) > 1 and int(c) * math.log10(int(b)) > math.log10(MAX_EXPONENT):
+            raise ExpressionError(f"Exponents larger than {MAX_EXPONENT} are not supported (a^b^c means a^(b^c)).")
+    for a, b in _FACTORIAL.findall(cleaned):
+        if int(a or b) > MAX_FACTORIAL:
+            raise ExpressionError(f"Factorials above {MAX_FACTORIAL}! are not supported.")
+
+
 def validate_expression_text(text: str) -> str:
     """Return a normalised expression string or raise :class:`ExpressionError`."""
     if not isinstance(text, str):
@@ -243,6 +270,7 @@ def validate_expression_text(text: str) -> str:
     cleaned = _IDENTIFIER.sub(_check_identifier, cleaned)
     if cleaned.count("(") != cleaned.count(")"):
         raise ExpressionError("Unbalanced parentheses.")
+    check_cost(cleaned)
     return cleaned
 
 

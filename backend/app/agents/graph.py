@@ -29,7 +29,7 @@ from app.agents.intent import check_intent
 from app.agents.llm_planner import LLMPlanUnsupported, plan_with_llm
 from app.agents.nl_planner import ClarificationNeeded, plan_from_intent
 from app.agents.rule_planner import PlanningError, plan_with_rules
-from app.agents.tutor import explain
+from app.agents.tutor import explain, template_explanation
 from app.math_engine.parser import ExpressionError
 from app.math_engine.tools import ToolError, ToolOutput, run_tool
 from app.math_engine.verifier import verify
@@ -68,6 +68,10 @@ class SolverState(TypedDict, total=False):
     llm_used: bool
     llm_plan: ToolCall | None
     llm_error: str | None
+    # Set by the API service: the Groq planner already ran in the main process (network stays
+    # outside the computation sandbox). Keys: call (ToolCall | None), error, unsupported.
+    llm_result: dict[str, Any] | None
+    explain_with_llm: bool
 
 
 def plan_node(state: SolverState) -> SolverState:
@@ -91,8 +95,16 @@ def plan_node(state: SolverState) -> SolverState:
         errors.append(str(exc))
 
     llm_error: str | None = None
+    pre = state.get("llm_result")
     try:
-        llm_call = plan_with_llm(problem, context)
+        if pre is not None:  # planned outside the sandbox
+            if pre.get("unsupported"):
+                raise LLMPlanUnsupported(pre["unsupported"])
+            if pre.get("error"):
+                raise RuntimeError(pre["error"])
+            llm_call = pre.get("call")
+        else:
+            llm_call = plan_with_llm(problem, context)
     except LLMPlanUnsupported as exc:
         # The LLM judged the problem unsupported/ambiguous: ask rather than guess.
         return {"status": "unsupported", "error": str(exc), "planner": "llm", "llm_used": True}
@@ -213,9 +225,15 @@ def verify_node(state: SolverState) -> SolverState:
 def explain_node(state: SolverState) -> SolverState:
     call, out = state["tool_call"], state["tool_output"]
     assert call is not None and out is not None
-    text, used = explain(
-        state["problem"], call.tool, out.answer_text, out.steps, state.get("verification"), state.get("intent")
-    )
+    if state.get("explain_with_llm", True):
+        text, used = explain(
+            state["problem"], call.tool, out.answer_text, out.steps, state.get("verification"), state.get("intent")
+        )
+    else:  # the API service may add an LLM explanation outside the sandbox
+        text, used = (
+            template_explanation(call.tool, out.answer_text, state.get("verification"), state.get("intent")),
+            False,
+        )
     return {"explanation": text, "llm_used": state.get("llm_used", False) or used}
 
 
@@ -256,8 +274,22 @@ def build_graph() -> Any:
     return g.compile()
 
 
-def run_solver(problem: str, context: str | None = None) -> SolverState:
-    return build_graph().invoke({"problem": problem, "context": context, "llm_used": False})
+def run_solver(
+    problem: str,
+    context: str | None = None,
+    *,
+    llm_result: dict[str, Any] | None = None,
+    explain_with_llm: bool = True,
+) -> SolverState:
+    state: SolverState = {
+        "problem": problem,
+        "context": context,
+        "llm_used": False,
+        "explain_with_llm": explain_with_llm,
+    }
+    if llm_result is not None:
+        state["llm_result"] = llm_result
+    return build_graph().invoke(state)
 
 
 def state_steps(state: SolverState) -> list[Step]:
