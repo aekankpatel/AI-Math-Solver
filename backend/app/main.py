@@ -1,4 +1,4 @@
-"""FastAPI entry point for MathForge AI."""
+"""FastAPI entry point for Mathora."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ from app.service import get_client_limits, handle_followup, llm_state, solve_pro
 settings = get_settings()
 logging.basicConfig(level=settings.log_level.upper(), format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 install_log_redaction()
-log = logging.getLogger("mathforge")
+log = logging.getLogger("mathora")
 
 
 @asynccontextmanager
@@ -34,7 +34,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(
-    title="MathForge AI",
+    title="Mathora",
     version="0.2.0",
     description="Solver–Verifier–Tutor math reasoning API built with LangGraph, SymPy, NumPy and SciPy.",
     lifespan=lifespan,
@@ -88,6 +88,8 @@ def client_id(request: Request) -> str:
 def rate_limited(request: Request) -> str:
     """Dependency: per-client request limits for the compute endpoints."""
     key = client_id(request)
+    # LOG_LEVEL=DEBUG shows how clients are identified (to verify TRUSTED_PROXY_HOPS after a deploy)
+    log.debug("client key %s (peer %s)", key, request.client.host if request.client else None)
     ok, retry = get_client_limits().check_request(key)
     if not ok:
         raise HTTPException(
@@ -96,6 +98,11 @@ def rate_limited(request: Request) -> str:
             headers={"Retry-After": str(int(retry) + 1)},
         )
     return key
+
+
+@app.get("/")
+def root() -> dict[str, str]:
+    return {"name": "Mathora API", "health": "/api/health"}
 
 
 @app.get("/api/health", response_model=HealthResponse)

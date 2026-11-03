@@ -1,11 +1,11 @@
-# MathForge AI
+# Mathora
 
-**Solve · Verify · Explain.** MathForge AI is a math reasoning app built around a
+**Solve · Verify · Explain.** Mathora is a math reasoning app built around a
 **Solver–Verifier–Tutor** workflow. An LLM (Groq) can read the problem and pick a tool. The math itself
 is always done by **SymPy, NumPy and SciPy**, and a separate verifier checks every result with a
 **different method** before it reaches the user.
 
-![MathForge AI screenshot](docs/screenshot.png)
+![Mathora screenshot](docs/screenshot.png)
 
 ## What it does
 
@@ -184,6 +184,8 @@ Open http://localhost:5173.
 | `SANDBOX_WORKERS` / `SANDBOX_TIMEOUT_SECONDS` / `SANDBOX_MEMORY_MB` | `2` / `10` / `1536` | Computation pool size, time limit and memory limit per worker |
 | `MAX_REQUEST_BYTES` | `16384` | Request body limit |
 | `ENABLE_DOCS` | `false` | Serve `/docs` and `/openapi.json` |
+| `LOG_LEVEL` | `INFO` | `DEBUG` also logs how each client is identified (to check `TRUSTED_PROXY_HOPS`) |
+| `VITE_API_URL` (frontend, build time) | *(empty: same origin)* | Absolute backend URL for a separately hosted frontend, e.g. the Space URL |
 | `CORS_ORIGINS` | `http://localhost:5173,http://localhost:8080` | Allowed browser origins |
 
 Never commit `.env`. It is listed in `.gitignore`.
@@ -450,19 +452,16 @@ When running locally, replace `GROQ_AUTH=proxy` with `GROQ_API_KEY=...`.
 
 ## Deployment (zero cost)
 
-Not deployed yet. Recommended free setup, using only free tiers with no card required:
+Planned public setup, all on free tiers: the **frontend on Vercel Hobby** (`frontend/vercel.json`), the **backend on a
+Hugging Face Docker Space** with CPU basic hardware (`deploy/huggingface/`, pushed by the manual workflow
+`.github/workflows/deploy-space.yml`), and the **Groq free tier** for planning. Step-by-step instructions, every environment
+variable and secret, and the live checks are in [DEPLOYMENT.md](DEPLOYMENT.md).
 
-| Part | Service | Why |
-|---|---|---|
-| Backend (FastAPI + sandbox) | [Hugging Face Spaces](https://huggingface.co/docs/hub/en/spaces-gpus), Docker SDK, free "CPU basic" hardware | 2 vCPU and 16 GB RAM, enough for two sandbox workers with 1.5 GB limits each. The free tiers of Render or Koyeb have 512 MB RAM and 0.1 vCPU, which cannot hold SymPy, SciPy and two workers. Store the key as a Space **secret** (`GROQ_API_KEY`); it is never in the image or the repository. |
-| Frontend (static build) | GitHub Pages or Cloudflare Pages | Free static hosting with HTTPS. Build with `VITE_API_URL=https://<space>.hf.space`, and add that Pages origin to `CORS_ORIGINS`. |
-| LLM | Groq free tier (`openai/gpt-oss-120b`) | The app's budget (150k tokens per rolling 24 h, about 75–80 planned questions) stays under Groq's 200k limit; after that, the offline planner answers. |
-
-Notes for that setup:
-
-- The free Space sleeps after a long idle period (about 48 hours, per the Hugging Face docs) and wakes on the next visit, which takes about a minute. Its disk is ephemeral: sessions and the budget ledger reset when it restarts. The budget is conservative, so a reset cannot push usage past Groq's own limit; Groq's 429s still pause the planner.
-- Set `TRUSTED_PROXY_HOPS=1` behind the Space proxy (check the logged client addresses after the first deploy), keep `--workers 1`, and leave `ENABLE_DOCS=false`.
-- Persistence is not required: no database, user accounts or stored problems.
+- The Space image runs as UID 1000 on port 7860, with one API process and two sandbox workers (about 300 MB of RAM at idle,
+  out of 16 GB).
+- `CORS_ORIGINS` must be the exact Vercel production URL. The frontend reads the backend URL from `VITE_API_URL` at build time.
+- The Groq key is only ever a Space secret: it is not in the repository, the frontend bundle, the workers, the responses or the logs.
+- A free Space sleeps when idle and has no persistent disk. The UI waits for it to wake, and sessions and counters reset on restart.
 
 ## Known limitations / roadmap
 

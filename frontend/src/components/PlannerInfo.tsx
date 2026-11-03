@@ -53,7 +53,7 @@ export function HealthPill({ health, reachable }: { health: Health | null; reach
     }
   } else if (reachable) {
     cls = 'off'
-    text = 'Connecting…'
+    text = 'Connecting to the server…'
   }
   return (
     <div className="status" data-testid="llm-status" role="status">

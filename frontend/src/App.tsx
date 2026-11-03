@@ -33,14 +33,34 @@ export default function App() {
   const bottom = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    api
-      .health()
-      .then(setHealth)
-      .catch(() => {
-        setHealth(null)
-        setReachable(false)
-      })
+    // The free backend host sleeps when idle and needs up to a minute or two to wake: keep retrying.
+    let cancelled = false
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const check = (attempt: number) => {
+      api
+        .health()
+        .then((h) => {
+          if (cancelled) return
+          setHealth(h)
+          setReachable(true)
+        })
+        .catch(() => {
+          if (cancelled) return
+          setHealth(null)
+          if (attempt < 24) {
+            setReachable(true) // shown as "Connecting…" while retrying
+            timer = setTimeout(() => check(attempt + 1), 5000)
+          } else {
+            setReachable(false)
+          }
+        })
+    }
+    check(0)
     api.examples().then(setExamples).catch(() => undefined)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
   }, [])
 
   useEffect(() => {
@@ -102,7 +122,7 @@ export default function App() {
             ∑
           </span>
           <div>
-            <h1>MathForge AI</h1>
+            <h1>Mathora</h1>
             <p className="tagline">Solve · Verify · Explain — every answer is independently checked.</p>
           </div>
         </div>

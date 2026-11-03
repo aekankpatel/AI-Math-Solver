@@ -418,9 +418,9 @@ def test_log_records_are_redacted_globally(caplog):
 
 
 def test_log_filter_redacts_messages_and_exceptions(caplog):
-    logger = logging.getLogger("mathforge.test")
+    logger = logging.getLogger("mathora.test")
     logger.addFilter(RedactingFilter())
-    with caplog.at_level(logging.INFO, logger="mathforge.test"):
+    with caplog.at_level(logging.INFO, logger="mathora.test"):
         logger.warning("Groq call failed: %s", "Authorization: Bearer gsk_abcdefghijklmnopqrstuvwxyz")
         try:
             raise RuntimeError("bad key gsk_abcdefghijklmnopqrstuvwxyz")
@@ -490,3 +490,14 @@ def test_json_reply_without_a_tool_is_rejected(monkeypatch):
     monkeypatch.setattr(llm_planner, "get_chat_model", lambda: Model())
     with pytest.raises(LLMPlanError):
         llm_planner.plan_with_llm("Integrate x^2 from 0 to 3")
+
+
+def test_cors_origins_are_exact_and_never_wildcard(monkeypatch):
+    monkeypatch.setenv("CORS_ORIGINS", " https://mathora.vercel.app/ , *, not-an-origin ")
+    get_settings.cache_clear()
+    assert get_settings().cors_origin_list == ["https://mathora.vercel.app"]
+
+
+def test_root_endpoint_for_the_space_page(client):
+    r = client.get("/")
+    assert r.status_code == 200 and r.json()["health"] == "/api/health"

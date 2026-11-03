@@ -26,3 +26,4 @@ dist/
 # raw LLM response caches (local only; reports in backend/eval/reports are the sanitized record)
 *cache*.jsonl
 backend/eval/reports/groq_cache.jsonl
+space-bundle/
