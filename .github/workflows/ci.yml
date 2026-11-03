@@ -73,5 +73,17 @@ jobs:
           grep -q '"status":"verified"' /tmp/out.json
           curl -sf http://localhost:8080/ | grep -q MathForge
           curl -sf http://localhost:8080/api/health
+          # sandbox: a runaway computation is stopped and the server keeps answering
+          curl -sf -X POST http://localhost:8080/api/solve -H 'Content-Type: application/json' \
+            -d '{"problem":"expand (x+y+z+w+1)^200"}' | tee /tmp/slow.json
+          grep -q '"error_code":"timeout"' /tmp/slow.json
+          curl -sf -X POST http://localhost:8080/api/solve -H 'Content-Type: application/json' \
+            -d '{"problem":"Integrate x^2 from 0 to 3"}' | grep -q '"answer_text":"9"'
+          # hardening: security headers, docs disabled, oversized bodies rejected
+          curl -sI http://localhost:8080/ | grep -qi 'content-security-policy'
+          curl -sI http://localhost:8000/api/health | grep -qi 'x-content-type-options: nosniff'
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8000/docs)" = 404
+          python3 -c "print('{\"problem\":\"' + 'x'*40000 + '\"}')" > /tmp/big.json
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:8000/api/solve -H 'Content-Type: application/json' --data-binary @/tmp/big.json)" = 413
       - if: always()
         run: docker compose down

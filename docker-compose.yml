@@ -6,8 +6,13 @@ services:
       LLM_MODEL: ${LLM_MODEL:-openai/gpt-oss-120b}
       GROQ_AUTH: ${GROQ_AUTH:-api_key}
       CORS_ORIGINS: http://localhost:8080
+      TRUSTED_PROXY_HOPS: "1"  # requests arrive through the nginx frontend
+      LLM_DAILY_TOKEN_BUDGET: ${LLM_DAILY_TOKEN_BUDGET:-150000}
+      RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-10}
+      SANDBOX_WORKERS: ${SANDBOX_WORKERS:-2}
     ports:
-      - "8000:8000"
+      # local access only: public traffic must come through the frontend proxy (TRUSTED_PROXY_HOPS=1)
+      - "127.0.0.1:8000:8000"
     restart: unless-stopped
 
   frontend:
