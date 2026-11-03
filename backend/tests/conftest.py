@@ -10,6 +10,8 @@ os.environ["LLM_ENABLED"] = "false"
 os.environ["SANDBOX_ENABLED"] = "false"
 os.environ["RATE_LIMIT_PER_MINUTE"] = "0"
 os.environ["RATE_LIMIT_PER_DAY"] = "0"
+# The offline replay of the recorded benchmark cache uses the method it was recorded with.
+os.environ["LLM_STRUCTURED_METHOD"] = "function_calling"
 
 
 def reset_runtime_state() -> None:

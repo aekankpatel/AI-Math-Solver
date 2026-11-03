@@ -51,14 +51,14 @@ def test_memory_limit(box):
 
 
 def test_runaway_sympy_is_stopped(box):
-    # bypasses the static guards on purpose: the sandbox itself must stop it
-    from app.schemas import ToolCall
-
-    call = ToolCall(tool="expand_expression", category="algebra", args={"expression": "(x+y+z+1)^900"})
+    # passes the static guards (exponent 300) but has ~2e10 terms: only the sandbox can stop it
+    problem = "expand (x+y+z+w+v+1)^300"
     t = time.monotonic()
     with pytest.raises(SandboxTimeout):
-        box.run("solve", {"problem": "expand (x+y+z+1)^900", "context": None, "llm_result": {"call": call}})
+        box.run("solve", {"problem": problem, "context": None, "llm_result": {"call": None}})
     assert time.monotonic() - t < 4
+    out = box.run("solve", {"problem": "derivative of x^3", "context": None, "llm_result": {"call": None}})
+    assert out["response"].answer_text == "3*x**2"  # the replacement worker is healthy
 
 
 def test_busy_when_all_workers_are_taken():

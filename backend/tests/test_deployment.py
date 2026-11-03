@@ -428,3 +428,65 @@ def test_log_filter_redacts_messages_and_exceptions(caplog):
             logger.error("boom", exc_info=exc)
     assert "gsk_abcdefghijklmnop" not in caplog.text
     assert "[REDACTED]" in caplog.text
+
+
+# --------------------------------------------------------------------- structured-output method
+
+
+def test_json_schema_method_is_requested_and_validated(monkeypatch):
+    from app.agents import llm_planner
+
+    seen = {}
+
+    class Model:
+        model_name = "fake"
+
+        def with_structured_output(self, schema, **kwargs):
+            seen.update(kwargs)
+            outer = self
+
+            class Runner:
+                def invoke(self, messages):
+                    return {
+                        "raw": None,
+                        "parsed": schema(
+                            tool="integrate",
+                            category="integrals",
+                            expression="x^2",
+                            variable="x",
+                            lower="0",
+                            upper="3",
+                        ),
+                        "parsing_error": None,
+                    }
+
+            return Runner() if outer else None
+
+    monkeypatch.setenv("LLM_STRUCTURED_METHOD", "json_schema")
+    get_settings.cache_clear()
+    monkeypatch.setattr(llm_planner, "get_chat_model", lambda: Model())
+    call = llm_planner.plan_with_llm("Integrate x^2 from 0 to 3")
+    assert seen.get("method") == "json_schema" and seen.get("include_raw") is True
+    assert call.tool == "integrate" and call.args["upper"] == "3"
+    # different method -> different cache key (recorded function-calling caches stay valid)
+    assert llm_planner._cache_key("m", "p", None) != llm_planner._cache_key("m", "p", None, "json_schema")
+
+
+def test_json_reply_without_a_tool_is_rejected(monkeypatch):
+    from app.agents import llm_planner
+
+    class Model:
+        model_name = "fake"
+
+        def with_structured_output(self, schema, **kwargs):
+            class Runner:
+                def invoke(self, messages):
+                    return {"raw": None, "parsed": schema(tool="none"), "parsing_error": None}
+
+            return Runner()
+
+    monkeypatch.setenv("LLM_STRUCTURED_METHOD", "json_schema")
+    get_settings.cache_clear()
+    monkeypatch.setattr(llm_planner, "get_chat_model", lambda: Model())
+    with pytest.raises(LLMPlanError):
+        llm_planner.plan_with_llm("Integrate x^2 from 0 to 3")

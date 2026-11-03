@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     llm_explanations: bool = False
     # Structured-output method for the planner: "function_calling" (tool call) or "json_schema"
     # (Groq strict structured outputs, supported by the openai/gpt-oss models).
-    llm_structured_method: Literal["function_calling", "json_schema"] = "function_calling"
+    llm_structured_method: Literal["function_calling", "json_schema"] = "json_schema"
 
     # ---- global Groq budget (rolling 24 h, whole deployment). Groq free tier for
     # openai/gpt-oss-120b: 200k tokens/day, 1,000 requests/day, 8k tokens/minute.

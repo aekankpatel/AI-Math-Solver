@@ -23,7 +23,9 @@ Every solution includes:
 - a **verification badge**: `verified`, `approximate`, `unverified` or `failed`, plus each check that was run
 - **step-by-step working**, built from the actual computation
 - an **interactive Plotly chart**: roots on the curve, f with f′ and a tangent line, shaded area under a curve, limit behaviour, eigenvalues in the complex plane, histograms, and shaded probability regions
-- an **explanation**: written by the LLM when a key is set, from a template otherwise
+- a **planner badge** showing whether the Groq LLM or the offline planner turned the question into a computation, with a
+  notice whenever the app had to fall back to the offline planner (daily budget used, Groq rate limit, failed or rejected plan)
+- an **explanation**: from a template by default, or written by the LLM when `LLM_EXPLANATIONS=true`
 - **follow-up questions** in the same session (`now integrate it`, `explain the steps`, `how was this verified?`)
 
 ## Architecture
@@ -52,13 +54,17 @@ misread or information is missing, nothing is computed and the user is asked for
 | Tools | `backend/app/math_engine/tools.py` | 12 whitelisted tools (`solve_equation`, `integrate`, `matrix_operation`, `probability_distribution`, …) with timeouts, input validation and generated steps |
 | Verifier | `backend/app/math_engine/verifier.py` | Checks each result with a *different* method (see below) |
 | Visualizer | `backend/app/math_engine/visualize.py` | Builds Plotly JSON from the computed objects |
-| Planner (LLM) | `backend/app/agents/llm_planner.py` | Groq via `langchain-groq` structured output (tool calling). Returns only a tool name and string arguments, validated by Pydantic. |
+| Planner (LLM) | `backend/app/agents/llm_planner.py` | Groq via `langchain-groq` structured output (`LLM_STRUCTURED_METHOD`: JSON schema or tool calling). Returns only a tool name and string arguments, validated by Pydantic. |
 | Planner (rules) | `backend/app/agents/rule_planner.py` | Deterministic offline planner for formulaic input. Used when no key is set, and as an alternative plan. |
 | Planner (NL) | `backend/app/agents/nl_planner.py` | Offline planner for word problems, built on the structured intent extraction. It asks for missing information rather than using defaults. Because it shares the extraction with the intent checker, its readings are capped at "assumed". |
 | Intent verifier | `backend/app/agents/intent.py` | Extracts the intent with its own cue-based rules: task, variable, domain, order, point, bounds, limit point and direction, probability event, distribution, counting rule, matrices, data and every number. It then checks the plan: the task matches, every argument value appears in the question, every stated number is used, the slots match, and expressions are numerically equivalent to the math written in the question. Ambiguities the LLM declares are honoured. |
 | Tutor | `backend/app/agents/tutor.py` | Explains the verified result without adding numbers, and answers follow-ups |
 | Graph | `backend/app/agents/graph.py` | LangGraph workflow. Tries plans in order (LLM, rules, NL) until one matches the question, makes one safe repair (filling in a slot the question states, such as "positive" or "at x = 3"), and combines the math and intent statuses into the overall status. |
-| API | `backend/app/main.py`, `service.py` | FastAPI: `/api/solve`, `/api/followup`, `/api/health`, `/api/examples`; in-memory LRU sessions |
+| API | `backend/app/main.py`, `service.py` | FastAPI: `/api/solve`, `/api/followup`, `/api/health`, `/api/examples`; in-memory LRU sessions. Calls Groq (within the budget), then hands the computation to the sandbox. |
+| Sandbox | `backend/app/sandbox.py`, `jobs.py` | Pool of worker processes that run all parsing, planning checks, tools, verification and plots, with a wall-clock timeout (the worker is killed and replaced), a memory limit (`RLIMIT_AS`), no network and no secrets |
+| Usage budget | `backend/app/budget.py` | Rolling 24-hour ledger of the tokens Groq actually reports, a pause after Groq 429s / exhausted quota / repeated errors, optional JSON persistence |
+| Rate limits | `backend/app/ratelimit.py` | Per-client sliding windows (requests per minute and per day, and each client's daily share of Groq calls) |
+| Hardening | `backend/app/security.py` | Request-size limit, security headers, secret redaction in every log record |
 | UI | `frontend/` | React 19 + TypeScript + Vite, KaTeX, Plotly (loaded lazily) |
 
 ### How each result is verified
@@ -92,10 +98,30 @@ derivative, a wrong eigenvalue, and so on) and assert that the verifier reports 
   empty `__builtins__` and an explicit symbol table. Input like `__import__("os")`, `x.__class__`, `exec(…)`,
   quotes, `;` or `[]` inside an expression is rejected (`tests/test_parser.py`).
 - Matrix and list inputs are read with `ast.literal_eval`, which accepts literals only.
-- Limits on input size: expressions up to 500 characters, matrices up to 10×10, data sets up to 10,000 values.
-  Each symbolic computation times out after 10 seconds.
+- Limits on input size: problems up to 1,000 characters, expressions up to 500, matrices up to 10×10, data sets up to
+  10,000 values. Inputs that are known to explode are refused before parsing: integers over 60 digits, exponents over
+  1,000 (including stacked powers such as `9^9^9^9`, which mean `9^(9^(9^9))`) and factorials over 5,000.
+- Everything else runs in the computation sandbox: each request gets at most `SANDBOX_TIMEOUT_SECONDS` (10 s); a worker that
+  runs over is killed with its whole process group and replaced, so a runaway SymPy call cannot keep using CPU. Workers have an
+  address-space limit (`SANDBOX_MEMORY_MB`, 1.5 GB), so a memory bomb fails inside the worker. Workers have no API key and never call the network.
 - If the problem is ambiguous (several variables and none specified), unsupported (for example a differential
   equation), or has no solution (`x = x + 1`, a singular matrix), the app returns a clear message instead of a guess.
+
+### Public-deployment protections
+
+| Risk | Protection |
+|---|---|
+| One visitor spends the free Groq quota | Global rolling 24-hour token and request budget (`LLM_DAILY_TOKEN_BUDGET`, 150k of Groq's 200k by default), charged with the token counts Groq reports. Each client also gets a daily share of Groq calls (`LLM_CALLS_PER_CLIENT_PER_DAY`); after that they are served by the offline planner instead of being refused. |
+| Groq rate limits, exhausted quota, outages | A 429 pauses the LLM until the reset time Groq states; `x-ratelimit-remaining-requests: 0` does the same, and 3 consecutive failures pause it for 2 minutes. While paused, nothing is sent to Groq and the offline planners answer. The response's `llm_status` says why (`budget`, `cooldown`, `client_quota`, `error`, `rejected`), and the UI shows a notice. |
+| Request floods | Per-client limits: 10 requests a minute and 300 a day by default, answered with 429 and `Retry-After`. The pool size bounds concurrent computations, and requests that cannot get a worker within 15 s get 503 with `Retry-After`. |
+| Expensive or malicious math | Static input guards plus the process sandbox (time and memory limits, kill on timeout) |
+| Oversized or malformed requests | 16 KB body limit (413), strict schemas (unknown fields, control characters and malformed session ids are rejected), concise 422 errors that do not echo the input |
+| Secret leaks | The key lives only in the API process environment (never in workers or responses). Every log record passes through a redaction step that masks `gsk_…` keys, bearer tokens, `api_key=` values and Groq organisation ids. Raw provider errors are never returned to the browser; unexpected errors return a generic 500. |
+| Browser attacks | CORS allowlist; `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, a strict API CSP; the nginx frontend sends a CSP with no inline scripts. OpenAPI docs are off unless `ENABLE_DOCS=true`. |
+| Spoofed client IPs | `X-Forwarded-For` is ignored unless `TRUSTED_PROXY_HOPS` is set, and is then read from the right (entries the proxies added), so clients cannot claim a new identity |
+
+Run a single API process (`--workers 1`, as the Dockerfile does): the budget, rate limits and sessions are in memory.
+Computation concurrency comes from `SANDBOX_WORKERS`.
 
 ## Running it
 
@@ -109,7 +135,8 @@ cp backend/.env.example .env        # optional: add a free GROQ_API_KEY
 docker compose up --build
 ```
 
-Open http://localhost:8080 for the UI. The API is at http://localhost:8000/docs.
+Open http://localhost:8080 for the UI. The API listens on http://localhost:8000 (local only; set `ENABLE_DOCS=true` for
+the interactive docs at `/docs`).
 
 ### Option 2: Local development
 
@@ -146,6 +173,17 @@ Open http://localhost:5173.
 | `GROQ_API_KEY` | *(empty)* | Free key from https://console.groq.com/keys. Without one, the deterministic planner and template explanations are used. |
 | `LLM_MODEL` | `openai/gpt-oss-120b` | Any Groq chat model that supports tool calling (the default was changed after llama-3.3-70b-versatile turned out to be unavailable on the account used for testing) |
 | `LLM_ENABLED` | `true` | Set to `false` to force offline mode |
+| `LLM_STRUCTURED_METHOD` | `json_schema` | How the planner returns its plan: `json_schema` (Groq structured outputs) or `function_calling` (forced tool call). See "Groq reliability" below. |
+| `LLM_EXPLANATIONS` | `false` | Also ask the LLM for the tutor explanation (one extra call per solved problem) |
+| `LLM_MAX_RETRIES` | `1` | SDK retries for transient Groq errors |
+| `LLM_DAILY_TOKEN_BUDGET` / `LLM_DAILY_REQUEST_BUDGET` | `150000` / `800` | Deployment-wide Groq budget per rolling 24 h |
+| `LLM_CALLS_PER_CLIENT_PER_DAY` | `40` | Each client's share of Groq calls; beyond it the offline planner answers |
+| `LLM_BUDGET_STATE_PATH` | *(unset)* | JSON file that keeps the budget ledger across restarts |
+| `RATE_LIMIT_PER_MINUTE` / `RATE_LIMIT_PER_DAY` | `10` / `300` | Per-client request limits (0 disables) |
+| `TRUSTED_PROXY_HOPS` | `0` | Number of reverse proxies in front of the API that append `X-Forwarded-For` (Docker Compose sets 1) |
+| `SANDBOX_WORKERS` / `SANDBOX_TIMEOUT_SECONDS` / `SANDBOX_MEMORY_MB` | `2` / `10` / `1536` | Computation pool size, time limit and memory limit per worker |
+| `MAX_REQUEST_BYTES` | `16384` | Request body limit |
+| `ENABLE_DOCS` | `false` | Serve `/docs` and `/openapi.json` |
 | `CORS_ORIGINS` | `http://localhost:5173,http://localhost:8080` | Allowed browser origins |
 
 Never commit `.env`. It is listed in `.gitignore`.
@@ -160,18 +198,24 @@ cd backend && pytest
 cd frontend && npm test
 ```
 
-The backend suite has 224 tests and runs fully offline. It covers:
+The backend suite has 369 tests and runs fully offline (no Groq calls). It covers:
 
 - parser security and the correctness of every tool against known answers;
 - the verifier, both accepting correct results and detecting wrong ones;
 - intent verification (`tests/test_intent.py`): ambiguous wording, wrong tool selection, missing constraints and misread parameters;
 - the LangGraph workflow with a fake LLM, including misreadings, declared ambiguities and provider failure;
-- the HTTP API, plus benchmark floors and an offline Groq replay test.
+- the HTTP API, plus benchmark floors and an offline Groq replay test;
+- deployment protections (`tests/test_deployment.py`, `tests/test_sandbox.py`): the rolling token budget, Groq 429 / quota
+  handling and the circuit breaker, per-client limits and spoofed `X-Forwarded-For`, offline-planner notices, request validation,
+  the body-size limit, security headers, secret redaction in logs and responses, and real worker processes being killed on
+  timeout, stopped by the memory limit and replaced.
 
-The frontend suite (10 tests) uses Vitest and Testing Library.
+The frontend suite (16 tests) uses Vitest and Testing Library, including the planner badge, the offline notice, timeout and
+rate-limit messages and the status legend.
 
 CI (`.github/workflows/ci.yml`) runs ruff, pytest, oxlint, vitest and the production build. It then
-builds both Docker images and smoke-tests the running stack.
+builds both Docker images and smoke-tests the running stack, including a runaway computation that must be stopped,
+security headers, disabled docs and the body-size limit.
 
 ## Evaluation benchmark
 
@@ -301,6 +345,34 @@ limits were 1,000 requests per day and 8,000 tokens per minute.
 - **Intent-check rejections of Groq plans: 21.** Ten were an unrequested `domain=real`; seven were missing information, where asking is correct. Four were genuine misreadings: P(X > k) planned as P(X ≥ k) twice, a statistics question turned into arithmetic, and the triangle-area precomputation.
 - **Latency:** Groq calls take 1.15 s typical (1.89 s at p95). End to end it's 1.19 s typical (2.0 s at p95).
 
+### Groq reliability: tool calling vs JSON schema
+
+The 28 Groq call failures in the full benchmark (9.1%) all came from the **tool-calling** transport, not from the plan content:
+
+| Failure (function calling, forced tool choice) | Count | Cause |
+|---|---|---|
+| Call to a non-existent tool named `json` | 10 | gpt-oss sometimes routes structured output through a built-in "json" tool. Groq rejects it with HTTP 400 "tool call validation failed"; one automatic retry did not fix it. |
+| Plain-text reply ("Tool choice is required, but model did not call a tool") | 10 | The model answered in prose despite the forced tool choice. Groq returns HTTP 400. |
+| Valid plan that names no tool | 8 | Schema-valid but incomplete (`tool: none`). |
+
+The planner now asks for **JSON-schema structured output** (`response_format: json_schema`, `LLM_STRUCTURED_METHOD=json_schema`, the new
+default). With no tool machinery involved, the first two failure types cannot occur. The third is still possible, and it is still
+rejected by the same validation, intent and provenance checks, and answered by the offline planners. Nothing about verification changed:
+the JSON plan is converted into the same `ToolCall` and goes through exactly the same checks.
+
+**Targeted re-test** (`eval/reports/groq_json_schema_retest.{json,md}`): only the 28 questions that had failed, not the full benchmark.
+Groq's rolling 24-hour token limit was still nearly used up by the full benchmark, so the re-test is **partial: 6 of 28 questions** got a
+real Groq response (the other attempted calls were quota 429s, recorded as errors). Of those 6, there were **0 malformed responses**:
+5 plans were accepted, and the refusal on "prove that sqrt(2) is irrational" was a valid `supported=false`. The 3 answerable ones were all
+answered correctly and fully verified. This sample is small. It supports the switch, but it is not a measured failure rate. Re-run the same
+command when the quota allows; cached questions are not called again:
+
+```bash
+cd backend && GROQ_AUTH=proxy LLM_STRUCTURED_METHOD=json_schema python -m eval.run --mode groq --allow-network --rpm 10 --tpm 6000 --only eq-04,lin-15,comb-06,edge-05,edge-12,unsup-03,unsup-04,para-20,unseen-04,unseen-39,unseen-41,unseen-42,unseen-45,unseen-47,unseen-55,unseen-56,nl-03,nl-07,nl-17,nl-21,nl-25,nl-27,nl-29,nl-30,nl-32,nl-34,nl-39,nl-42 --cache eval/reports/groq_cache_json.jsonl --out-name groq_json_schema_retest
+```
+
+`LLM_STRUCTURED_METHOD=function_calling` restores the previous transport. Its cache keys are unchanged, so the recorded benchmark replays exactly.
+
 ### Groq planner evaluation (how to re-run)
 
 Dry run for `openai/gpt-oss-120b` at `--rpm 10 --tpm 6000`, sending nothing:
@@ -376,17 +448,38 @@ When running locally, replace `GROQ_AUTH=proxy` with `GROQ_API_KEY=...`.
   any tool runs, for example wrong types, bad enum values, a category that contradicts the tool, or an interpretation that
   contradicts the arguments. The LLM's own assumptions and ambiguities can only lower trust.
 
+## Deployment (zero cost)
+
+Not deployed yet. Recommended free setup, using only free tiers with no card required:
+
+| Part | Service | Why |
+|---|---|---|
+| Backend (FastAPI + sandbox) | [Hugging Face Spaces](https://huggingface.co/docs/hub/en/spaces-gpus), Docker SDK, free "CPU basic" hardware | 2 vCPU and 16 GB RAM, enough for two sandbox workers with 1.5 GB limits each. The free tiers of Render or Koyeb have 512 MB RAM and 0.1 vCPU, which cannot hold SymPy, SciPy and two workers. Store the key as a Space **secret** (`GROQ_API_KEY`); it is never in the image or the repository. |
+| Frontend (static build) | GitHub Pages or Cloudflare Pages | Free static hosting with HTTPS. Build with `VITE_API_URL=https://<space>.hf.space`, and add that Pages origin to `CORS_ORIGINS`. |
+| LLM | Groq free tier (`openai/gpt-oss-120b`) | The app's budget (150k tokens per rolling 24 h, about 75–80 planned questions) stays under Groq's 200k limit; after that, the offline planner answers. |
+
+Notes for that setup:
+
+- The free Space sleeps after a long idle period (about 48 hours, per the Hugging Face docs) and wakes on the next visit, which takes about a minute. Its disk is ephemeral: sessions and the budget ledger reset when it restarts. The budget is conservative, so a reset cannot push usage past Groq's own limit; Groq's 429s still pause the planner.
+- Set `TRUSTED_PROXY_HOPS=1` behind the Space proxy (check the logged client addresses after the first deploy), keep `--workers 1`, and leave `ENABLE_DOCS=false`.
+- Persistence is not required: no database, user accounts or stored problems.
+
 ## Known limitations / roadmap
 
 - No inequalities, ODEs, series or multivariable calculus yet. Requests for these are reported as unsupported.
-- Sessions are kept in memory and are lost on restart. A shared store such as Redis would be needed for more than one replica.
+- Sessions, rate limits and the token budget are kept in memory in a single API process. They reset on restart
+  (the budget can be persisted with `LLM_BUDGET_STATE_PATH`), and running several replicas would need a shared store such as Redis.
+- Rate limits are per IP address. Visitors behind one shared NAT share a limit, and someone with many addresses gets
+  several limits. The global Groq budget still caps the total cost at zero.
+- The sandbox's memory limit is an address-space limit (`RLIMIT_AS`). It works on Linux (the Docker image) and is skipped on
+  platforms without it.
 - The offline planners cover common phrasings and typical word problems. They still refuse equations written entirely in words
   ("x squared minus 9 equals 0"), ordinal rankings ("first, second and third") and hyphenated counts ("5-card hands").
 - Intent verification is cue-based. It checks the plan against what the text says; it does not truly understand the text.
   A misreading that is consistent with every stated number and cue can pass as "assumed". That status is never shown as fully verified.
-- LLM-backed planning and explanations are covered by mocked tests only. CI does not call Groq, and no Groq results have been measured yet.
+- CI never calls Groq. LLM planning is covered by mocked tests, offline replays and the measured benchmark reports.
 - Approximate numeric roots come from multi-start Newton search on [-10, 10]. Roots outside that range can be missed.
   The verifier's [-50, 50] sweep then reports `failed`.
 - Periodic equations report real solutions only. The period may not be the minimal one, for example 2π for sin²x.
-- Next steps: measure the Groq planner (`--mode groq`), add an independent LLM intent judge as a second check on LLM plans,
+- Next steps: add an independent LLM intent judge as a second check on LLM plans,
   and collect real user questions for a truly external evaluation set.
