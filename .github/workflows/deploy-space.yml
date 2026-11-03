@@ -3,7 +3,7 @@ name: Deploy backend to Hugging Face Space
 # Manual only: run it from the Actions tab once the Space and the secrets exist.
 # Required repository settings (Settings -> Secrets and variables -> Actions):
 #   secret   HF_TOKEN  - Hugging Face access token with write access to the Space
-#   variable HF_SPACE  - the Space id, e.g. <hf-username>/mathforge-api
+#   variable HF_SPACE  - the Space id, e.g. <hf-username>/mathora-api
 on:
   workflow_dispatch:
 
