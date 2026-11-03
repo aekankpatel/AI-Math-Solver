@@ -27,6 +27,37 @@ def _capture_rate_limits(response: Any) -> None:
             RATE_LIMITS.update(headers)
 
 
+def total_tokens(message: Any) -> int | None:
+    """Total tokens Groq reported for one response message (None if absent)."""
+    usage = getattr(message, "usage_metadata", None) or {}
+    if usage.get("total_tokens") is not None:
+        return int(usage["total_tokens"])
+    meta = (getattr(message, "response_metadata", None) or {}).get("token_usage") or {}
+    return int(meta["total_tokens"]) if meta.get("total_tokens") is not None else None
+
+
+# Called with the token count of every successful Groq response (set by the API service so the
+# deployment-wide budget sees real usage; unset in the benchmark and in tests).
+_USAGE_LISTENER: list[Any] = []
+_FAILURE_LISTENER: list[Any] = []
+
+
+def set_usage_listener(fn: Any | None, on_failure: Any | None = None) -> None:
+    _USAGE_LISTENER[:] = [fn] if fn else []
+    _FAILURE_LISTENER[:] = [on_failure] if on_failure else []
+
+
+def charge_usage(message: Any) -> None:
+    for fn in list(_USAGE_LISTENER):
+        fn(total_tokens(message))
+
+
+def report_failure(exc: BaseException) -> None:
+    """Tell the budget about a failed tutor call (rate limits pause the LLM)."""
+    for fn in list(_FAILURE_LISTENER):
+        fn(f"{type(exc).__name__}: {exc}")
+
+
 def rate_limits() -> dict[str, str]:
     with _RATE_LOCK:
         return dict(RATE_LIMITS)

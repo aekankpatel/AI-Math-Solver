@@ -18,7 +18,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from app.agents.llm import get_chat_model
+from app.agents.llm import charge_usage, get_chat_model
+from app.config import get_settings
 from app.math_engine.tools import TOOLS
 from app.schemas import ProblemCategory, ToolCall
 
@@ -227,8 +228,11 @@ def _record_usage(problem: str, raw: Any, seconds: float, retries: int = 0) -> N
 _CACHE_LOCK = threading.Lock()
 
 
-def _cache_key(model_name: str, problem: str, context: str | None) -> str:
-    raw = json.dumps([PROMPT_VERSION, model_name, problem, context or ""])
+def _cache_key(model_name: str, problem: str, context: str | None, method: str = "function_calling") -> str:
+    parts: list[str] = [PROMPT_VERSION, model_name, problem, context or ""]
+    if method != "function_calling":  # keeps keys of existing function-calling caches unchanged
+        parts.append(method)
+    raw = json.dumps(parts)
     return hashlib.sha256(raw.encode()).hexdigest()
 
 
@@ -260,12 +264,18 @@ def plan_with_llm(problem: str, context: str | None = None) -> ToolCall | None:
     if model is None:
         return None
     model_name = str(getattr(model, "model_name", getattr(model, "model", "unknown")))
-    key = _cache_key(model_name, problem, context)
+    method = get_settings().llm_structured_method
+    key = _cache_key(model_name, problem, context, method)
     cached = _cache_get(key)
     if cached is not None:
         return plan_output_to_tool_call(PlannerOutput.model_validate(cached))
-    # include_raw keeps the provider response so token usage can be measured
-    structured = model.with_structured_output(PlannerOutput, include_raw=True)
+    # include_raw keeps the provider response so token usage can be measured.
+    # function_calling: the plan is a forced tool call; json_schema: the plan is the JSON reply
+    # (response_format=json_schema), which avoids Groq's tool-call validation failures.
+    if method == "json_schema":
+        structured = model.with_structured_output(PlannerOutput, method="json_schema", include_raw=True)
+    else:
+        structured = model.with_structured_output(PlannerOutput, include_raw=True)
     user = problem if not context else f"Previous context:\n{context}\n\nNew request: {problem}"
     t0 = time.perf_counter()
     retries = 0
@@ -276,7 +286,12 @@ def plan_with_llm(problem: str, context: str | None = None) -> ToolCall | None:
         except Exception as exc:  # network, rate limit after SDK retries, malformed tool call (400)
             # Groq rejects malformed tool calls with HTTP 400 "Tool call validation failed" (e.g. gpt-oss
             # occasionally calls a non-existent tool named 'json'). The SDK does not retry 400s; retry once.
-            if retries < _TOOL_CALL_RETRIES and "tool call validation failed" in str(exc).lower():
+            low = str(exc).lower()
+            if retries < _TOOL_CALL_RETRIES and (
+                "tool call validation failed" in low
+                or "failed to generate json" in low
+                or "json_validate_failed" in low
+            ):
                 retries += 1
                 continue
             raise LLMPlanError(
@@ -284,6 +299,7 @@ def plan_with_llm(problem: str, context: str | None = None) -> ToolCall | None:
             ) from exc
     if isinstance(result, dict) and "parsed" in result:
         _record_usage(problem, result.get("raw"), time.perf_counter() - t0, retries)
+        charge_usage(result.get("raw"))
         if result.get("parsing_error") is not None:
             raise LLMPlanError(f"invalid structured output: {str(result['parsing_error'])[:200]}")
         result = result.get("parsed")

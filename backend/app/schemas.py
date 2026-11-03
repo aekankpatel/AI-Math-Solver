@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import re
 from enum import StrEnum
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class ProblemCategory(StrEnum):
@@ -113,14 +114,36 @@ class IntentVerification(BaseModel):
     repaired: bool = False
 
 
+MAX_PROBLEM_CHARS = 1000
+_SESSION_ID = r"^[A-Za-z0-9_-]{1,64}$"
+_CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+
+
+def _clean_text(value: str) -> str:
+    value = value.strip()
+    if not value:
+        raise ValueError("must not be empty")
+    if _CONTROL.search(value):
+        raise ValueError("must not contain control characters")
+    return value
+
+
 class SolveRequest(BaseModel):
-    problem: str = Field(..., min_length=1, max_length=2000)
-    session_id: str | None = Field(default=None, max_length=64)
+    model_config = ConfigDict(extra="forbid")
+
+    problem: str = Field(..., min_length=1, max_length=MAX_PROBLEM_CHARS)
+    session_id: str | None = Field(default=None, pattern=_SESSION_ID)
+
+    _clean = field_validator("problem")(classmethod(lambda cls, v: _clean_text(v)))
 
 
 class FollowUpRequest(BaseModel):
-    session_id: str = Field(..., min_length=1, max_length=64)
-    question: str = Field(..., min_length=1, max_length=2000)
+    model_config = ConfigDict(extra="forbid")
+
+    session_id: str = Field(..., pattern=_SESSION_ID)
+    question: str = Field(..., min_length=1, max_length=MAX_PROBLEM_CHARS)
+
+    _clean = field_validator("question")(classmethod(lambda cls, v: _clean_text(v)))
 
 
 class SolveResponse(BaseModel):
@@ -140,9 +163,20 @@ class SolveResponse(BaseModel):
     error: str | None = None
     llm_used: bool = False
     planner: Literal["llm", "rules", "nl"] = "rules"
+    # Why the Groq planner was or was not used for this answer:
+    # used | rejected (its plan failed the checks) | disabled (not configured) | budget (daily budget
+    # reached) | cooldown (Groq rate limit / repeated errors) | client_quota (this visitor's share used)
+    # | error (the call failed) | unsupported (it judged the question out of scope)
+    llm_status: Literal[
+        "used", "rejected", "disabled", "budget", "cooldown", "client_quota", "error", "unsupported", "not_needed"
+    ] = "disabled"
+    planner_notice: str | None = None  # user-facing note when the offline planner answered instead
+    error_code: Literal["timeout", "memory", "too_large", "busy"] | None = None
 
 
 class HealthResponse(BaseModel):
     status: Literal["ok"]
     llm_configured: bool
     model: str
+    llm_available: bool = False  # configured and not paused / out of budget right now
+    llm_state: Literal["available", "disabled", "budget", "cooldown"] = "disabled"

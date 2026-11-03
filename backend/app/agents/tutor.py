@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 
-from app.agents.llm import get_chat_model
+from app.agents.llm import charge_usage, get_chat_model, report_failure
 from app.schemas import IntentStatus, IntentVerification, Step, Verification, VerificationStatus
 
 log = logging.getLogger(__name__)
@@ -134,18 +134,25 @@ def explain(
             msg = model.invoke(
                 [("system", TUTOR_SYSTEM_PROMPT), ("human", _material(problem, answer, steps, verification, intent))]
             )
+            charge_usage(msg)
             text = str(getattr(msg, "content", "")).strip()
             if text:
                 return text, True
         except Exception as exc:  # network/provider errors fall back to templates
-            log.warning("LLM explanation failed: %s", exc)
+            report_failure(exc)
+            log.warning("LLM explanation failed: %s", type(exc).__name__)
     return template_explanation(tool, answer, verification, intent), False
 
 
 def answer_followup(
-    question: str, problem: str, answer: str, steps: list[Step], verification: Verification | None
+    question: str,
+    problem: str,
+    answer: str,
+    steps: list[Step],
+    verification: Verification | None,
+    use_llm: bool = True,
 ) -> tuple[str, bool]:
-    model = get_chat_model()
+    model = get_chat_model() if use_llm else None
     if model is not None:
         try:
             msg = model.invoke(
@@ -154,11 +161,13 @@ def answer_followup(
                     ("human", _material(problem, answer, steps, verification) + f"\n\nFollow-up question: {question}"),
                 ]
             )
+            charge_usage(msg)
             text = str(getattr(msg, "content", "")).strip()
             if text:
                 return text, True
         except Exception as exc:
-            log.warning("LLM follow-up failed: %s", exc)
+            report_failure(exc)
+            log.warning("LLM follow-up failed: %s", type(exc).__name__)
     q = question.lower()
     if any(w in q for w in ("verif", "sure", "correct", "trust", "check")):
         detail = "; ".join(
