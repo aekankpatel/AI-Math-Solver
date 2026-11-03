@@ -111,7 +111,7 @@ def test_llm_failures_raise_explicit_errors(monkeypatch, model, reason):
 
 def test_failed_calls_are_not_cached(monkeypatch, tmp_path):
     cache = tmp_path / "cache.jsonl"
-    monkeypatch.setenv("MATHFORGE_LLM_CACHE", str(cache))
+    monkeypatch.setenv("MATHORA_LLM_CACHE", str(cache))
     monkeypatch.setattr(llm_planner, "get_chat_model", lambda: _FakeModel(exc=RuntimeError("timeout")))
     with pytest.raises(LLMPlanError):
         plan_with_llm("Integrate x^2 from 0 to 3")
@@ -144,7 +144,7 @@ def test_run_stops_after_consecutive_llm_errors(monkeypatch, tmp_path, capsys):
     # replay mode with an empty cache: every LLM call fails (and nothing touches the network)
     monkeypatch.setattr(llm_planner, "get_chat_model", llm_planner.get_chat_model)
     monkeypatch.setattr(graph, "explain", graph.explain)
-    for var in ("LLM_ENABLED", "MATHFORGE_LLM_CACHE", "LLM_MAX_RETRIES"):
+    for var in ("LLM_ENABLED", "MATHORA_LLM_CACHE", "LLM_MAX_RETRIES"):
         monkeypatch.setenv(var, "0")  # register the variable so main()'s changes are undone ...
         monkeypatch.delenv(var)  # ... and start from "unset"
     code = run_main(
@@ -336,7 +336,7 @@ def test_run_case_records_cached_replay(monkeypatch, tmp_path):
     }
     key = llm_planner._cache_key(get_settings().llm_model, case["problem"], None)
     cache.write_text(json.dumps({"key": key, "output": out}) + "\n")
-    monkeypatch.setenv("MATHFORGE_LLM_CACHE", str(cache))
+    monkeypatch.setenv("MATHORA_LLM_CACHE", str(cache))
     monkeypatch.setattr(llm_planner, "get_chat_model", lambda: _ReplayModel(get_settings().llm_model))
     rec = _run_case(case, "groq")
     # the LLM's determinant reading is rejected; the faithful offline rank plan answers correctly

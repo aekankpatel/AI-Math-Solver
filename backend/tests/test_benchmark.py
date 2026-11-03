@@ -108,7 +108,7 @@ def test_groq_replay_mode_runs_offline_from_cache(tmp_path, monkeypatch):
     # main() patches these for groq mode; register them so they are restored afterwards
     monkeypatch.setattr(llm_planner, "get_chat_model", llm_planner.get_chat_model)
     monkeypatch.setattr(graph, "explain", graph.explain)
-    for var in ("LLM_ENABLED", "MATHFORGE_LLM_CACHE", "LLM_MAX_RETRIES"):
+    for var in ("LLM_ENABLED", "MATHORA_LLM_CACHE", "LLM_MAX_RETRIES"):
         monkeypatch.setenv(var, "0")  # register so main()'s changes are undone ...
         monkeypatch.delenv(var)  # ... starting from "unset"
     model = get_settings().llm_model

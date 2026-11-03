@@ -90,7 +90,7 @@ describe('App', () => {
     render(<App />)
     fireEvent.change(screen.getByLabelText('Math problem'), { target: { value: 'x=1' } })
     fireEvent.click(screen.getByRole('button', { name: 'Solve' }))
-    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Cannot reach the MathForge API'))
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Cannot reach the Mathora API'))
   })
 })
 

@@ -1,4 +1,4 @@
-"""MathForge benchmark dataset.
+"""Mathora benchmark dataset.
 
 Every case states the problem in natural language, the tool that should be
 selected, canonical tool arguments (used by the planner-independent ``oracle``

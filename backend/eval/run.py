@@ -1,4 +1,4 @@
-"""Run the MathForge benchmark.
+"""Run the Mathora benchmark.
 
     python -m eval.run --mode oracle            # math engine only (canonical tool args)
     python -m eval.run --mode rules             # full LangGraph pipeline, deterministic planner
@@ -464,7 +464,7 @@ def to_markdown(
     c, a = summary["counts"], summary["all_problems"]
     mv, ts = summary["math_verification"], summary["tampered_solutions"]
     lines = [
-        f"# MathForge benchmark — mode `{summary['mode']}`",
+        f"# Mathora benchmark — mode `{summary['mode']}`",
         "",
         f"**{c['benchmark_items']} benchmark items** = {c['problems']} problems ({c['answerable']} answerable + "
         f"{c['should_refuse']} that should be refused or clarified) + {c['tampered_solutions']} tampered solutions"
@@ -706,15 +706,15 @@ def main(argv: list[str] | None = None) -> int:
         if args.dry_run:
             from app.agents.llm_planner import _cache_get, _cache_key
 
-            previous = os.environ.get("MATHFORGE_LLM_CACHE")
-            os.environ["MATHFORGE_LLM_CACHE"] = args.cache  # read-only lookup, restored right after
+            previous = os.environ.get("MATHORA_LLM_CACHE")
+            os.environ["MATHORA_LLM_CACHE"] = args.cache  # read-only lookup, restored right after
             try:
                 cached_n = sum(1 for c in cases if _cache_get(_cache_key(model_name, c["problem"], None)) is not None)
             finally:
                 if previous is None:
-                    os.environ.pop("MATHFORGE_LLM_CACHE", None)
+                    os.environ.pop("MATHORA_LLM_CACHE", None)
                 else:
-                    os.environ["MATHFORGE_LLM_CACHE"] = previous
+                    os.environ["MATHORA_LLM_CACHE"] = previous
             measured = None
             smoke = REPORT_DIR / "groq_smoke.json"
             if smoke.exists():
@@ -744,7 +744,7 @@ def main(argv: list[str] | None = None) -> int:
             if not args.allow_network:
                 print("groq mode makes real API calls; re-run with --allow-network to confirm.", file=sys.stderr)
                 return 2
-        os.environ["MATHFORGE_LLM_CACHE"] = args.cache
+        os.environ["MATHORA_LLM_CACHE"] = args.cache
         os.environ["LLM_MAX_RETRIES"] = str(args.retries)
     _configure(args.mode)
     if args.mode == "groq" and args.replay:
