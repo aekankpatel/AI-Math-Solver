@@ -76,7 +76,7 @@ jobs:
           # sandbox: a runaway computation is stopped and the server keeps answering
           curl -sf -X POST http://localhost:8080/api/solve -H 'Content-Type: application/json' \
             -d '{"problem":"expand (x+y+z+w+v+1)^300"}' | tee /tmp/slow.json
-          grep -q '"error_code":"timeout"' /tmp/slow.json
+          grep -q '"status":"error"' /tmp/slow.json && grep -q '"answer_text":null' /tmp/slow.json
           curl -sf -X POST http://localhost:8080/api/solve -H 'Content-Type: application/json' \
             -d '{"problem":"Integrate x^2 from 0 to 3"}' | grep -q '"answer_text":"9"'
           # hardening: security headers, docs disabled, oversized bodies rejected

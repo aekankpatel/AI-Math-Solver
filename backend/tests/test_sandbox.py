@@ -54,8 +54,12 @@ def test_runaway_sympy_is_stopped(box):
     # passes the static guards (exponent 300) but has ~2e10 terms: only the sandbox can stop it
     problem = "expand (x+y+z+w+v+1)^300"
     t = time.monotonic()
-    with pytest.raises(SandboxTimeout):
-        box.run("solve", {"problem": problem, "context": None, "llm_result": {"call": None}})
+    try:
+        out = box.run("solve", {"problem": problem, "context": None, "llm_result": {"call": None}})
+    except (SandboxTimeout, SandboxCrashed):
+        pass  # stopped by the time limit (killed) or the memory limit
+    else:  # a MemoryError inside the worker can surface as an ordinary tool error
+        assert out["response"].status != "solved" and out["response"].answer_text is None
     assert time.monotonic() - t < 4
     out = box.run("solve", {"problem": "derivative of x^3", "context": None, "llm_result": {"call": None}})
     assert out["response"].answer_text == "3*x**2"  # the replacement worker is healthy
