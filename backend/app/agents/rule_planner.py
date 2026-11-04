@@ -87,6 +87,11 @@ def plan_with_rules(problem: str) -> ToolCall:
     if not text:
         raise PlanningError("Empty problem.")
 
+    from app.agents.spectral_planner import plan_spectrum
+
+    spectral = plan_spectrum(text)
+    if spectral is not None:
+        return spectral
     for planner in (
         _plan_matrix,
         _plan_probability,

@@ -173,6 +173,12 @@ def _literal_lists(text: str) -> tuple[list, list]:
     return matrices, vectors
 
 
+def _spectral_question(problem: str) -> bool:
+    from app.agents.spectral_planner import is_spectral_question
+
+    return is_spectral_question(problem)
+
+
 def extract_intent(problem: str) -> Intent:
     text = _normalise(problem)
     low = text.lower()
@@ -185,6 +191,8 @@ def extract_intent(problem: str) -> Intent:
         if it.task and re.search(r"\bdetermin(e|ing)\b", low) and it.task == "determinant":
             it.task = next((op for op, pat in _MATRIX_OPS if op != "determinant" and re.search(pat, low)), None)
         it.task = f"matrix:{it.task}" if it.task else "matrix"
+    elif _spectral_question(problem):
+        it.task = "spectrum"
     elif re.search(
         r"\b[pc]\s*\(\s*\d+\s*,\s*\d+\s*\)|permutations?\s*\(|combinations?\s*\(|\d\s*!|\bfactorial\b", low
     ) or re.search(
@@ -355,6 +363,7 @@ _TOOL_TASK = {
     "descriptive_statistics": "statistics",
     "probability_distribution": "probability",
     "combinatorics": "counting",
+    "matrix_spectrum": "spectrum",
 }
 
 
@@ -406,6 +415,20 @@ def describe(call: ToolCall) -> str:
             "between": f"P({x} ≤ X ≤ {x2})",
         }.get(q, str(q))
         return f"{event} for X ~ {str(a.get('distribution')).capitalize()}({params})."
+    if t == "matrix_spectrum":
+        facts = [f"{a['size']}×{a['size']}" if a.get("size") else "square"]
+        facts[0] += " real matrix A" if a.get("real") else " matrix A"
+        if a.get("eigenvalues"):
+            facts.append("eigenvalues " + ", ".join(str(v) for v in a["eigenvalues"]))
+        if a.get("annihilating"):
+            facts.append(f"satisfying {a['annihilating']}")
+        if a.get("trace") is not None:
+            facts.append(f"trace {a['trace']}")
+        if a.get("determinant") is not None:
+            facts.append(f"determinant {a['determinant']}")
+        if a.get("charpoly"):
+            facts.append(f"characteristic polynomial {a['charpoly']}")
+        return "For a " + ", ".join(facts) + ": find " + "; ".join(str(q) for q in a.get("queries") or []) + "."
     if t == "combinatorics":
         op = a.get("operation")
         return {
@@ -590,6 +613,7 @@ _TOOL_CATEGORY = {
     "descriptive_statistics": "probability_statistics",
     "probability_distribution": "probability_statistics",
     "combinatorics": "probability_statistics",
+    "matrix_spectrum": "linear_algebra",
 }
 _ENUMS = {
     "operation": {
@@ -678,9 +702,47 @@ def validate_plan(call: ToolCall) -> list[str]:
             options = allowed.get(call.tool, ()) if isinstance(allowed, dict) else allowed
             if options and a[key] not in options:
                 errors.append(f"{key} = {a[key]!r} is not one of {', '.join(options)}")
+    if call.tool == "matrix_spectrum":
+        errors += _validate_spectrum(a)
     for (tool, value), needed in _REQUIRED_EXTRA.items():
         if call.tool == tool and value in (a.get("operation"), a.get("query")):
             errors += [f"'{value}' needs argument '{n}'" for n in needed if a.get(n) in (None, [], "")]
+    return errors
+
+
+def _validate_spectrum(a: dict[str, Any]) -> list[str]:
+    from app.math_engine import spectral
+
+    errors: list[str] = []
+    queries = a.get("queries")
+    if not (isinstance(queries, list) and queries and all(isinstance(q, str) for q in queries)):
+        return ["'queries' must be a non-empty list of quantities such as 'trace(A^2)'"]
+    for q in queries:
+        try:
+            spectral.parse_query(q)
+        except spectral.SpectrumError as exc:
+            errors.append(str(exc))
+    if a.get("size") is not None and not (isinstance(a["size"], int) and not isinstance(a["size"], bool)):
+        errors.append("'size' must be an integer")
+    ev = a.get("eigenvalues")
+    if ev is not None and not (isinstance(ev, list) and all(_is_number_like(v) or isinstance(v, str) for v in ev)):
+        errors.append("'eigenvalues' must be a list of numbers")
+    for key, parse in (
+        ("annihilating", spectral.annihilating_polynomial),
+        ("charpoly", spectral.characteristic_polynomial),
+    ):
+        if a.get(key) is not None:
+            try:
+                parse(str(a[key]))
+            except spectral.SpectrumError as exc:
+                errors.append(f"'{key}': {exc}")
+    for key in ("trace", "determinant"):
+        if a.get(key) is not None and not _is_number_like(a[key]) and not isinstance(a[key], str):
+            errors.append(f"'{key}' must be a number")
+    if a.get("real") is not None and not isinstance(a["real"], bool):
+        errors.append("'real' must be true or false")
+    if not (a.get("eigenvalues") or a.get("annihilating") or a.get("charpoly")):
+        errors.append("the plan gives no eigenvalues, matrix equation or characteristic polynomial")
     return errors
 
 
@@ -812,6 +874,8 @@ def _check_alignment(
         _check_counting(problem, it, call, ctx)
     elif call.tool == "descriptive_statistics":
         _check_data(problem, call, ctx)
+    elif call.tool == "matrix_spectrum":
+        _check_spectrum(problem, call, ctx)
 
     _check_unused(it, call, ctx)
 
@@ -853,6 +917,12 @@ def _arg_scalars(call: ToolCall) -> list[tuple[str, Any]]:
             out.append((key, a[key]))
     for key, value in (a.get("params") or {}).items():
         out.append((f"params.{key}", value))
+    if call.tool == "matrix_spectrum":
+        for key in ("size", "trace", "determinant"):
+            if a.get(key) is not None:
+                out.append((key, a[key]))
+        for v in a.get("eigenvalues") or []:
+            out.append(("eigenvalues", v))
     for v in a.get("data") or []:
         out.append(("data", v))
     return out
@@ -928,8 +998,10 @@ def _check_unused(it: Intent, call: ToolCall, ctx: _Ctx) -> None:
             used |= set(_numbers_in(str(call.args[key])))
     for eq in call.args.get("equations") or []:
         used |= set(_numbers_in(eq))
-    for key in ("matrix", "other", "vector"):
+    for key in ("matrix", "other", "vector", "annihilating", "charpoly"):
         used |= set(_numbers_in(str(call.args.get(key) or "")))
+    for q in call.args.get("queries") or []:
+        used |= set(_numbers_in(str(q)))
     if call.tool == "differentiate":
         used.add(float(call.args.get("order") or 1))
     if call.tool == "probability_distribution" and call.args.get("distribution") in ("binomial", "poisson"):
@@ -1361,3 +1433,159 @@ def _check_counting(problem: str, it: Intent, call: ToolCall, ctx: _Ctx) -> None
         )
     elif n is not None and k is not None and k > n:
         ctx.add("n ≥ k", False, f"k = {k:g} exceeds n = {n:g}; the roles may be swapped.")
+
+
+# --------------------------------------------------------------------------- spectral questions
+
+
+def _check_spectrum(problem: str, call: ToolCall, ctx: _Ctx) -> None:
+    """Every fact and expression in the plan must be written in the question, every condition the
+    question states must be in the plan, and every quantity asked for must be computed."""
+    from app.agents.spectral_planner import _compact, extract, matrix_equations
+    from app.math_engine import spectral
+    from app.math_engine.latex import normalize_latex
+
+    a = call.args
+    text = normalize_latex(problem)
+    compact_q = _compact(text).lower()
+    ex = extract(problem)
+
+    def fn(expr: str) -> sp.Expr | None:
+        try:
+            return spectral.matrix_function(expr)
+        except spectral.SpectrumError:
+            return None
+
+    def same_fn(x: str, y: str) -> bool:
+        fx, fy = fn(x), fn(y)
+        return fx is not None and fy is not None and sp.simplify(fx - fy) == 0
+
+    def written(expr: str) -> bool:
+        return _compact(expr).lower() in compact_q
+
+    # facts the question states must be in the plan (they change the answer)
+    if ex.real != bool(a.get("real")):
+        ctx.add(
+            "real / complex matrix as stated",
+            False,
+            "The question says the matrix is real."
+            if ex.real
+            else "The plan assumes a real matrix; the question does not say so.",
+            fix={"real": ex.real},
+        )
+    if ex.size and a.get("size") not in (None, ex.size):
+        ctx.add(
+            "matrix size as stated",
+            False,
+            f"The question describes a {ex.size}×{ex.size} matrix.",
+            fix={"size": ex.size},
+        )
+    for key, label in (("trace", "trace"), ("determinant", "determinant")):
+        stated = getattr(ex, key)
+        planned = a.get(key)
+        if stated is not None and planned is None:
+            ctx.add(f"{label} condition used", False, f"The question states the {label} ({stated}).", fix={key: stated})
+        elif stated is not None and not _same_value(stated, planned):
+            ctx.add(
+                f"{label} as stated",
+                False,
+                f"The question states {label} {stated}, the plan uses {planned}.",
+                fix={key: stated},
+            )
+    if ex.eigenvalues and a.get("eigenvalues") is not None:
+        planned = sorted(float(sp.N(sp.sympify(str(v)))) for v in a["eigenvalues"] if _scalar(v) is not None)
+        stated = sorted(float(sp.N(sp.sympify(v))) for v in ex.eigenvalues)
+        if len(planned) == len(stated) and not all(_num_close(x, y) for x, y in zip(planned, stated, strict=True)):
+            ctx.add(
+                "eigenvalues as stated",
+                False,
+                "The plan's eigenvalues differ from the question's.",
+                fix={"eigenvalues": ex.eigenvalues},
+            )
+    eqs = matrix_equations(text)
+    if a.get("annihilating"):
+        planned = str(a["annihilating"])
+        try:
+            q = spectral.annihilating_polynomial(planned)
+        except spectral.SpectrumError:
+            q = None
+        match = written(planned) or any(
+            q is not None and _proportional(q, spectral.annihilating_polynomial(e)) for e in eqs
+        )
+        if match:
+            ctx.add("matrix equation from the question", True, planned)
+        else:
+            ctx.add(
+                "matrix equation from the question", False, f"The equation {planned} is not stated in the question."
+            )
+    elif eqs:
+        ctx.add("matrix equation used", False, f"The question states {eqs[0]}.", fix={"annihilating": eqs[0]})
+    if a.get("charpoly"):
+        planned = str(a["charpoly"])
+        ok = written(planned)
+        if not ok and ex.charpoly:
+            try:
+                p1, _ = spectral.characteristic_polynomial(planned)
+                p2, _ = spectral.characteristic_polynomial(ex.charpoly)
+                ok = sp.simplify(p1 - p2) == 0
+            except spectral.SpectrumError:
+                ok = False
+        ctx.add(
+            "characteristic polynomial from the question",
+            ok,
+            planned if ok else f"The characteristic polynomial {planned} is not the one in the question.",
+            "info" if ok else "warning",
+        )
+
+    # each quantity computed must be asked for, with an expression written in the question
+    words = {
+        "trace": r"\btrace\b|\btr\b",
+        "det": r"\bdet\b|determinant",
+        "eigenvalues": r"eigen|spectrum",
+        "charpoly": r"characteristic polynomial",
+    }
+    planned_q = []
+    for q in a.get("queries") or []:
+        try:
+            kind, arg, _ = spectral.parse_query(q)
+        except spectral.SpectrumError:
+            continue
+        planned_q.append((kind, arg))
+        if not re.search(words[kind], text, re.I):
+            ctx.add("quantity asked for", False, f"The question does not ask for the {kind} ({q}).")
+            continue
+        if _compact(arg) in ("A", "") or written(arg) or any(same_fn(arg, d) for d in _defined(ex)):
+            ctx.add("quantity asked for", True, q)
+        elif all(_grounded(n, set(_numbers_in(text))) for n in _numbers_in(arg)):
+            ctx.add("quantity asked for", False, f"{q} is not written in the question.", "warning")
+        else:
+            ctx.add("quantity asked for", False, f"{q} uses numbers that are not in the question.")
+    # every quantity the question asks for must be computed (multi-part questions)
+    missing = []
+    for q in ex.queries:
+        kind, arg, _ = spectral.parse_query(q)
+        if not any(k == kind and (_compact(arg) == _compact(b) or same_fn(arg, b)) for k, b in planned_q):
+            missing.append(q)
+    if missing:
+        ctx.add(
+            "every part answered",
+            False,
+            "The question also asks for: " + ", ".join(missing) + ".",
+            fix={"queries": list(a.get("queries") or []) + missing},
+        )
+    elif ex.queries:
+        ctx.add("every part answered", True, ", ".join(ex.queries))
+
+
+def _defined(ex: Any) -> list[str]:
+    out = []
+    for q in ex.queries:
+        m = re.match(r"\w+\((.*)\)$", q)
+        if m:
+            out.append(m.group(1))
+    return out
+
+
+def _proportional(p: sp.Expr, q: sp.Expr) -> bool:
+    ratio = sp.cancel(p / q)
+    return bool(ratio.is_number and ratio != 0)

@@ -20,7 +20,9 @@ export function SolutionCard({ result, isFollowUp }: { result: SolveResponse; is
       <article className="card answer-card" data-testid="followup-answer">
         <header className="card-head">
           <span className="chip">Tutor</span>
-          <h3 className="problem">{result.problem}</h3>
+          <h3 className="problem">
+            <RichText text={result.problem} />
+          </h3>
         </header>
         <p className="explanation">
           <RichText text={result.explanation ?? ''} />
@@ -34,7 +36,9 @@ export function SolutionCard({ result, isFollowUp }: { result: SolveResponse; is
       <article className="card clarify-card" role="alert" data-testid="clarify-card">
         <header className="card-head">
           <span className="chip chip-warn">Needs clarification</span>
-          <h3 className="problem">{result.problem}</h3>
+          <h3 className="problem">
+            <RichText text={result.problem} />
+          </h3>
         </header>
         <p>
           <strong>{result.error}</strong>
@@ -64,7 +68,9 @@ export function SolutionCard({ result, isFollowUp }: { result: SolveResponse; is
       <article className="card error-card" role="alert" data-testid="error-card">
         <header className="card-head">
           <span className="chip chip-warn">{label}</span>
-          <h3 className="problem">{result.problem}</h3>
+          <h3 className="problem">
+            <RichText text={result.problem} />
+          </h3>
         </header>
         <p>{result.error}</p>
         {result.status === 'unsupported' && (
@@ -87,7 +93,9 @@ export function SolutionCard({ result, isFollowUp }: { result: SolveResponse; is
           result.verification && <VerificationBadge status={result.verification.status} />
         )}
         <PlannerBadge result={result} />
-        <h3 className="problem">{result.problem}</h3>
+        <h3 className="problem">
+            <RichText text={result.problem} />
+          </h3>
       </header>
 
       <PlannerNotice result={result} />

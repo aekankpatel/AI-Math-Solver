@@ -255,3 +255,19 @@ describe('VerificationBadge', () => {
     expect(screen.getByTestId('verification-badge')).toHaveTextContent(label)
   })
 })
+
+describe('RichText', () => {
+  it('renders every common math delimiter instead of printing raw LaTeX', async () => {
+    const { RichText } = await import('./components/Tex')
+    const { container } = render(
+      <RichText text={'So \\[ \\frac{12}{4}\\times 4 = 12 \\] and \\(x=3\\), $y$, $$z^2$$ is **12**.'} />,
+    )
+    expect(container.querySelectorAll('.katex').length).toBe(4)
+    const plain = Array.from(container.children)
+      .filter((el) => !el.classList.contains('tex'))
+      .map((el) => el.textContent)
+      .join('')
+    expect(plain).not.toMatch(/\\[[(]|\\frac|\$/)
+    expect(container.querySelector('strong')?.textContent).toBe('12')
+  })
+})

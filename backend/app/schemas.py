@@ -38,6 +38,7 @@ ToolName = Literal[
     "descriptive_statistics",
     "probability_distribution",
     "combinatorics",
+    "matrix_spectrum",
 ]
 
 

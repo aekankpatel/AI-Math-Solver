@@ -8,6 +8,7 @@ No SymPy object ever leaves the worker.
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
 import sympy as sp
@@ -112,3 +113,34 @@ _JOBS = {"solve": solve_job, "sleep": _sleep_job, "allocate": _allocate_job, "en
 
 def run_job(name: str, kwargs: dict[str, Any]) -> Any:
     return _JOBS[name](**kwargs)
+
+
+def warm_up() -> None:
+    """Exercise the planners, intent checks, tools and verifiers once so SymPy's caches and lazy
+    imports are ready. Called in the sandbox's fork server, so every worker forked from it starts
+    warm (matters on slow free CPUs). No threads may survive into the fork: the tools' thread pool
+    is replaced by a fresh, unstarted one afterwards, and LangGraph (which may use threads) is not run."""
+    import concurrent.futures
+
+    from app.agents.graph import _check
+    from app.agents.rule_planner import plan_with_rules
+    from app.math_engine import tools
+    from app.math_engine.verifier import verify
+
+    for problem in (
+        "A is a 2x2 real matrix with A^2 + I = 0. Find the eigenvalues of A and det(A + I).",
+        "Integrate x^2 from 0 to 3",
+        "Solve x^2 - 5x + 6 = 0",
+    ):
+        try:
+            call = plan_with_rules(problem)
+            _check(problem, call)
+            verify(call.tool, tools.run_tool(call.tool, call.args))
+        except Exception:  # warm-up is best effort
+            pass
+    tools._EXECUTOR.shutdown(wait=True)
+    tools._EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=4)
+
+
+if os.environ.get("MATHENZA_SANDBOX_WARMUP") == "1":
+    warm_up()

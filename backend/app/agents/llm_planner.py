@@ -23,7 +23,7 @@ from app.config import get_settings
 from app.math_engine.tools import TOOLS
 from app.schemas import ProblemCategory, ToolCall
 
-PROMPT_VERSION = "2026-11-05.p3d"  # p3d: product renamed to Mathenza in the prompts (p3b: tool/category optional)
+PROMPT_VERSION = "2026-11-05.p4"  # p4: matrix_spectrum tool, multi-part queries (p3b: tool/category optional)
 
 PLANNER_SYSTEM_PROMPT = """You are the planning component of Mathenza, a math solver.
 Your ONLY job is to translate the user's question into a call to exactly one whitelisted tool.
@@ -49,6 +49,13 @@ Tools and the fields they use:
   query (pmf: P(X=x), pdf: density, cdf: P(X<=x), greater: P(X>x) for continuous and P(X>=x) for
   discrete, between: P(x<=X<=x2)), x, x2.
 - combinatorics: operation (combinations|permutations|factorial), n, k
+- matrix_spectrum: for a matrix A that is NOT written out but described by facts. Fields: size (n for n×n),
+  eigenvalues (list, with repetition), annihilating (a matrix equation A satisfies, e.g. "A^3 - 2A + I = 0"),
+  charpoly (the characteristic polynomial as written, may contain unknown coefficients, e.g.
+  "lambda^3 + c_1 lambda + 4"), trace, determinant, real (true only if the question says the matrix is real),
+  queries (EVERY quantity asked for, in order: "eigenvalues", "eigenvalues(B-expression)", "trace(expr)",
+  "det(expr)", "characteristic polynomial"; expr uses A, I, ^, +, -, * and ^-1, e.g. "det(A^3 - 2A)",
+  "trace((A + I)^-1)"). Replace named matrices (B = A^2 + I) by their expression in A.
 
 Faithfulness rules (your plan is checked against the question; violations are rejected):
 1. Every number you put in the arguments must appear in the question (or be implied by a word
@@ -73,8 +80,13 @@ Examples:
 - "Probability of fewer than 2 calls when calls arrive at 4 per hour (Poisson)" ->
   probability_distribution, distribution=poisson, params={lambda: 4}, query=cdf, x=1
 - "How fast is x^3 changing at x = 2?" -> differentiate, expression="x^3", point="2"
+- "A is 3×3 with eigenvalues 1, -2, 3. Find det(A^3 - 2A) and tr((A + I)^-1)." -> matrix_spectrum, size=3,
+  eigenvalues=["1","-2","3"], queries=["det(A^3 - 2A)", "trace((A + I)^-1)"]
 - "Normal distribution with mean 10, P(X < 12)?" -> supported=false,
   clarification="What is the standard deviation?"
+
+A question with several parts is supported when one tool can answer all of them (matrix_spectrum takes
+several queries); otherwise set supported=false and ask the user to send the parts separately.
 
 If the problem is not mathematics, is outside these tools (e.g. proofs, geometry constructions,
 differential equations, inequalities), or is too ambiguous to translate faithfully, set
@@ -107,6 +119,7 @@ class PlannerOutput(BaseModel):
         "descriptive_statistics",
         "probability_distribution",
         "combinatorics",
+        "matrix_spectrum",
         "none",
     ] = Field(
         default="none",
@@ -139,6 +152,14 @@ class PlannerOutput(BaseModel):
     x2: float | str | None = None
     n: int | str | None = None
     k: int | str | None = None
+    size: int | None = None
+    eigenvalues: list[str | float] | None = None
+    annihilating: str | None = None
+    charpoly: str | None = None
+    trace: str | float | None = None
+    determinant: str | float | None = None
+    real: bool | None = None
+    queries: list[str] | None = None
 
 
 class LLMPlanUnsupported(ValueError):
@@ -162,6 +183,7 @@ _TOOL_CATEGORY = {
     "descriptive_statistics": "probability_statistics",
     "probability_distribution": "probability_statistics",
     "combinatorics": "probability_statistics",
+    "matrix_spectrum": "linear_algebra",
 }
 
 

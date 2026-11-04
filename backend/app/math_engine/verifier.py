@@ -698,7 +698,14 @@ VERIFIERS: dict[str, Callable[[ToolOutput], Verification]] = {
     "descriptive_statistics": _verify_stats,
     "probability_distribution": _verify_distribution,
     "combinatorics": _verify_combinatorics,
+    "matrix_spectrum": lambda out: _verify_spectrum(out),
 }
+
+
+def _verify_spectrum(out: ToolOutput) -> Verification:
+    from app.math_engine.spectral import verify_spectrum
+
+    return verify_spectrum(out.data)
 
 
 def verify(tool: str, output: ToolOutput) -> Verification:

@@ -30,6 +30,7 @@ from app.agents.llm_planner import LLMPlanUnsupported, plan_with_llm
 from app.agents.tutor import answer_followup, explain
 from app.budget import get_budget
 from app.config import get_settings
+from app.math_engine.latex import normalize_latex
 from app.ratelimit import ClientLimits
 from app.sandbox import SandboxBusy, SandboxCrashed, SandboxTimeout, get_runner
 from app.schemas import ProblemCategory, SolveResponse
@@ -186,7 +187,7 @@ _TIMEOUT_MESSAGE = (
 
 def _compute(problem: str, context: str | None, client: str | None) -> tuple[SolveResponse, str | None, str | None]:
     """Plan (Groq, if allowed), then compute in the sandbox. Returns (response, focus, original)."""
-    llm_result, llm_status = _plan_remote(problem, context, client)
+    llm_result, llm_status = _plan_remote(normalize_latex(problem), context, client)
     s = get_settings()
     try:
         result = get_runner().run("solve", {"problem": problem, "context": context, "llm_result": llm_result})

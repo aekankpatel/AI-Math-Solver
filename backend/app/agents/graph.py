@@ -281,8 +281,10 @@ def run_solver(
     llm_result: dict[str, Any] | None = None,
     explain_with_llm: bool = True,
 ) -> SolverState:
+    from app.math_engine.latex import normalize_latex
+
     state: SolverState = {
-        "problem": problem,
+        "problem": normalize_latex(problem),
         "context": context,
         "llm_used": False,
         "explain_with_llm": explain_with_llm,

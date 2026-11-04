@@ -151,6 +151,7 @@ class Sandbox:
         method = "forkserver" if "forkserver" in mp.get_all_start_methods() else "spawn"
         self._ctx = mp.get_context(method)
         if method == "forkserver":
+            os.environ.setdefault("MATHENZA_SANDBOX_WARMUP", "1")  # read by app.jobs in the fork server
             self._ctx.set_forkserver_preload(["app.jobs"])
         self._idle: queue.Queue[_Worker] = queue.Queue()
         self._lock = threading.Lock()

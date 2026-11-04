@@ -1015,6 +1015,40 @@ def combinatorics(operation: str, n: Any, k: Any = None) -> ToolOutput:
     )
 
 
+# --------------------------------------------------------------------------- spectral facts
+
+
+def matrix_spectrum(
+    queries: list[str],
+    size: int | None = None,
+    eigenvalues: list[Any] | None = None,
+    annihilating: str | None = None,
+    charpoly: str | None = None,
+    trace: Any = None,
+    determinant: Any = None,
+    real: bool = False,
+) -> ToolOutput:
+    """Eigenvalues, traces, determinants and characteristic polynomials of (functions of) a matrix that is
+    described only by spectral facts. See ``app/math_engine/spectral.py``."""
+    from app.math_engine import spectral
+
+    def run() -> dict[str, Any]:
+        try:
+            return spectral.matrix_spectrum(
+                queries, size, eigenvalues, annihilating, charpoly, trace, determinant, bool(real)
+            )
+        except spectral.SpectrumError as exc:
+            raise ToolError(str(exc)) from exc
+
+    r = _with_timeout(run, "Spectral computation")
+    if len(r["lines"]) == 1:
+        text, latex = r["lines"][0], r["latex_lines"][0]
+    else:
+        text = "; ".join(f"{i}. {line}" for i, line in enumerate(r["lines"], 1))
+        latex = r"\begin{aligned}" + r" \\ ".join(f"&{line}" for line in r["latex_lines"]) + r"\end{aligned}"
+    return ToolOutput(answer_text=text, answer_latex=latex, steps=r["steps"], data=r)
+
+
 TOOLS: dict[str, Callable[..., ToolOutput]] = {
     "solve_equation": solve_equation,
     "solve_system": solve_system,
@@ -1028,6 +1062,7 @@ TOOLS: dict[str, Callable[..., ToolOutput]] = {
     "descriptive_statistics": descriptive_statistics,
     "probability_distribution": probability_distribution,
     "combinatorics": combinatorics,
+    "matrix_spectrum": matrix_spectrum,
 }
 
 
