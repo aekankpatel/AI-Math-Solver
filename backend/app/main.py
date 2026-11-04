@@ -1,4 +1,4 @@
-"""FastAPI entry point for Mathora."""
+"""FastAPI entry point for Mathenza."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ from app.service import get_client_limits, handle_followup, llm_state, solve_pro
 settings = get_settings()
 logging.basicConfig(level=settings.log_level.upper(), format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 install_log_redaction()
-log = logging.getLogger("mathora")
+log = logging.getLogger("mathenza")
 
 
 @asynccontextmanager
@@ -34,7 +34,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(
-    title="Mathora",
+    title="Mathenza",
     version="0.2.0",
     description="Solver–Verifier–Tutor math reasoning API built with LangGraph, SymPy, NumPy and SciPy.",
     lifespan=lifespan,
@@ -102,7 +102,7 @@ def rate_limited(request: Request) -> str:
 
 @app.get("/")
 def root() -> dict[str, str]:
-    return {"name": "Mathora API", "health": "/api/health"}
+    return {"name": "Mathenza API", "health": "/api/health"}
 
 
 @app.get("/api/health", response_model=HealthResponse)

@@ -23,9 +23,9 @@ from app.config import get_settings
 from app.math_engine.tools import TOOLS
 from app.schemas import ProblemCategory, ToolCall
 
-PROMPT_VERSION = "2026-11-04.p3c"  # p3c: product renamed to Mathora in the prompts (p3b: tool/category optional)
+PROMPT_VERSION = "2026-11-05.p3d"  # p3d: product renamed to Mathenza in the prompts (p3b: tool/category optional)
 
-PLANNER_SYSTEM_PROMPT = """You are the planning component of Mathora, a math solver.
+PLANNER_SYSTEM_PROMPT = """You are the planning component of Mathenza, a math solver.
 Your ONLY job is to translate the user's question into a call to exactly one whitelisted tool.
 You must NOT solve the problem or do any arithmetic yourself: a computer algebra system does that.
 
@@ -237,7 +237,7 @@ def _cache_key(model_name: str, problem: str, context: str | None, method: str =
 
 
 def _cache_get(key: str) -> dict[str, Any] | None:
-    path = os.environ.get("MATHORA_LLM_CACHE")
+    path = os.environ.get("MATHENZA_LLM_CACHE")
     if not path or not Path(path).exists():
         return None
     with _CACHE_LOCK, open(path, encoding="utf-8") as fh:
@@ -249,7 +249,7 @@ def _cache_get(key: str) -> dict[str, Any] | None:
 
 
 def _cache_put(key: str, problem: str, output: dict[str, Any]) -> None:
-    path = os.environ.get("MATHORA_LLM_CACHE")
+    path = os.environ.get("MATHENZA_LLM_CACHE")
     if not path:
         return
     with _CACHE_LOCK, open(path, "a", encoding="utf-8") as fh:

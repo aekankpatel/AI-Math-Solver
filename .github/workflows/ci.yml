@@ -71,7 +71,7 @@ jobs:
           curl -sf -X POST http://localhost:8000/api/solve -H 'Content-Type: application/json' \
             -d '{"problem":"Solve x^2 - 5x + 6 = 0"}' | tee /tmp/out.json
           grep -q '"status":"verified"' /tmp/out.json
-          curl -sf http://localhost:8080/ | grep -q Mathora
+          curl -sf http://localhost:8080/ | grep -q Mathenza
           curl -sf http://localhost:8080/api/health
           # sandbox: a runaway computation is stopped and the server keeps answering
           curl -sf -X POST http://localhost:8080/api/solve -H 'Content-Type: application/json' \
@@ -89,9 +89,9 @@ jobs:
         run: docker compose down
       - name: Render image (deploy/render/Dockerfile, run with the free instance's 512 MB)
         run: |
-          docker build -t mathora-render -f deploy/render/Dockerfile backend
+          docker build -t mathenza-render -f deploy/render/Dockerfile backend
           docker run -d --name render --memory 512m --memory-swap 512m --cpus 1 -p 10000:10000 \
-            -e CORS_ORIGINS=https://example.vercel.app mathora-render
+            -e CORS_ORIGINS=https://example.vercel.app mathenza-render
           for i in $(seq 1 60); do curl -sf http://localhost:10000/api/health && break; sleep 2; done
           curl -sf -X POST http://localhost:10000/api/solve -H 'Content-Type: application/json' \
             -d '{"problem":"Integrate x^2 from 0 to 3"}' | grep -q '"answer_text":"9"'

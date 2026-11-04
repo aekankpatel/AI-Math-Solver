@@ -122,7 +122,7 @@ export default function App() {
             ∑
           </span>
           <div>
-            <h1>Mathora</h1>
+            <h1>Mathenza</h1>
             <p className="tagline">Solve · Verify · Explain — every answer is independently checked.</p>
           </div>
         </div>

@@ -1,11 +1,11 @@
-# Mathora
+# Mathenza
 
-**Solve · Verify · Explain.** Mathora is a math reasoning app built around a
+**Solve · Verify · Explain.** Mathenza is a math reasoning app built around a
 **Solver–Verifier–Tutor** workflow. An LLM (Groq) can read the problem and pick a tool. The math itself
 is always done by **SymPy, NumPy and SciPy**, and a separate verifier checks every result with a
 **different method** before it reaches the user.
 
-![Mathora screenshot](docs/screenshot.png)
+![Mathenza screenshot](docs/screenshot.png)
 
 ## What it does
 

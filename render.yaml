@@ -1,8 +1,8 @@
-# Render Blueprint: the Mathora API as a free Docker web service.
+# Render Blueprint: the Mathenza API as a free Docker web service.
 # Render dashboard -> New -> Blueprint -> select this repository. You are asked for the two secrets below.
 services:
   - type: web
-    name: mathora-api
+    name: mathenza-api
     runtime: docker
     plan: free
     region: oregon
@@ -19,5 +19,5 @@ services:
     envVars:
       - key: GROQ_API_KEY # secret: entered in the Render dashboard, never committed
         sync: false
-      - key: CORS_ORIGINS # your Vercel production URL, e.g. https://mathora.vercel.app
+      - key: CORS_ORIGINS # your Vercel production URL, e.g. https://mathenza.vercel.app
         sync: false

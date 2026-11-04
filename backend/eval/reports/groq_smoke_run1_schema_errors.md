@@ -1,4 +1,4 @@
-# Mathora benchmark — mode `groq`
+# Mathenza benchmark — mode `groq`
 
 **95 benchmark items** = 25 problems (19 answerable + 6 that should be refused or clarified) + 34 tampered solutions + 36 tampered interpretations.
 Problems run in this mode: 25.

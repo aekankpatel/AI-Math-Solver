@@ -25,8 +25,8 @@ RUN pip install -r requirements.txt
 
 COPY app ./app
 
-RUN useradd --create-home --uid 10001 mathora
-USER mathora
+RUN useradd --create-home --uid 10001 mathenza
+USER mathenza
 
 EXPOSE 10000
 # One API process: the token budget, rate limits and sessions live in its memory.

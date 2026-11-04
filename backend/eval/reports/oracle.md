@@ -1,4 +1,4 @@
-# Mathora benchmark — mode `oracle`
+# Mathenza benchmark — mode `oracle`
 
 **378 benchmark items** = 308 problems (264 answerable + 44 that should be refused or clarified) + 34 tampered solutions + 36 tampered interpretations.
 Problems run in this mode: 279 (29 skipped: oracle mode cannot run natural-language-only cases (no canonical tool arguments)).

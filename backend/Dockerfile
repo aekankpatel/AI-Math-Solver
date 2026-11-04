@@ -12,8 +12,8 @@ RUN pip install -r requirements.txt
 
 COPY app ./app
 
-RUN useradd --create-home --uid 10001 mathora
-USER mathora
+RUN useradd --create-home --uid 10001 mathenza
+USER mathenza
 
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \

@@ -1,4 +1,4 @@
-# Deploying Mathora ($0)
+# Deploying Mathenza ($0)
 
 | Part | Service (free tier) | What runs there |
 |---|---|---|
@@ -9,7 +9,7 @@
 No paid plan or paid API is used. Render may ask for a card to verify a new account (a temporary hold that is released;
 nothing is charged on the free instance type). Without a Groq key the app still works, using its offline planners.
 
-Mathora's own budget (150k tokens per rolling 24 h) stays below Groq's free limit (200k). When it is used up, or Groq returns
+Mathenza's own budget (150k tokens per rolling 24 h) stays below Groq's free limit (200k). When it is used up, or Groq returns
 a rate-limit error, the offline planner answers and the page says so.
 
 Hugging Face Spaces was the first plan, but new Docker Spaces now need a paid plan, so the backend moved to Render.
@@ -35,7 +35,7 @@ The image therefore uses:
 
 | File | Purpose |
 |---|---|
-| `render.yaml` | Render Blueprint: one free Docker web service `mathora-api`, health check `/api/health`, auto-deploy after CI passes, rebuilt only for backend changes |
+| `render.yaml` | Render Blueprint: one free Docker web service `mathenza-api`, health check `/api/health`, auto-deploy after CI passes, rebuilt only for backend changes |
 | `deploy/render/Dockerfile` | The Render image (build context `backend/`): non-root user, listens on `$PORT`, one API process, the sandbox settings above |
 | `frontend/vercel.json` | Vercel build settings, SPA routing and security headers (the browser may only call `self` and `*.onrender.com`) |
 | `frontend/.env.example` | The only frontend setting: `VITE_API_URL` |
@@ -49,7 +49,7 @@ Local development is unchanged: `docker compose up --build` (nginx + backend) or
 | Name | Kind | Value |
 |---|---|---|
 | `GROQ_API_KEY` | Secret | Your key from https://console.groq.com/keys (optional; without it the offline planners are used) |
-| `CORS_ORIGINS` | Value | Your Vercel production URL, exactly, e.g. `https://mathora.vercel.app` (https, no trailing slash; comma-separate several). `*` is ignored. |
+| `CORS_ORIGINS` | Value | Your Vercel production URL, exactly, e.g. `https://mathenza.vercel.app` (https, no trailing slash; comma-separate several). `*` is ignored. |
 
 Already set in the image (override in Render only if needed): `TRUSTED_PROXY_HOPS=1`, `SANDBOX_WORKERS=1`,
 `SANDBOX_MEMORY_MB=640`, `SANDBOX_TIMEOUT_SECONDS=20`, `ENABLE_DOCS=false`, `LLM_EXPLANATIONS=false`.
@@ -61,7 +61,7 @@ See the configuration table in `README.md` for all of them.
 
 | Name | Value |
 |---|---|
-| `VITE_API_URL` | The Render URL, e.g. `https://mathora-api.onrender.com` (no trailing slash) |
+| `VITE_API_URL` | The Render URL, e.g. `https://mathenza-api.onrender.com` (no trailing slash) |
 
 `VITE_API_URL` is compiled into the public JavaScript; it is a URL, not a secret. Never add an API key to Vercel: the Groq key only
 exists as a Render secret, inside the backend process. It never reaches the sandbox workers, API responses or logs.
@@ -72,11 +72,11 @@ exists as a Render secret, inside the backend process. It never reaches the sand
 
 1. Sign up at https://render.com with **GitHub** (free plan), and allow Render to access the repository.
 2. **New → Blueprint →** select the repository (branch `main`). Render reads `render.yaml` and shows one service,
-   `mathora-api`, on the **Free** instance type.
+   `mathenza-api`, on the **Free** instance type.
 3. When asked for the secret values, enter:
    - `GROQ_API_KEY` = your Groq key;
    - `CORS_ORIGINS` = `https://placeholder.invalid` for now (you will set the real Vercel URL in step 3).
-4. **Apply.** The first build takes about 5–10 minutes. The service URL is shown at the top, e.g. `https://mathora-api.onrender.com`;
+4. **Apply.** The first build takes about 5–10 minutes. The service URL is shown at the top, e.g. `https://mathenza-api.onrender.com`;
    if the name is taken, Render adds a suffix.
 5. Open `<render-url>/api/health`. Expect `"status":"ok"` and `"llm_configured":true` (or `false` without a key).
 
@@ -102,11 +102,11 @@ Either way, the service is now connected to GitHub: every push to `main` that ch
 3. Set **Root Directory** to `frontend`. Vercel picks up `vercel.json`: framework Vite, install `npm ci`, build
    `npm run build`, output `dist`, with SPA routing and security headers.
 4. Under **Environment Variables** add `VITE_API_URL` = your Render URL.
-5. **Deploy.** Note the production URL, e.g. `https://mathora.vercel.app`. The project name decides the URL; use `mathora` if it is free.
+5. **Deploy.** Note the production URL, e.g. `https://mathenza.vercel.app`. The project name decides the URL; use `mathenza` if it is free.
 
 ### 3. Connect the two
 
-1. Render → `mathora-api` → **Environment** → set `CORS_ORIGINS` to the exact Vercel production URL. Save; the service redeploys.
+1. Render → `mathenza-api` → **Environment** → set `CORS_ORIGINS` to the exact Vercel production URL. Save; the service redeploys.
 2. If you later change `VITE_API_URL` in Vercel, **redeploy** the frontend: Vite reads it at build time.
 
 Only the production URL is allowed. Vercel preview deployments use other URLs, so the browser blocks their API calls. That is
@@ -124,7 +124,7 @@ intended; add a preview URL to `CORS_ORIGINS` temporarily if you need to test on
 6. From a terminal, check that other origins are refused (no `access-control-allow-origin` header in the reply):
 
    ```bash
-   curl -s -D - -o /dev/null -X OPTIONS https://mathora-api.onrender.com/api/solve -H 'Origin: https://evil.example' -H 'Access-Control-Request-Method: POST'
+   curl -s -D - -o /dev/null -X OPTIONS https://mathenza-api.onrender.com/api/solve -H 'Origin: https://evil.example' -H 'Access-Control-Request-Method: POST'
    ```
 
 7. Check that per-visitor rate limits use real client addresses. Add the Render variable `LOG_LEVEL=DEBUG`, solve a problem,

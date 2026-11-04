@@ -1,6 +1,6 @@
 import type { Health, SolveResponse } from './types'
 
-// Absolute backend URL in production (e.g. https://mathora-api.onrender.com); empty = same origin (dev proxy / nginx).
+// Absolute backend URL in production (e.g. https://mathenza-api.onrender.com); empty = same origin (dev proxy / nginx).
 const BASE = ((import.meta.env.VITE_API_URL as string | undefined) ?? '').trim().replace(/\/+$/, '')
 const TIMEOUT_MS = 45_000
 
@@ -53,7 +53,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new ApiError(
       aborted
         ? 'The server took too long to answer. Please try again.'
-        : 'Cannot reach the Mathora API. Check your connection or try again shortly.',
+        : 'Cannot reach the Mathenza API. Check your connection or try again shortly.',
       0,
     )
   } finally {
