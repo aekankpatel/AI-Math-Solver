@@ -1,6 +1,6 @@
 import type { Health, SolveResponse } from './types'
 
-// Absolute backend URL in production (e.g. https://<user>-<space>.hf.space); empty = same origin (dev proxy / nginx).
+// Absolute backend URL in production (e.g. https://mathora-api.onrender.com); empty = same origin (dev proxy / nginx).
 const BASE = ((import.meta.env.VITE_API_URL as string | undefined) ?? '').trim().replace(/\/+$/, '')
 const TIMEOUT_MS = 45_000
 

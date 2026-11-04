@@ -33,7 +33,7 @@ export default function App() {
   const bottom = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    // The free backend host sleeps when idle and needs up to a minute or two to wake: keep retrying.
+    // The free backend host sleeps when idle and needs up to ~2–3 minutes to wake: keep retrying.
     let cancelled = false
     let timer: ReturnType<typeof setTimeout> | undefined
     const check = (attempt: number) => {
@@ -47,7 +47,7 @@ export default function App() {
         .catch(() => {
           if (cancelled) return
           setHealth(null)
-          if (attempt < 24) {
+          if (attempt < 36) {
             setReachable(true) // shown as "Connecting…" while retrying
             timer = setTimeout(() => check(attempt + 1), 5000)
           } else {

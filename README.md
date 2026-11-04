@@ -452,16 +452,15 @@ When running locally, replace `GROQ_AUTH=proxy` with `GROQ_API_KEY=...`.
 
 ## Deployment (zero cost)
 
-Planned public setup, all on free tiers: the **frontend on Vercel Hobby** (`frontend/vercel.json`), the **backend on a
-Hugging Face Docker Space** with CPU basic hardware (`deploy/huggingface/`, pushed by the manual workflow
-`.github/workflows/deploy-space.yml`), and the **Groq free tier** for planning. Step-by-step instructions, every environment
-variable and secret, and the live checks are in [DEPLOYMENT.md](DEPLOYMENT.md).
+Planned public setup, all on free tiers: the **frontend on Vercel Hobby** (`frontend/vercel.json`), the **backend as a free
+Render web service** (`render.yaml`, `deploy/render/Dockerfile`), and the **Groq free tier** for planning. Step-by-step
+instructions, every environment variable and secret, and the live checks are in [DEPLOYMENT.md](DEPLOYMENT.md).
 
-- The Space image runs as UID 1000 on port 7860, with one API process and two sandbox workers (about 300 MB of RAM at idle,
-  out of 16 GB).
-- `CORS_ORIGINS` must be the exact Vercel production URL. The frontend reads the backend URL from `VITE_API_URL` at build time.
-- The Groq key is only ever a Space secret: it is not in the repository, the frontend bundle, the workers, the responses or the logs.
-- A free Space sleeps when idle and has no persistent disk. The UI waits for it to wake, and sessions and counters reset on restart.
+- **Sizing:** the free instance has 512 MB RAM and 0.1 CPU. The image runs one API process and one sandbox worker. Tested with
+  those limits, it uses about 250–300 MB, answers typical problems in 0.3–3.6 s and stops runaway computations at 20 s.
+- **Configuration:** `CORS_ORIGINS` must be the exact Vercel production URL. The frontend reads the backend URL from `VITE_API_URL` at build time.
+- **Secrets:** the Groq key is only ever a Render secret. It is not in the repository, the frontend bundle, the workers, the responses or the logs.
+- **Sleep and restarts:** the free service sleeps after 15 minutes idle. The UI waits for it to wake, which takes about 1–3 minutes. Sessions and counters reset on restart.
 
 ## Known limitations / roadmap
 

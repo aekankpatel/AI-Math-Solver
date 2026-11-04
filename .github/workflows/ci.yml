@@ -87,16 +87,17 @@ jobs:
           test "$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:8000/api/solve -H 'Content-Type: application/json' --data-binary @/tmp/big.json)" = 413
       - if: always()
         run: docker compose down
-      - name: Hugging Face Space image (built from the deploy bundle, run as UID 1000 on port 7860)
+      - name: Render image (deploy/render/Dockerfile, run with the free instance's 512 MB)
         run: |
-          ./scripts/build_space_bundle.sh /tmp/space
-          docker build -t mathora-space /tmp/space
-          docker run -d --name space --user 1000 --cpus 2 -p 7860:7860 -e CORS_ORIGINS=https://example.vercel.app mathora-space
-          for i in $(seq 1 30); do curl -sf http://localhost:7860/api/health && break; sleep 2; done
-          curl -sf -X POST http://localhost:7860/api/solve -H 'Content-Type: application/json' \
+          docker build -t mathora-render -f deploy/render/Dockerfile backend
+          docker run -d --name render --memory 512m --memory-swap 512m --cpus 1 -p 10000:10000 \
+            -e CORS_ORIGINS=https://example.vercel.app mathora-render
+          for i in $(seq 1 60); do curl -sf http://localhost:10000/api/health && break; sleep 2; done
+          curl -sf -X POST http://localhost:10000/api/solve -H 'Content-Type: application/json' \
             -d '{"problem":"Integrate x^2 from 0 to 3"}' | grep -q '"answer_text":"9"'
-          curl -s -D - -o /dev/null -X OPTIONS http://localhost:7860/api/solve -H 'Origin: https://example.vercel.app' \
+          curl -s -D - -o /dev/null -X OPTIONS http://localhost:10000/api/solve -H 'Origin: https://example.vercel.app' \
             -H 'Access-Control-Request-Method: POST' | grep -qi 'access-control-allow-origin: https://example.vercel.app'
-          ! curl -s -D - -o /dev/null -X OPTIONS http://localhost:7860/api/solve -H 'Origin: https://evil.example' \
+          ! curl -s -D - -o /dev/null -X OPTIONS http://localhost:10000/api/solve -H 'Origin: https://evil.example' \
             -H 'Access-Control-Request-Method: POST' | grep -qi 'access-control-allow-origin'
-          docker rm -f space
+          test "$(docker inspect -f '{{.State.OOMKilled}}' render)" = false
+          docker rm -f render
