@@ -8,11 +8,20 @@ new numbers. Without an LLM, template explanations are used.
 from __future__ import annotations
 
 import logging
+import re
 
 from app.agents.llm import charge_usage, get_chat_model, report_failure
 from app.schemas import IntentStatus, IntentVerification, Step, Verification, VerificationStatus
 
 log = logging.getLogger(__name__)
+
+
+def normalize_math_delimiters(text: str) -> str:
+    """LLMs often write \\[...\\] / \\(...\\); the UI renders $$...$$ / $...$, so convert them."""
+    text = re.sub(r"\\\[(.+?)\\\]", lambda m: "$$" + m.group(1).strip() + "$$", text, flags=re.S)
+    text = re.sub(r"\\\((.+?)\\\)", lambda m: "$" + m.group(1).strip() + "$", text, flags=re.S)
+    return text
+
 
 TUTOR_SYSTEM_PROMPT = """You are the tutor in Mathenza. You receive a math problem, the
 answer computed by a computer algebra system, the solution steps, and an independent
@@ -25,13 +34,15 @@ compact list. Rules:
 - Explain WHY the method works, not only what was done; point out the key idea or common
   mistake for this kind of problem in one sentence.
 - If verification status is not "verified", say plainly how confident the result is.
-- Use plain text with inline LaTeX between $...$ when helpful. No headings."""
+- Use plain text with inline LaTeX between $...$ (display math between $$...$$) when helpful.
+  Never use \\( \\) or \\[ \\] delimiters. No headings."""
 
 FOLLOWUP_SYSTEM_PROMPT = """You are the tutor in Mathenza answering a follow-up question about
 a solved problem. Base your answer only on the provided problem, computed answer, steps and
 verification. Do not perform new arithmetic: if the question requires a new computation, say
 that it should be submitted as a new problem and suggest the exact phrasing. Be concise.
-Use inline LaTeX between $...$ when helpful."""
+Use inline LaTeX between $...$ (display math between $$...$$) when helpful; never use \\( \\) or \\[ \\]
+delimiters."""
 
 _STATUS_SENTENCE = {
     VerificationStatus.VERIFIED: "The result passed independent verification (an exact check plus independent numeric checks).",
@@ -135,7 +146,7 @@ def explain(
                 [("system", TUTOR_SYSTEM_PROMPT), ("human", _material(problem, answer, steps, verification, intent))]
             )
             charge_usage(msg)
-            text = str(getattr(msg, "content", "")).strip()
+            text = normalize_math_delimiters(str(getattr(msg, "content", "")).strip())
             if text:
                 return text, True
         except Exception as exc:  # network/provider errors fall back to templates
@@ -162,7 +173,7 @@ def answer_followup(
                 ]
             )
             charge_usage(msg)
-            text = str(getattr(msg, "content", "")).strip()
+            text = normalize_math_delimiters(str(getattr(msg, "content", "")).strip())
             if text:
                 return text, True
         except Exception as exc:
