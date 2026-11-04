@@ -1,4 +1,4 @@
-# MathForge benchmark — mode `groq`
+# Mathora benchmark — mode `groq`
 
 **77 benchmark items** = 7 problems (3 answerable + 4 that should be refused or clarified) + 34 tampered solutions + 36 tampered interpretations.
 Problems run in this mode: 7.

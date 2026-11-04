@@ -53,7 +53,7 @@ export function Plot({ figure }: { figure: PlotlyFigure }) {
         return Plotly.react(el, figure.data as Plotly.Data[], merged as Partial<Plotly.Layout>, {
           responsive: true,
           displaylogo: false,
-          displayModeBar: !narrow,
+          displayModeBar: narrow ? false : 'hover',
           modeBarButtonsToRemove: ['lasso2d', 'select2d'],
         })
       })

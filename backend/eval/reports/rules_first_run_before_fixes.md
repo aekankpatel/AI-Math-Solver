@@ -1,4 +1,4 @@
-# MathForge benchmark — mode `rules`
+# Mathora benchmark — mode `rules`
 
 Cases: 210 run (181 answerable, 29 should be refused) + 34 tampered solutions.
 

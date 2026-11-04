@@ -1,4 +1,4 @@
-# MathForge benchmark — mode `rules`
+# Mathora benchmark — mode `rules`
 
 **300 benchmark items** = 266 problems (226 answerable + 40 that should be refused or clarified) + 34 tampered solutions.
 Problems run in this mode: 266.
