@@ -1,211 +1,137 @@
 # Mathenza
 
-**Solve · Verify · Explain.** Mathenza is a math reasoning app built around a
-**Solver–Verifier–Tutor** workflow. An LLM (Groq) can read the problem and pick a tool. The math itself
-is always done by **SymPy, NumPy and SciPy**, and a separate verifier checks every result with a
-**different method** before it reaches the user.
+**A maths solver that shows its working, then checks it.** You type a question in plain text or LaTeX. Mathenza works
+out what is being asked, computes the answer exactly with SymPy, NumPy and SciPy, and confirms it a second, independent
+way before showing it. A language model (Groq) may help *read* the question, but it never does the arithmetic.
 
-![Mathenza screenshot](docs/screenshot.png)
+![Mathenza](docs/screenshot.png)
 
-## What it does
+## What it can answer
 
-| Category | Examples |
+| Area | Examples |
 |---|---|
-| Algebra | `Solve x^2 - 5x + 6 = 0`, `x + 2y = 7, 3x - y = 7`, `factor x^3 - 8`, `cos(x) = x` (numeric) |
-| Calculus | `derivative of x^3 sin(x)`, `second derivative of exp(x^2)`, `derivative of x^2 at x = 3`, `limit of sin(x)/x as x -> 0` |
-| Integrals | `Integrate x^2 from 0 to 3`, `integral of x e^x dx`, `integrate exp(-x^2) from -oo to oo` |
-| Linear algebra | `determinant / inverse / eigenvalues / rank / rref / transpose of [[…]]`, `solve [[2,1],[1,3]] x = [3,5]`, matrix products |
-| Sums and sequences | `sum of the first 100 positive integers`, `sum of k^2 for k = 1 to 10`, `sum of (1/2)^k from k = 1 to infinity`, `10th term of the arithmetic sequence 3, 7, 11, ...`, `sum of the first 6 terms of 2, 6, 18, ...` |
-| Extrema and evaluation | `critical points of f(x) = x^3 - 3x` (classified as maximum / minimum), `evaluate x^3 - 3x at x = 2`, `area between y = x^2 and y = x from 0 to 1` |
-| Percentages | `15% of 240`, `12 is what percent of 48?`, `decrease 400 by 15%`, `percentage change from 80 to 120` |
-| Probability word problems | `at least one six in 4 rolls of a fair die`, `5 red and 3 blue balls, two drawn without replacement, probability both are red` |
-| Matrices described by facts | `A is 3×3 with eigenvalues 1, -2, 3: find det(A³ − 2A) and tr((A + I)⁻¹)`, `a 4×4 real matrix with trace 2, det 1 and A⁴ − 2A³ + 3A² − 2A + I = 0: find its eigenvalues and tr(A⁵)` (several results in one answer) |
-| Probability & statistics | `mean and standard deviation of 2, 4, 4, 5`, `Binomial n=10 p=0.5, P(X <= 3)`, `normal mean 100 std 15, P(X > 130)`, Poisson / uniform / exponential, `10 choose 3`, `P(5,2)`, `6!` |
+| Algebra | `Solve x^2 - 5x + 6 = 0`, `x + 2y = 7, 3x - y = 7`, `factor x^3 - 8`, `\|2x - 3\| = 5`, `evaluate x^3 - 3x at x = 2` |
+| Calculus | `derivative of x^3 sin(x) at x = 1`, `limit of sin(x)/x as x -> 0`, `critical points of x^3 - 3x` |
+| Integrals | `integrate x^2 from 0 to 3`, `integral of x e^x dx`, `area between y = x^2 and y = x from 0 to 1` |
+| Sums and sequences | `sum of the first 100 positive integers`, `sum of (1/2)^k from k = 1 to infinity`, `10th term of 3, 7, 11, ...` |
+| Linear algebra | determinant, inverse, eigenvalues, rank, RREF, products, `solve [[2,1],[1,3]] x = [3,5]` |
+| Matrices described by facts | `A is 3×3 with eigenvalues 1, -2, 3: find det(A^3 - 2A) and tr((A + I)^-1)` |
+| Probability and statistics | mean/median/std, binomial, Poisson, normal, uniform, exponential, `at least one six in 4 rolls of a fair die`, drawing without replacement, counting |
+| Percentages | `15% of 240`, `12 is what percent of 48?`, `percentage change from 80 to 120` |
 
-Every solution includes:
+Questions with several parts (`(a) … (b) …`, `solve … and find …`) are split and every part is answered on its own.
+Follow-up questions keep the context: `now integrate it`, `explain step 2`, `how was this checked?`.
 
-- an **exact answer** (LaTeX, rendered with KaTeX). Questions pasted with LaTeX (`\(…\)`, `\frac`, `\text{Tr}`) are understood.
-- a **verification badge**: `verified`, `approximate`, `unverified` or `failed`, plus each check that was run
-- **step-by-step working**, built from the actual computation
-- an **interactive Plotly chart**: roots on the curve, f with f′ and a tangent line, shaded area under a curve, limit behaviour, eigenvalues in the complex plane, histograms, and shaded probability regions
-- a **planner badge** showing whether the Groq LLM or the offline planner turned the question into a computation, with a
-  notice whenever the app had to fall back to the offline planner (daily budget used, Groq rate limit, failed or rejected plan)
-- an **explanation**: from a template by default, or written by the LLM when `LLM_EXPLANATIONS=true`
-- **multi-part questions**, including parts that need different tools ("Let f(x) = x² sin x. (a) Find f′(x).
-  (b) Integrate f from 0 to π.", "Solve x² − 5x + 6 = 0 and find the determinant of [[1,2],[3,4]]"). The question is split
-  into self-contained parts (offline, or by the LLM if every number in its split appears in the question). Each part is
-  planned, intent-checked and verified on its own, and the overall badge is the weakest part's, so a partly answered
-  question is never shown as fully verified
-- **follow-up questions** in the same session (`now integrate it`, `explain the steps`, `how was this verified?`)
+Each answer comes with exact maths, step-by-step working, an interactive graph where useful, a plain-language
+explanation, and a mark that says how far it can be trusted:
 
-## Architecture
+| Mark | Meaning |
+|---|---|
+| **Fully verified** | The maths was confirmed independently and the reading matches every part of the question |
+| **Verified with assumptions** | The maths is confirmed, but the reading relies on assumptions that are listed |
+| **Approximate** | Confirmed numerically within tolerance, not symbolically |
+| **Needs clarification** | Information is missing or the question can be read several ways, so nothing is computed |
+
+## How a question is answered
 
 ```
-                ┌──────────────────── LangGraph StateGraph ────────────────────┐
- problem ──► plan ──► intent ──► solve ──► verify ──► explain ──► visualize ──► response
-              │         │          │
-              │         │          └─ tool error ───────────────────────────► error
-              │         └─ ambiguous / misread (after one repair attempt) ──► needs clarification
-              └─ unsupported ───────────────────────────────────────────────► not supported
+browser ──► API (FastAPI) ──► rate limit + Groq budget ──► planner ──► sandbox worker ──► answer
+                                                          (Groq or       │
+                                                           offline)      ├─ intent check
+                                                                         ├─ math tool (SymPy / NumPy / SciPy)
+                                                                         ├─ independent verification
+                                                                         └─ steps, graph, explanation
 ```
 
-Two separate questions are verified:
+1. **Clean-up.** LaTeX (`\(…\)`, `\frac`, `\text{Tr}`) is turned into plain maths text. A question with several parts is
+   split into self-contained parts, each of which goes through the steps below.
+2. **Limits.** Per-visitor rate limits, a request-size limit and strict input validation are applied first.
+3. **Planning.** The question becomes a *plan*: one whitelisted tool plus its arguments (for example
+   `integrate(expression="x^2", lower=0, upper=3)`).
+   - If Groq is configured and within its daily budget, it proposes a plan (JSON-schema output, `openai/gpt-oss-120b`).
+   - Offline planners (rules and a language analyser) always run too, and take over whenever Groq is unavailable, out
+     of budget or wrong. The page says which planner was used and why.
+4. **Intent check.** Before anything is computed, the plan is compared with the question using rules of its own: the
+   task, every number and condition, bounds, points, the event in a probability question, every part of a multi-part
+   question. A plan that misreads the question is repaired from the question itself, replaced by another planner's
+   plan, or turned into a clarification request. Plans in which the model did arithmetic itself are rejected.
+5. **Computation.** The tool runs in an isolated worker process: no network, no secrets, a time limit (the worker is
+   killed on timeout) and a memory limit. Inputs that would explode (`9^9^9^9`, `(x+1)^5000`) are refused before parsing.
+6. **Verification.** A different method confirms the result (table below). If the check disagrees, the answer is
+   marked as failed rather than shown as correct.
+7. **Presentation.** Steps and graphs are built from the computed objects, never from model text. The explanation
+   comes from a template (or optionally the model, which may not change any number).
 
-1. **Is the math right?** The independent mathematical verifier checks the tool's result.
-2. **Is it the right question?** The intent verifier checks that the planned tool and arguments match what was asked.
-
-A result is shown as **fully verified** only when both pass. If the math is verified but the reading of the question
-relied on assumptions, it is shown as **verified with assumptions**, with the assumptions listed. If the question was
-misread or information is missing, nothing is computed and the user is asked for clarification.
-
-| Layer | Path | Responsibility |
-|---|---|---|
-| Safe parser | `backend/app/math_engine/parser.py` | Lexical allowlist (characters, identifiers, length) runs **before** SymPy sees anything. No builtins, attribute access, dunders or unknown functions. |
-| Tools | `backend/app/math_engine/tools.py`, `spectral.py` | 13 whitelisted tools (`solve_equation`, `integrate`, `matrix_operation`, `probability_distribution`, …) with timeouts, input validation and generated steps |
-| Verifier | `backend/app/math_engine/verifier.py` | Checks each result with a *different* method (see below) |
-| Visualizer | `backend/app/math_engine/visualize.py` | Builds Plotly JSON from the computed objects |
-| Planner (LLM) | `backend/app/agents/llm_planner.py` | Groq via `langchain-groq` structured output (`LLM_STRUCTURED_METHOD`: JSON schema or tool calling). Returns only a tool name and string arguments, validated by Pydantic. |
-| Planner (rules) | `backend/app/agents/rule_planner.py` | Deterministic offline planner for formulaic input. Used when no key is set, and as an alternative plan. |
-| Planner (NL) | `backend/app/agents/nl_planner.py` | Offline planner for word problems, built on the structured intent extraction. It asks for missing information rather than using defaults. Because it shares the extraction with the intent checker, its readings are capped at "assumed". |
-| Intent verifier | `backend/app/agents/intent.py` | Extracts the intent with its own cue-based rules: task, variable, domain, order, point, bounds, limit point and direction, probability event, distribution, counting rule, matrices, data and every number. It then checks the plan: the task matches, every argument value appears in the question, every stated number is used, the slots match, and expressions are numerically equivalent to the math written in the question. Ambiguities the LLM declares are honoured. |
-| Tutor | `backend/app/agents/tutor.py` | Explains the verified result without adding numbers, and answers follow-ups |
-| Graph | `backend/app/agents/graph.py` | LangGraph workflow. Tries plans in order (LLM, rules, NL) until one matches the question, makes one safe repair (filling in a slot the question states, such as "positive" or "at x = 3"), and combines the math and intent statuses into the overall status. |
-| API | `backend/app/main.py`, `service.py` | FastAPI: `/api/solve`, `/api/followup`, `/api/health`, `/api/examples`; in-memory LRU sessions. Calls Groq (within the budget), then hands the computation to the sandbox. |
-| Sandbox | `backend/app/sandbox.py`, `jobs.py` | Pool of worker processes that run all parsing, planning checks, tools, verification and plots, with a wall-clock timeout (the worker is killed and replaced), a memory limit (`RLIMIT_AS`), no network and no secrets |
-| Usage budget | `backend/app/budget.py` | Rolling 24-hour ledger of the tokens Groq actually reports, a pause after Groq 429s / exhausted quota / repeated errors, optional JSON persistence |
-| Rate limits | `backend/app/ratelimit.py` | Per-client sliding windows (requests per minute and per day, and each client's daily share of Groq calls) |
-| Hardening | `backend/app/security.py` | Request-size limit, security headers, secret redaction in every log record |
-| UI | `frontend/` | React 19 + TypeScript + Vite, KaTeX, Plotly (loaded lazily) |
-
-### How each result is verified
-
-| Tool | Independent check(s) |
+| Tool | Independent check |
 |---|---|
-| Equations | Substitute each solution back (symbolic, then numeric residual). Separately, a SciPy `brentq` sign-change search on [-50, 50] confirms no real root was missed. |
-| Systems | Substitute each solution into every equation |
-| Simplify / factor / expand | Symbolic difference, plus numeric equality at random points |
-| Derivatives | Central finite differences at random points, and integrating the result back |
-| Integrals | Differentiate the antiderivative back to the integrand; definite integrals also checked with `scipy.integrate.quad` |
-| Limits | Evaluate numerically while approaching the point from each side |
-| Matrices | NumPy recomputation, `A·A⁻¹ = I`, eigenvalues as roots of the characteristic polynomial, `A·x = b` residual, Berkowitz determinant |
-| Statistics / probability | NumPy / `scipy.stats` recomputation (including the hypergeometric distribution); Python integer arithmetic for combinatorics |
-| Sums | Direct exact addition of every term (finite sums), S(n) − S(n−1) = term plus small cases (sums up to n), `mpmath.nsum` (infinite series) |
-| Sequences | The rule must reproduce every given term; the sequence is then generated term by term up to n |
-| Critical points | f′(c) = 0 by exact substitution, the sign of f′ on each side (classification), and a numeric scan of f′ on [−50, 50] so no critical point is missed |
-| Percentages and evaluation | Exact fraction arithmetic in Python; 40-digit numeric evaluation |
-| Matrices described by facts | For every possible spectrum, build a concrete non-diagonal matrix with it (P·B·P⁻¹, real blocks for conjugate pairs). Recompute every stated condition (the matrix equation, trace, determinant, characteristic polynomial, real entries) and every answer by direct matrix arithmetic. Re-enumerate the possible spectra numerically with `numpy.roots`. |
+| Equations and systems | Substitute every solution back; a numeric root scan confirms no real root is missing |
+| Simplify / factor / expand | Symbolic difference plus numeric equality at random points |
+| Derivatives | Finite differences at sample points, and integrating the result back |
+| Integrals | Differentiate the antiderivative; numeric quadrature for definite integrals (absolute values split at sign changes) |
+| Limits | Numeric evaluation approaching from each side |
+| Matrices | NumPy recomputation, `A·A⁻¹ = I`, characteristic polynomial, `A·x = b` residual |
+| Matrices described by facts | Build concrete matrices with each possible spectrum and recompute every condition and answer |
+| Sums and sequences | Add the terms directly / generate the sequence term by term; `S(n) − S(n−1)` for formulas in n |
+| Critical points | `f′(c) = 0` exactly, the sign of `f′` on each side, and a numeric scan so none is missed |
+| Statistics, probability, counting, percentages | NumPy / `scipy.stats` / exact integer and fraction arithmetic |
 
-**Status meanings**
+## Safety and limits
 
-- `verified`: an exact check passed and every numeric check agrees.
-- `approximate`: only numeric agreement was possible, for example a root found with Newton's method or a limit.
-- `unverified`: no independent check applied.
-- `failed`: a check disagreed. The UI shows this in red and opens the details.
+- The model never runs code and never computes: it can only choose from a fixed list of tools, and every expression
+  goes through an allow-list parser (no builtins, attributes or unknown functions) before SymPy sees it.
+- Every computation runs in a sandboxed worker with a time limit and a memory limit; a runaway job is killed and the
+  worker replaced.
+- Groq usage is capped by a rolling 24-hour token budget (below the free tier), a per-visitor share and an automatic
+  pause after rate limits or errors; the offline planners answer meanwhile.
+- The API key exists only in the backend process: never in workers, responses, logs or the frontend bundle.
+- Per-visitor rate limits (default 10 a minute, 300 a day), 16 KB request limit, strict CORS, security headers.
 
-The tests corrupt correct solver outputs on purpose (a wrong root, a missing root, a wrong
-derivative, a wrong eigenvalue, and so on) and assert that the verifier reports `failed`.
+## Tech stack
 
-### Safety model
+FastAPI, LangGraph, SymPy, NumPy, SciPy, mpmath, Pydantic · React 19, TypeScript, Vite, KaTeX, Plotly · Groq
+(optional) · pytest, Vitest, ruff, oxlint · Docker, GitHub Actions · Vercel (frontend) and Render (backend).
 
-- The LLM **never runs code**. It can only pick from a fixed list of tools (a `Literal` type).
-  Arguments that a tool doesn't declare are rejected.
-- Every expression passes the allowlist in `parser.py` before SymPy parses it. SymPy runs with an
-  empty `__builtins__` and an explicit symbol table. Input like `__import__("os")`, `x.__class__`, `exec(…)`,
-  quotes, `;` or `[]` inside an expression is rejected (`tests/test_parser.py`).
-- Matrix and list inputs are read with `ast.literal_eval`, which accepts literals only.
-- Limits on input size: problems up to 1,000 characters, expressions up to 500, matrices up to 10×10, data sets up to
-  10,000 values. Inputs that are known to explode are refused before parsing: integers over 60 digits, exponents over
-  1,000 (including stacked powers such as `9^9^9^9`, which mean `9^(9^(9^9))`) and factorials over 5,000.
-- Everything else runs in the computation sandbox: each request gets at most `SANDBOX_TIMEOUT_SECONDS` (10 s); a worker that
-  runs over is killed with its whole process group and replaced, so a runaway SymPy call cannot keep using CPU. Workers have an
-  address-space limit (`SANDBOX_MEMORY_MB`, 1.5 GB), so a memory bomb fails inside the worker. Workers have no API key and never call the network.
-- If the problem is ambiguous (several variables and none specified), unsupported (for example a differential
-  equation), or has no solution (`x = x + 1`, a singular matrix), the app returns a clear message instead of a guess.
-
-### Public-deployment protections
-
-| Risk | Protection |
-|---|---|
-| One visitor spends the free Groq quota | Global rolling 24-hour token and request budget (`LLM_DAILY_TOKEN_BUDGET`, 150k of Groq's 200k by default), charged with the token counts Groq reports. Each client also gets a daily share of Groq calls (`LLM_CALLS_PER_CLIENT_PER_DAY`); after that they are served by the offline planner instead of being refused. |
-| Groq rate limits, exhausted quota, outages | A 429 pauses the LLM until the reset time Groq states; `x-ratelimit-remaining-requests: 0` does the same, and 3 consecutive failures pause it for 2 minutes. While paused, nothing is sent to Groq and the offline planners answer. The response's `llm_status` says why (`budget`, `cooldown`, `client_quota`, `error`, `rejected`), and the UI shows a notice. |
-| Request floods | Per-client limits: 10 requests a minute and 300 a day by default, answered with 429 and `Retry-After`. The pool size bounds concurrent computations, and requests that cannot get a worker within 15 s get 503 with `Retry-After`. |
-| Expensive or malicious math | Static input guards plus the process sandbox (time and memory limits, kill on timeout) |
-| Oversized or malformed requests | 16 KB body limit (413), strict schemas (unknown fields, control characters and malformed session ids are rejected), concise 422 errors that do not echo the input |
-| Secret leaks | The key lives only in the API process environment (never in workers or responses). Every log record passes through a redaction step that masks `gsk_…` keys, bearer tokens, `api_key=` values and Groq organisation ids. Raw provider errors are never returned to the browser; unexpected errors return a generic 500. |
-| Browser attacks | CORS allowlist; `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, a strict API CSP; the nginx frontend sends a CSP with no inline scripts. OpenAPI docs are off unless `ENABLE_DOCS=true`. |
-| Spoofed client IPs | `X-Forwarded-For` is ignored unless `TRUSTED_PROXY_HOPS` is set, and is then read from the right (entries the proxies added), so clients cannot claim a new identity |
-
-Run a single API process (`--workers 1`, as the Dockerfile does): the budget, rate limits and sessions are in memory.
-Computation concurrency comes from `SANDBOX_WORKERS`.
-
-## Running it
-
-### Option 1: Docker (one command)
-
-```bash
-cp backend/.env.example .env        # optional: add a free GROQ_API_KEY
 ```
+backend/app/
+  main.py, service.py        API, rate limits, Groq budget, multi-part questions, sessions
+  agents/                    planners (llm, rules, nl, spectral, multipart), intent check, LangGraph workflow, tutor
+  math_engine/               safe parser, tools, verifier, graphs, spectral tool, LaTeX clean-up
+  sandbox.py, jobs.py        isolated worker processes
+  budget.py, ratelimit.py, security.py
+backend/eval/                308-question benchmark and reports
+frontend/src/                React app
+deploy/render/, render.yaml, frontend/vercel.json   deployment
+```
+
+## Run it locally
+
+With Docker (UI on http://localhost:8080):
 
 ```bash
 docker compose up --build
 ```
 
-Open http://localhost:8080 for the UI. The API listens on http://localhost:8000 (local only; set `ENABLE_DOCS=true` for
-the interactive docs at `/docs`).
-
-### Option 2: Local development
-
-Backend (Python 3.12+):
+Without Docker, start the backend:
 
 ```bash
-cd backend && python -m venv .venv && source .venv/bin/activate
-```
-
-```bash
-pip install -r requirements-dev.txt
-```
-
-```bash
-cp .env.example .env   # optional: set GROQ_API_KEY
+cd backend && python -m venv .venv && source .venv/bin/activate && pip install -r requirements-dev.txt
 ```
 
 ```bash
 uvicorn app.main:app --reload --port 8000
 ```
 
-Frontend (Node 22+), in a second terminal. The Vite dev server proxies `/api` to port 8000:
+Then the frontend in a second terminal (http://localhost:5173):
 
 ```bash
 cd frontend && npm install && npm run dev
 ```
 
-Open http://localhost:5173.
+Groq is optional. Without a key everything works with the offline planners. To use it, put a free key from
+https://console.groq.com/keys in `backend/.env` as `GROQ_API_KEY=…` (see `backend/.env.example` for all settings,
+including rate limits, the token budget and sandbox limits). Never commit `.env`.
 
-### LLM configuration (optional, free)
-
-| Variable | Default | Purpose |
-|---|---|---|
-| `GROQ_API_KEY` | *(empty)* | Free key from https://console.groq.com/keys. Without one, the deterministic planner and template explanations are used. |
-| `LLM_MODEL` | `openai/gpt-oss-120b` | Any Groq chat model that supports tool calling (the default was changed after llama-3.3-70b-versatile turned out to be unavailable on the account used for testing) |
-| `LLM_ENABLED` | `true` | Set to `false` to force offline mode |
-| `LLM_STRUCTURED_METHOD` | `json_schema` | How the planner returns its plan: `json_schema` (Groq structured outputs) or `function_calling` (forced tool call). See "Groq reliability" below. |
-| `LLM_EXPLANATIONS` | `false` | Also ask the LLM for the tutor explanation (one extra call per solved problem) |
-| `LLM_MAX_RETRIES` | `1` | SDK retries for transient Groq errors |
-| `LLM_DAILY_TOKEN_BUDGET` / `LLM_DAILY_REQUEST_BUDGET` | `150000` / `800` | Deployment-wide Groq budget per rolling 24 h |
-| `LLM_CALLS_PER_CLIENT_PER_DAY` | `40` | Each client's share of Groq calls; beyond it the offline planner answers |
-| `LLM_BUDGET_STATE_PATH` | *(unset)* | JSON file that keeps the budget ledger across restarts |
-| `RATE_LIMIT_PER_MINUTE` / `RATE_LIMIT_PER_DAY` | `10` / `300` | Per-client request limits (0 disables) |
-| `TRUSTED_PROXY_HOPS` | `0` | Number of reverse proxies in front of the API that append `X-Forwarded-For` (Docker Compose sets 1) |
-| `SANDBOX_WORKERS` / `SANDBOX_TIMEOUT_SECONDS` / `SANDBOX_MEMORY_MB` | `2` / `10` / `1536` | Computation pool size, time limit and memory limit per worker |
-| `MAX_REQUEST_BYTES` | `16384` | Request body limit |
-| `ENABLE_DOCS` | `false` | Serve `/docs` and `/openapi.json` |
-| `LOG_LEVEL` | `INFO` | `DEBUG` also logs how each client is identified (to check `TRUSTED_PROXY_HOPS`) |
-| `VITE_API_URL` (frontend, build time) | *(empty: same origin)* | Absolute backend URL for a separately hosted frontend, e.g. the Space URL |
-| `CORS_ORIGINS` | `http://localhost:5173,http://localhost:8080` | Allowed browser origins |
-
-Never commit `.env`. It is listed in `.gitignore`.
-
-## Testing
+## Tests
 
 ```bash
 cd backend && pytest
@@ -215,284 +141,45 @@ cd backend && pytest
 cd frontend && npm test
 ```
 
-The backend suite has 369 tests and runs fully offline (no Groq calls). It covers:
+474 backend tests and 20 frontend tests, all offline (no Groq calls). Besides correctness for every tool, they
+deliberately corrupt results and plans to prove the verifier and the intent check catch them, and they cover the
+sandbox, rate limits, the Groq budget, secret redaction and the UI. CI runs linting, type checks, both test suites,
+the benchmark and a Docker smoke test on every push.
 
-- parser security and the correctness of every tool against known answers;
-- the verifier, both accepting correct results and detecting wrong ones;
-- intent verification (`tests/test_intent.py`): ambiguous wording, wrong tool selection, missing constraints and misread parameters;
-- the LangGraph workflow with a fake LLM, including misreadings, declared ambiguities and provider failure;
-- the HTTP API, plus benchmark floors and an offline Groq replay test;
-- deployment protections (`tests/test_deployment.py`, `tests/test_sandbox.py`): the rolling token budget, Groq 429 / quota
-  handling and the circuit breaker, per-client limits and spoofed `X-Forwarded-For`, offline-planner notices, request validation,
-  the body-size limit, security headers, secret redaction in logs and responses, and real worker processes being killed on
-  timeout, stopped by the memory limit and replaced.
+## Benchmark
 
-The frontend suite (16 tests) uses Vitest and Testing Library, including the planner badge, the offline notice, timeout and
-rate-limit messages and the status legend.
+`backend/eval/` holds 308 hand-checked problems (264 answerable, 44 that should be refused or clarified), including
+held-out paraphrases and an unseen set written before tuning, plus 34 tampered solutions and 36 tampered readings.
+Ground truth is confirmed independently with mpmath/SciPy (`python -m eval.ground_truth`). Reports are in
+`backend/eval/reports/`.
 
-CI (`.github/workflows/ci.yml`) runs ruff, pytest, oxlint, vitest and the production build. It then
-builds both Docker images and smoke-tests the running stack, including a runaway computation that must be stopped,
-security headers, disabled docs and the body-size limit.
-
-## Evaluation benchmark
-
-`backend/eval/` contains a reproducible benchmark of **378 items**:
-
-| Part | Items | Purpose |
+| | Offline planners | With Groq (`gpt-oss-120b`) |
 |---|---|---|
-| Development set | 150 answerable + 29 should-refuse | All 12 tools, edge cases, ambiguous inputs, unsupported or unsafe requests |
-| Held-out paraphrases (Phase 2) | 31 answerable | Natural wording, written after the Phase 2 planner was frozen |
-| **Unseen real-world set (Phase 3)** | 45 answerable + 11 needing clarification | Word problems, "positive" / "real" constraints, distractor numbers, missing information. Committed in its own commit (`3c6ba6f`) before any Phase 3 change, and never used for tuning |
-| NL tuning set (Phase 3) | 38 answerable + 4 needing clarification | Used to develop the Phase 3 language handling |
-| Tampered solutions | 34 | Correct tool outputs corrupted, e.g. a wrong root, a missing complex root, a transposed inverse |
-| Tampered interpretations | 36 | Correct plans with one misreading each, e.g. the wrong operation, swapped bounds, an invented parameter, an ignored "positive", wrong strictness, swapped n and k |
-
-That is 308 problems (264 answerable + 44 that should be refused or clarified), plus 34 tampered solutions and 36 tampered
-interpretations. Every rate in the reports is printed with its numerator and denominator. Two notes on denominators:
-
-- `oracle` mode skips the 29 natural-language-only refusal cases, because they have no canonical tool arguments.
-- Tamper controls are reported separately and are never pooled with real outputs.
-
-Ground truth is written by hand from closed forms and definitions. `python -m eval.ground_truth` confirms all 264 answers
-independently with mpmath, NumPy and SciPy, without importing application code.
+| Correct answers | 261 / 264 | 262 / 264 |
+| Correct refusals / clarifications | 44 / 44 | 44 / 44 |
+| Wrong answers | **0** | **0** |
+| Fully verified ⇒ correct | 177 / 177 | 205 / 205 |
+| Tampered solutions caught | 34 / 34 | 34 / 34 |
+| Tampered readings caught (false alarms) | 36 / 36 (0 / 35) | 36 / 36 (0 / 35) |
 
 ```bash
-cd backend && python -m eval.ground_truth
+cd backend && python -m eval.run --mode rules
 ```
 
-```bash
-python -m eval.run --mode oracle   # math engine + intent checker on canonical plans
-```
+## Deployment
 
-```bash
-python -m eval.run --mode rules    # full pipeline, offline planners
-```
+Free tiers only: the frontend on **Vercel**, the backend as a Docker web service on **Render** (512 MB, sleeps after
+15 minutes idle), Groq's free API for planning. Step-by-step instructions, environment variables and live checks are in
+[DEPLOYMENT.md](DEPLOYMENT.md).
 
-**Results, `rules` mode**, from the committed reports in `eval/reports/`:
+## Limitations
 
-| | Phase 2 baseline | Intent layer only | Phase 3 first run | Phase 3 final |
-|---|---|---|---|---|
-| Unseen: answer accuracy | 48.9% (22/45) | 48.9% (22/45) | 93.3% (42/45) | **95.6% (43/45)** |
-| Unseen: clarification when information is missing | 9/11 | 11/11 | 10/11 | **11/11** |
-| Unseen: wrong answers + answered-when-should-ask | 0 + 2 | 0 + 0 | 2 + 1 | **0 + 0** |
-| Held-out paraphrases: answer accuracy | 51.6% (16/31) | 51.6% | 96.8% (30/31) | **96.8% (30/31)** |
-| Development set: answer / refusal accuracy | 150/150, 29/29 | same | same | **150/150, 29/29** |
-| Incorrect answers presented as fully verified | n/a | 0 | 0/3 | **0** |
+- Not supported yet: inequalities, differential equations, implicit derivatives, multivariable calculus, proofs.
+  These get a clear "not supported" or a clarification request rather than a guess.
+- The offline planners understand common phrasings; unusual wording needs Groq or a rephrase.
+- The intent check is rule-based. A misreading that matches every number and cue can still pass as "verified with
+  assumptions", never as fully verified.
+- Infinite series and some limits are confirmed numerically, so they are marked approximate.
+- Sessions, rate limits and the token budget live in memory in one process and reset on restart.
 
-| Final metric (`rules`, all 308 problems) | Value |
-|---|---|
-| Fully-verified precision (math verified *and* intent confirmed ⇒ correct) | 100% (176/176) |
-| Fully-verified recall | 67.4% (176/261). The other correct answers are shown as "verified with assumptions" or "approximate" |
-| Math-verified precision / recall | 100% (231/231) / 88.5% (231/261) |
-| Tampered solutions detected | 34/34 |
-| Tampered interpretations flagged / valid controls wrongly flagged | 36/36 / 0/35 |
-| Correct canonical plans flagged by the intent checker (`oracle`) | 0/264 |
-| Latency p50 / p95 | 22 ms / 96 ms |
-
-How these numbers were produced, and what they don't show:
-
-- **"Phase 3 first run"** was the first evaluation on the unseen set after development. It produced 2 wrong answers and 1
-  answer that should have been a question. All 3 were shown as "verified with assumptions", none as fully verified.
-  Two general safety fixes followed:
-  - a planned variable must occur in the expression (the planner had differentiated "with respect to f" in "for f(x) = …");
-  - the NL planner may no longer default to n! when only one number is given.
-
-  The second fix also made `unseen-11` correct, which accounts for 42 → 43. No coverage was added for the phrasings
-  still refused (`unseen-40`, `unseen-41`, `para-01`).
-- **The unseen set was written by the same author as the system**, so it measures generalisation beyond the tuned
-  examples, but not like independent user data. The intent checker was developed against the tampered-interpretation suite, so 36/36 there is a development figure.
-- **Held-out caveat.** The held-out paraphrases' failure list was visible after Phase 2. Some phenomena overlap with the NL tuning set
-  ("what's", "slope at", "area under"), so the 96.8% held-out figure is less clean than the unseen figure.
-- **Dataset correction.** The canonical plan for `para-03` was updated to `domain = real` after the intent checker correctly flagged that
-  the Phase 2 plan ignored "real". The ground truth was not changed.
-
-### Groq smoke test (25 questions, `openai/gpt-oss-120b`)
-
-`llama-3.3-70b-versatile` turned out to be unavailable on the test account. `openai/gpt-oss-120b`, the largest available
-model with tool calling, is now the default. Reports: `eval/reports/groq_smoke.md`, plus
-`groq_smoke_run1_schema_errors.md` for the first run. These are smoke-test figures, **not** benchmark accuracy.
-
-| | Run 1 (schema errors) | Final run |
-|---|---|---|
-| Groq calls that failed (HTTP 400, schema validation) | 7/25 | 2/25 |
-| End-to-end answer accuracy | 19/19 | 19/19 |
-| End-to-end refusal / clarification accuracy | 6/6 | 6/6 |
-| Groq plans accepted by the intent check | 16/18 | 18/19 |
-| Accuracy of accepted Groq plans | 15/15 | 18/18 |
-| Groq tool selection (before intent check) | 16/16 | 18/18 |
-| Should-refuse inputs where Groq refused or its plan was rejected | 1/6 | 5/6 |
-| Should-refuse inputs where a Groq plan was accepted | 1/6¹ | 0/6 |
-| Tokens (measured calls) | not recorded | 45,042 over 24 calls (~1,880 per call) |
-| Groq call latency p50 / max; end-to-end p50 / p95 | n/a | 1.16 s / 1.81 s; 1.21 s / 1.83 s |
-
-¹ `edge-05` (the inverse of a singular matrix): a faithful plan, which the math engine then correctly refused.
-
-Run 1 failed when `gpt-oss` omitted fields the schema required (`tool` when refusing, `category`) or called a non-existent
-`json` tool. In those cases the offline planners answered, and the report recorded each one as a Groq `error`.
-The fixes made `tool` and `category` optional and added one retry for Groq's tool-call validation 400s.
-After the final run, a remaining failure (an out-of-range `category` value) was fixed and validated with unit tests and
-offline graph tests, but not re-measured against Groq. The category rules:
-
-- a missing or unrecognisable category is derived from the tool;
-- a recognisable category that contradicts the tool, in any spelling and including `unsupported`, rejects the plan;
-- an executable plan without a valid tool or its required arguments never runs.
-
-Raw planner response caches (`*cache*.jsonl`) stay on the local machine and are git-ignored. The committed reports hold
-the sanitized record: structured plans, statuses, usage and truncated error messages. `--replay` needs the local cache.
-
-### Full Groq benchmark (308 questions, `openai/gpt-oss-120b`)
-
-Report: `eval/reports/groq_final.{json,md}`. This is the complete run, validated with the provenance check. The interim
-report `groq.md` (246 questions, before the fix) and its offline re-score `groq_rescored_246.md` are kept for comparison.
-The run took three sessions because the free tier allows 200,000 tokens per day on a rolling 24-hour window. About 490k
-tokens over about 264 live calls; cached questions were never called twice. Pacing was 10 RPM / 6,000 TPM, and the account
-limits were 1,000 requests per day and 8,000 tokens per minute.
-
-| Question set | End-to-end answers | End-to-end refusals | Groq plans accepted | Accepted plans correct | Groq tool choice |
-|---|---|---|---|---|---|
-| Development (179) | 150/150 | 29/29 | 145 | 137/137 | 146/147 |
-| Held-out paraphrases (31) | 30/31 | – | 29 | 29/29 | 30/30 |
-| Unseen (56) | 44/45 | 11/11 | 39 | 39/39 | 40/40 |
-| NL tuning (42) | 38/38 | 4/4 | 27 | 27/27 | 28/28 |
-| **All 308** | **262/264** | **44/44** | **240** | **232/232** | **244/245** |
-
-- **No wrong answers end to end.** The two missed answers are clarification requests: an all-words equation, and a ranking question ("first, second and third").
-- **Fully verified ⇒ correct: 205/205.** Math-verified ⇒ correct: 232/232. Tampered solutions detected: 34/34. Tampered interpretations flagged: 36/36, with 0/35 false alarms.
-- **Groq call failures: 28/308.** Ten were calls to a non-existent `json` tool, ten were plain-text replies, and eight were plans that named no tool. The offline planners handled all of them.
-- **Intent-check rejections of Groq plans: 21.** Ten were an unrequested `domain=real`; seven were missing information, where asking is correct. Four were genuine misreadings: P(X > k) planned as P(X ≥ k) twice, a statistics question turned into arithmetic, and the triangle-area precomputation.
-- **Latency:** Groq calls take 1.15 s typical (1.89 s at p95). End to end it's 1.19 s typical (2.0 s at p95).
-
-### Groq reliability: tool calling vs JSON schema
-
-The 28 Groq call failures in the full benchmark (9.1%) all came from the **tool-calling** transport, not from the plan content:
-
-| Failure (function calling, forced tool choice) | Count | Cause |
-|---|---|---|
-| Call to a non-existent tool named `json` | 10 | gpt-oss sometimes routes structured output through a built-in "json" tool. Groq rejects it with HTTP 400 "tool call validation failed"; one automatic retry did not fix it. |
-| Plain-text reply ("Tool choice is required, but model did not call a tool") | 10 | The model answered in prose despite the forced tool choice. Groq returns HTTP 400. |
-| Valid plan that names no tool | 8 | Schema-valid but incomplete (`tool: none`). |
-
-The planner now asks for **JSON-schema structured output** (`response_format: json_schema`, `LLM_STRUCTURED_METHOD=json_schema`, the new
-default). With no tool machinery involved, the first two failure types cannot occur. The third is still possible, and it is still
-rejected by the same validation, intent and provenance checks, and answered by the offline planners. Nothing about verification changed:
-the JSON plan is converted into the same `ToolCall` and goes through exactly the same checks.
-
-**Targeted re-test** (`eval/reports/groq_json_schema_retest.{json,md}`): only the 28 questions that had failed, not the full benchmark.
-Groq's rolling 24-hour token limit was still nearly used up by the full benchmark, so the re-test is **partial: 6 of 28 questions** got a
-real Groq response (the other attempted calls were quota 429s, recorded as errors). Of those 6, there were **0 malformed responses**:
-5 plans were accepted, and the refusal on "prove that sqrt(2) is irrational" was a valid `supported=false`. The 3 answerable ones were all
-answered correctly and fully verified. This sample is small. It supports the switch, but it is not a measured failure rate. Re-run the same
-command when the quota allows; cached questions are not called again:
-
-```bash
-cd backend && GROQ_AUTH=proxy LLM_STRUCTURED_METHOD=json_schema python -m eval.run --mode groq --allow-network --rpm 10 --tpm 6000 --only eq-04,lin-15,comb-06,edge-05,edge-12,unsup-03,unsup-04,para-20,unseen-04,unseen-39,unseen-41,unseen-42,unseen-45,unseen-47,unseen-55,unseen-56,nl-03,nl-07,nl-17,nl-21,nl-25,nl-27,nl-29,nl-30,nl-32,nl-34,nl-39,nl-42 --cache eval/reports/groq_cache_json.jsonl --out-name groq_json_schema_retest
-```
-
-`LLM_STRUCTURED_METHOD=function_calling` restores the previous transport. Its cache keys are unchanged, so the recorded benchmark replays exactly.
-
-### Groq planner evaluation (how to re-run)
-
-Dry run for `openai/gpt-oss-120b` at `--rpm 10 --tpm 6000`, sending nothing:
-
-- 308 problems, of which 24 are already cached from the smoke test, so 284 new calls;
-- about 1,877 tokens per call, measured in the smoke test, so about 533k tokens in total;
-- one call every 18.8 seconds, so about 90 minutes plus call latency.
-
-Groq's free tier also has daily request and token limits per model. If a daily cap is reached, the run stops after 5 consecutive
-errors with an incomplete report. Re-running the same command later resumes from the cache. Running one split at a time
-(`--split dev|heldout|unseen|dev_nl`) keeps each session smaller.
-
-No Groq results have been measured yet. Each command below that contacts Groq needs `--allow-network`.
-
-**Credentials.** Choose one:
-
-- Local development: `GROQ_API_KEY`.
-- Cloud environments whose egress proxy injects a network secret for `api.groq.com` (Bearer token, path prefix `/openai/v1/`): set
-  `GROQ_AUTH=proxy`. The SDK then sends a fixed placeholder, and the egress proxy injects the real key, which
-  never enters this process.
-
-**Order of operations**, all run from `backend/`:
-
-1. Check authentication with a single request, `GET /openai/v1/models`, which uses no tokens:
-
-   ```bash
-   GROQ_AUTH=proxy python -m eval.groq_check --allow-network
-   ```
-
-2. Preview the 25-question smoke test (sends nothing):
-
-   ```bash
-   GROQ_AUTH=proxy python -m eval.run --mode groq --subset smoke --dry-run
-   ```
-
-3. Run the smoke test (25 planner calls, about 9 minutes at the default pacing):
-
-   ```bash
-   GROQ_AUTH=proxy python -m eval.run --mode groq --subset smoke --allow-network
-   ```
-
-4. Run the full benchmark (308 planner calls, about 2 hours at the default pacing):
-
-   ```bash
-   GROQ_AUTH=proxy python -m eval.run --mode groq --allow-network
-   ```
-
-5. Re-score from cached responses at any time, with no network:
-
-   ```bash
-   python -m eval.run --mode groq --replay
-   ```
-
-When running locally, replace `GROQ_AUTH=proxy` with `GROQ_API_KEY=...`.
-
-**How a run behaves:**
-
-- **Smoke subset** (`eval/smoke.py`): 25 existing benchmark questions picked by ID. It covers all 12 tools and all four splits,
-  natural wording and misreading traps, plus 6 inputs that should be refused. The questions are referenced, never copied or
-  changed. Its results are reported as a subset and must not be quoted as benchmark accuracy.
-- **Pacing:** each planner call is about 2,150 tokens. The runner waits between uncached calls to stay within `--rpm` (default 20)
-  and `--tpm` (default 6,000 tokens/min, conservative for the free tier). Raise both if your Groq limits allow.
-- **Retries:** the Groq SDK retries 429 and 5xx responses `--retries` times (default 5), honouring `Retry-After`.
-- **Resume:** planner responses are cached in `eval/reports/groq_cache.jsonl`, keyed by prompt version, model and question.
-  Failed calls are never cached. Re-running the same command resumes, and cached questions cost nothing.
-  Progress is written to `<name>.progress.jsonl` as the run goes.
-- **Early stop:** after `--max-consecutive-errors` failed calls in a row (default 5), the run stops and writes a report marked incomplete.
-- **Honest accounting:** if an LLM call fails, the app falls back to the offline planners, and the report records it as an
-  `error`, not as an LLM result. The report separates end-to-end accuracy from LLM-only figures: plans accepted by the intent
-  check, the accuracy of those accepted plans, plans rejected in favour of a faithful offline plan, plans rejected with a
-  clarification request, plans the LLM itself refused, and call errors.
-- **Independence:** the intent check uses only the question text. Missing, malformed or contradictory LLM plans are rejected before
-  any tool runs, for example wrong types, bad enum values, a category that contradicts the tool, or an interpretation that
-  contradicts the arguments. The LLM's own assumptions and ambiguities can only lower trust.
-
-## Deployment (zero cost)
-
-Planned public setup, all on free tiers: the **frontend on Vercel Hobby** (`frontend/vercel.json`), the **backend as a free
-Render web service** (`render.yaml`, `deploy/render/Dockerfile`), and the **Groq free tier** for planning. Step-by-step
-instructions, every environment variable and secret, and the live checks are in [DEPLOYMENT.md](DEPLOYMENT.md).
-
-- **Sizing:** the free instance has 512 MB RAM and 0.1 CPU. The image runs one API process and one sandbox worker. Tested with
-  those limits, it uses about 250–300 MB, answers typical problems in 0.3–3.6 s and stops runaway computations at 20 s.
-- **Configuration:** `CORS_ORIGINS` must be the exact Vercel production URL. The frontend reads the backend URL from `VITE_API_URL` at build time.
-- **Secrets:** the Groq key is only ever a Render secret. It is not in the repository, the frontend bundle, the workers, the responses or the logs.
-- **Sleep and restarts:** the free service sleeps after 15 minutes idle. The UI waits for it to wake, which takes about 1–3 minutes. Sessions and counters reset on restart.
-
-## Known limitations / roadmap
-
-- No inequalities, ODEs, series or multivariable calculus yet. Requests for these are reported as unsupported.
-- Sessions, rate limits and the token budget are kept in memory in a single API process. They reset on restart
-  (the budget can be persisted with `LLM_BUDGET_STATE_PATH`), and running several replicas would need a shared store such as Redis.
-- Rate limits are per IP address. Visitors behind one shared NAT share a limit, and someone with many addresses gets
-  several limits. The global Groq budget still caps the total cost at zero.
-- The sandbox's memory limit is an address-space limit (`RLIMIT_AS`). It works on Linux (the Docker image) and is skipped on
-  platforms without it.
-- The offline planners cover common phrasings and typical word problems. They still refuse equations written entirely in words
-  ("x squared minus 9 equals 0"), ordinal rankings ("first, second and third") and hyphenated counts ("5-card hands").
-- Intent verification is cue-based. It checks the plan against what the text says; it does not truly understand the text.
-  A misreading that is consistent with every stated number and cue can pass as "assumed". That status is never shown as fully verified.
-- CI never calls Groq. LLM planning is covered by mocked tests, offline replays and the measured benchmark reports.
-- Approximate numeric roots come from multi-start Newton search on [-10, 10]. Roots outside that range can be missed.
-  The verifier's [-50, 50] sweep then reports `failed`.
-- Periodic equations report real solutions only. The period may not be the minimal one, for example 2π for sin²x.
-- Next steps: add an independent LLM intent judge as a second check on LLM plans,
-  and collect real user questions for a truly external evaluation set.
+Built by Aekank Patel.
