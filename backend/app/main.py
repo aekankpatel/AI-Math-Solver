@@ -147,4 +147,9 @@ def examples() -> dict[str, list[str]]:
             "Binomial n=10 p=0.5, P(X <= 3)",
             "normal mean 100 std 15, P(X > 130)",
         ],
+        "Sums & extrema": [
+            "sum of the first 100 positive integers",
+            "10th term of the arithmetic sequence 3, 7, 11, ...",
+            "critical points of f(x) = x^3 - 3x",
+        ],
     }

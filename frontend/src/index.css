@@ -232,3 +232,97 @@ button { font: inherit; color: inherit; }
   .ask-hint span:first-child { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .sheet, .working .dots { animation: none; } }
+
+/* ==== writing on the lines ====================================================================
+   The page is ruled every 32px. Everything on the home page is sized in whole lines, so the text
+   sits on the rules like handwriting in a notebook. Rules are drawn with inset shadows, which take
+   no space and so never push the next line off the grid. */
+:root { --line: 32px; }
+.app { padding-top: calc(var(--line) * 2); padding-bottom: calc(var(--line) * 2); }
+
+.masthead { padding-bottom: 0; border-bottom: 0; margin-bottom: var(--line); align-items: flex-end; row-gap: 0;
+  box-shadow: inset 0 -2px 0 var(--ink); }
+.wordmark { line-height: calc(var(--line) * 2); height: calc(var(--line) * 2); }
+.tagline { margin: 0; line-height: var(--line); }
+.status { height: var(--line); line-height: var(--line); }
+
+.eyebrow { margin: 0; line-height: var(--line); height: var(--line); }
+
+.ask-row { align-items: flex-end; }
+.ask textarea, .ask input { border: 0; padding: 0 6px; line-height: var(--line); resize: none;
+  background: rgba(255, 253, 247, 0.55); box-shadow: inset 0 -2px 0 var(--ink); }
+.ask textarea { height: calc(var(--line) * 2); min-height: calc(var(--line) * 2); }
+.ask input { height: var(--line); }
+.ask textarea:focus, .ask input:focus { box-shadow: inset 0 -2px 0 var(--pencil); background: rgba(255, 253, 247, 0.85); }
+.ask button { height: var(--line); padding: 0 20px; line-height: calc(var(--line) - 3px); }
+.ask-hint { margin: 0; height: var(--line); line-height: var(--line); }
+
+.examples { margin: var(--line) 0 0; }
+.examples dl { gap: 0; }
+.example-group { padding: 0; gap: 0 24px; border-bottom: 0; }
+.example-group dt { line-height: var(--line); }
+.example-group dd { flex-direction: column; flex-wrap: nowrap; gap: 0; }
+.example { display: flex; align-items: center; height: var(--line); padding: 0; font-family: var(--serif);
+  font-size: 1.02rem; line-height: var(--line); color: var(--navy); }
+.example .katex { font-size: 1.02em; }
+.example + .example::before { content: none; }
+
+.legend { margin-top: var(--line); font-size: 0.95rem; }
+.legend ul { margin: 0; gap: 0; }
+.legend li { grid-template-columns: 280px 1fr; min-height: var(--line); line-height: var(--line); gap: 0 14px; }
+.legend .stamp { font-size: 0.66rem; padding: 1px 8px; letter-spacing: 0.12em; transform: rotate(-2deg);
+  justify-self: start; line-height: 1.5; }
+
+.turns { margin-top: var(--line); }
+.followup { margin-top: var(--line); padding-top: 0; border-top: 0; }
+.followup input { font-size: 1rem; }
+
+.colophon { max-width: none; margin-top: calc(var(--line) * 2); padding-top: 0; border-top: 0;
+  box-shadow: inset 0 2px 0 var(--ink); line-height: var(--line); font-size: 0.95rem; }
+.colophon p { margin: 0; }
+.colophon-sign { line-height: var(--line); }
+
+@media (max-width: 760px) {
+  .legend li { grid-template-columns: 1fr; }
+  .example { height: auto; min-height: var(--line); }
+  .ask button { height: var(--line); }
+}
+@media (max-width: 760px) {
+  .ask-row { gap: 0; }
+  .followup .ask-row { gap: 0 10px; }
+}
+@media (max-width: 760px) {
+  .legend li { grid-template-rows: var(--line) auto; align-items: center; gap: 0; }
+  .legend li > .muted { line-height: var(--line); align-self: start; }
+}
+
+/* rules sit just under the text baseline (22px into each 32px line), like handwriting on a ruled page */
+:root {
+  background-image:
+    linear-gradient(to right, transparent 0, transparent 61px, #e6c9c2 61px, #e6c9c2 62px, transparent 62px),
+    repeating-linear-gradient(to bottom, transparent 0, transparent 22px, #e3dccb 22px, #e3dccb 23px, transparent 23px, transparent 32px);
+}
+@media (max-width: 760px) {
+  :root { background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 22px, #e3dccb 22px, #e3dccb 23px, transparent 23px, transparent 32px); }
+}
+/* drawn lines on the rules themselves (9px above the bottom of a line box) */
+.masthead { box-shadow: none; background: linear-gradient(var(--ink), var(--ink)) no-repeat left bottom 8px / 100% 2px; }
+.ask textarea, .ask input { box-shadow: none;
+  background: linear-gradient(var(--ink), var(--ink)) no-repeat left bottom 8px / 100% 2px, rgba(255, 253, 247, 0.5); }
+.ask textarea:focus, .ask input:focus { box-shadow: none;
+  background: linear-gradient(var(--pencil), var(--pencil)) no-repeat left bottom 8px / 100% 2px, rgba(255, 253, 247, 0.85); }
+.colophon { box-shadow: none; position: relative; }
+.colophon::before { content: ''; position: absolute; left: 0; right: 0; top: -10px; height: 2px; background: var(--ink); }
+.example { display: block; white-space: nowrap; overflow: visible; }
+.legend li { align-items: start; }
+.legend li > .stamp { margin-top: 5px; }
+/* inputs: a boxed field (clearly a place to type), still exactly one or two lines tall */
+.ask textarea, .ask input { background: #fffdf8; border: 1px solid #b8b0a0; border-radius: 3px; padding: 0 9px;
+  box-shadow: inset 0 1px 2px rgba(28, 27, 24, 0.06); }
+.ask textarea:hover, .ask input:hover { border-color: var(--ink-3); }
+.ask textarea:focus, .ask input:focus { background: #fffefb; border-color: var(--pencil);
+  box-shadow: 0 0 0 3px rgba(181, 51, 42, 0.12); }
+.ask textarea::placeholder, .ask input::placeholder { color: #9d9686; }
+@media (max-width: 760px) {
+  .ask-row > textarea { flex: none; width: 100%; }
+}

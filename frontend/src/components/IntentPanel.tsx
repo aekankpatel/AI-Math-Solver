@@ -84,8 +84,8 @@ const LEGEND: OverallStatus[] = ['verified', 'verified_with_assumptions', 'appro
 /** Explains the trust levels shown on every answer. */
 export function StatusLegend() {
   return (
-    <details className="legend" data-testid="status-legend">
-      <summary>What do the badges mean?</summary>
+    <section className="legend" data-testid="status-legend" aria-label="What the marks mean">
+      <h2 className="eyebrow">What the marks mean</h2>
       <ul>
         {LEGEND.map((s) => (
           <li key={s}>
@@ -94,6 +94,6 @@ export function StatusLegend() {
           </li>
         ))}
       </ul>
-    </details>
+    </section>
   )
 }

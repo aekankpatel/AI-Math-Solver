@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { api, ApiError, MAX_PROBLEM_CHARS } from './api'
 import { StatusLegend } from './components/IntentPanel'
+import { RichText } from './components/Tex'
+import { EXAMPLE_LABELS } from './examples'
 import { HealthPill } from './components/PlannerInfo'
 import { SolutionCard } from './components/SolutionCard'
 import type { Health, SolveResponse } from './types'
@@ -97,7 +99,8 @@ export default function App() {
     if (!p || loading) return
     setTurns([])
     setSessionId(null)
-    if (await run(() => api.solve(p), false)) setProblem('')
+    setProblem(p) // the box keeps showing the question that was asked
+    await run(() => api.solve(p), false)
   }
 
   async function submitFollowUp(e: FormEvent) {
@@ -167,8 +170,14 @@ export default function App() {
                   <dt>{cat}</dt>
                   <dd>
                     {items.map((ex) => (
-                      <button key={ex} type="button" className="example" onClick={() => void submitProblem(undefined, ex)}>
-                        {ex}
+                      <button
+                        key={ex}
+                        type="button"
+                        className="example"
+                        aria-label={ex}
+                        onClick={() => void submitProblem(undefined, ex)}
+                      >
+                        {EXAMPLE_LABELS[ex] ? <RichText text={EXAMPLE_LABELS[ex]} /> : ex}
                       </button>
                     ))}
                   </dd>
@@ -206,12 +215,15 @@ export default function App() {
             <label htmlFor="followup" className="sr-only">
               Follow-up question
             </label>
+            <span className="eyebrow" aria-hidden>
+              Ask more about this question
+            </span>
             <div className="ask-row">
               <input
                 id="followup"
                 value={followUp}
                 onChange={(e) => setFollowUp(e.target.value)}
-                placeholder="Ask about it: now integrate it · explain the steps · how was this checked?"
+                placeholder="Type here: now integrate it, explain step 2, how was this checked?"
                 maxLength={MAX_PROBLEM_CHARS}
               />
               <button type="submit" disabled={loading || !followUp.trim()}>
