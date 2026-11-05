@@ -156,4 +156,5 @@ def test_word_problem_equations_with_named_unknowns_are_accepted_as_assumed(q, t
 )
 def test_unfaithful_word_problem_plans_stay_rejected(q, tool, args):
     s = run_solver(q, llm_result={"call": ToolCall(tool=tool, category="algebra", args=args)}, explain_with_llm=False)
-    assert s["planner"] != "llm"
+    # rejected: either a faithful offline plan answers instead, or the user is asked to clarify
+    assert s["planner"] != "llm" or (s["status"] == "needs_clarification" and s["intent"].status.value == "mismatch")
