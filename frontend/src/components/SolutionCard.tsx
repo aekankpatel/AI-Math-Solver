@@ -3,6 +3,7 @@ import type { SolveResponse } from '../types'
 import { IntentPanel, OverallBadge } from './IntentPanel'
 import { PlannerBadge, PlannerNotice } from './PlannerInfo'
 import { Plot } from './Plot'
+import { prettyMath } from '../prettyMath'
 import { RichText, Tex } from './Tex'
 import { VerificationBadge, VerificationPanel } from './VerificationPanel'
 
@@ -97,11 +98,11 @@ export function SolutionCard({
     return (
       <article className={`sheet clarify-card${cls}`} role="alert" data-testid="clarify-card">
         <Head result={result} kind="Needs clarification" />
-        <p className="lead">{result.error}</p>
+        <p className="lead">{prettyMath(result.error ?? '')}</p>
         <PlannerNotice result={result} />
         {result.intent?.interpretation && (
           <p className="muted">
-            Closest reading I could form: {result.intent.interpretation} I did not compute it, because it may not be what
+            Closest reading I could form: {prettyMath(result.intent.interpretation)} I did not compute it, because it may not be what
             you asked.
           </p>
         )}
@@ -122,7 +123,7 @@ export function SolutionCard({
     return (
       <article className={`sheet error-card${cls}`} role="alert" data-testid="error-card">
         <Head result={result} kind={label} />
-        <p className="lead">{result.error}</p>
+        <p className="lead">{prettyMath(result.error ?? '')}</p>
         {result.status === 'unsupported' && (
           <p className="muted small">
             It can do equations and systems, simplifying, factoring and expanding, derivatives, integrals, limits,
@@ -157,7 +158,7 @@ export function SolutionCard({
 
       <Row label="Answer">
         <div className="answer">
-          {result.answer_latex ? <Tex math={result.answer_latex} display /> : <code>{result.answer_text}</code>}
+          {result.answer_latex ? <Tex math={result.answer_latex} display /> : <code>{prettyMath(result.answer_text ?? '')}</code>}
         </div>
       </Row>
 
@@ -177,8 +178,8 @@ export function SolutionCard({
           <ol className="steps">
             {result.steps.map((s, i) => (
               <li key={i}>
-                <div className="step-title">{s.title}</div>
-                {s.detail && <div className="step-detail">{s.detail}</div>}
+                <div className="step-title">{prettyMath(s.title)}</div>
+                {s.detail && <div className="step-detail">{prettyMath(s.detail)}</div>}
                 {s.latex && (
                   <div className="step-math">
                     <Tex math={s.latex} display />

@@ -1,4 +1,12 @@
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react'
 import { api, ApiError, MAX_PROBLEM_CHARS } from './api'
 import { StatusLegend } from './components/IntentPanel'
 import { RichText } from './components/Tex'
@@ -19,6 +27,32 @@ const FALLBACK_EXAMPLES: Record<string, string[]> = {
   Integrals: ['Integrate x^2 from 0 to 3'],
   'Linear algebra': ['eigenvalues of [[2,1],[1,2]]'],
   'Probability & statistics': ['Binomial n=10 p=0.5, P(X <= 3)'],
+}
+
+const LINE = 32 // the notebook's line spacing (see --line in index.css)
+
+/** Rounds its content's height up to whole notebook lines, so whatever follows stays on the rules. */
+function OnTheLines({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const box = ref.current
+    const inner = box?.firstElementChild as HTMLElement | null
+    if (!box || !inner) return
+    const fit = () => {
+      const h = inner.getBoundingClientRect().height
+      box.style.height = `${Math.ceil((h + 6) / LINE) * LINE}px` // + room for the sheet's shadow
+    }
+    fit()
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(fit)
+    observer.observe(inner)
+    return () => observer.disconnect()
+  }, [])
+  return (
+    <div ref={ref} className="on-lines">
+      {children}
+    </div>
+  )
 }
 
 export default function App() {
@@ -200,7 +234,9 @@ export default function App() {
 
         <div className="turns">
           {turns.map((t) => (
-            <SolutionCard key={t.id} result={t.result} isFollowUp={t.followUp} />
+            <OnTheLines key={t.id}>
+              <SolutionCard result={t.result} isFollowUp={t.followUp} />
+            </OnTheLines>
           ))}
           {loading && (
             <p className="working" aria-busy="true" aria-label="Working">

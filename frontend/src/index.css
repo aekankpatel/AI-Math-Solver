@@ -326,3 +326,12 @@ button { font: inherit; color: inherit; }
 @media (max-width: 760px) {
   .ask-row > textarea { flex: none; width: 100%; }
 }
+
+/* results stay on the rules: sheets are wrapped to whole lines (OnTheLines), gaps are whole lines */
+.turns { gap: var(--line); margin-top: var(--line); }
+.on-lines { position: relative; }
+.on-lines > .sheet { margin: 0; }
+.working { margin: 0; height: var(--line); line-height: var(--line); }
+.banner { margin-top: var(--line); padding: 0 16px; line-height: var(--line); align-items: center; }
+.banner-close { line-height: var(--line); }
+.notice { line-height: 1.6; }

@@ -1,3 +1,4 @@
+import { prettyMath } from '../prettyMath'
 import type { Verification, VerificationStatus } from '../types'
 
 const LABELS: Record<VerificationStatus, { label: string; icon: string; hint: string }> = {
@@ -20,7 +21,7 @@ export function VerificationPanel({ verification }: { verification: Verification
   return (
     <details className="fold verification" open={verification.status === 'failed'}>
       <summary>
-        <span className="fold-title">{verification.summary}</span>
+        <span className="fold-title">{prettyMath(verification.summary)}</span>
         <VerificationBadge status={verification.status} />
       </summary>
       <ul className="checks">
@@ -29,8 +30,8 @@ export function VerificationPanel({ verification }: { verification: Verification
             <span className="check-icon" aria-label={c.passed ? 'passed' : 'failed'}>
               {c.passed ? '✓' : '✕'}
             </span>
-            <span className="check-method">{c.method}</span>
-            {c.detail && <span className="check-detail">{c.detail}</span>}
+            <span className="check-method">{prettyMath(c.method)}</span>
+            {c.detail && <span className="check-detail">{prettyMath(c.detail)}</span>}
           </li>
         ))}
       </ul>

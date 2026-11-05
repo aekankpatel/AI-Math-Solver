@@ -1,6 +1,7 @@
 import katex from 'katex'
 import 'katex/dist/katex.min.css'
 import { useMemo } from 'react'
+import { prettyMath } from '../prettyMath'
 
 interface TexProps {
   math: string
@@ -40,8 +41,9 @@ export function RichText({ text }: { text: string }) {
         if (part.startsWith('\\[') && part.endsWith('\\]')) return <Tex key={i} math={part.slice(2, -2)} display />
         if (part.startsWith('\\(') && part.endsWith('\\)')) return <Tex key={i} math={part.slice(2, -2)} />
         if (part.startsWith('$') && part.endsWith('$') && part.length > 2) return <Tex key={i} math={part.slice(1, -1)} />
-        if (part.startsWith('**') && part.endsWith('**') && part.length > 4) return <strong key={i}>{part.slice(2, -2)}</strong>
-        return <span key={i}>{part}</span>
+        if (part.startsWith('**') && part.endsWith('**') && part.length > 4)
+          return <strong key={i}>{prettyMath(part.slice(2, -2))}</strong>
+        return <span key={i}>{prettyMath(part)}</span>
       })}
     </>
   )

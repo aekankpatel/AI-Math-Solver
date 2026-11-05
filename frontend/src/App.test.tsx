@@ -307,3 +307,25 @@ describe('multi-part answers', () => {
     expect(card).toHaveTextContent('Find the limit of sin(x)/x')
   })
 })
+
+describe('maths on the solution sheet', () => {
+  it('prints exponents, products and symbols the way they are written on paper', async () => {
+    const { prettyMath } = await import('./prettyMath')
+    expect(prettyMath('Solve x^2 - 5x + 6 = 0')).toBe('Solve x² − 5x + 6 = 0')
+    expect(prettyMath('x**2*(x*cos(x) + 3*sin(x))')).toBe('x²·(x·cos(x) + 3 sin(x))')
+    expect(prettyMath('integrate exp(-x^2) from -oo to oo')).toBe('integrate exp(−x²) from −∞ to ∞')
+    expect(prettyMath('P(X <= 3) as x -> 0, sqrt(2), A^-1')).toBe('P(X ≤ 3) as x → 0, √2, A⁻¹')
+    expect(prettyMath('too good to be true')).toBe('too good to be true')
+  })
+
+  it('shows the typed question unchanged in the box but typeset on the sheet', async () => {
+    vi.stubGlobal('fetch', mockFetch({ '/api/solve': solved }))
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('Math problem'), { target: { value: 'Solve x^2 - 5x + 6 = 0' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Solve' }))
+    const card = await screen.findByTestId('solution-card')
+    expect(card.querySelector('.problem')).toHaveTextContent('Solve x² − 5x + 6 = 0')
+    expect(screen.getByLabelText('Math problem')).toHaveValue('Solve x^2 - 5x + 6 = 0')
+    vi.unstubAllGlobals()
+  })
+})

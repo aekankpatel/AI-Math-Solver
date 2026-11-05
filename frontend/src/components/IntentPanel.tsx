@@ -1,3 +1,4 @@
+import { prettyMath } from '../prettyMath'
 import type { IntentVerification, OverallStatus } from '../types'
 
 const OVERALL: Record<OverallStatus, { label: string; icon: string; cls: string; hint: string }> = {
@@ -51,13 +52,13 @@ export function IntentPanel({ intent }: { intent: IntentVerification }) {
   return (
     <details className="fold intent" open={intent.status !== 'confirmed'} data-testid="intent-panel">
       <summary>
-        <span className="fold-title">{intent.interpretation}</span>
+        <span className="fold-title">{prettyMath(intent.interpretation)}</span>
         <span className={`tag tag-${intent.status === 'confirmed' ? 'ok' : 'note'}`}>{INTENT_LABEL[intent.status]}</span>
       </summary>
       {intent.assumptions.length > 0 && (
         <ul className="assumptions">
           {intent.assumptions.map((a, i) => (
-            <li key={i}>{a}</li>
+            <li key={i}>{prettyMath(a)}</li>
           ))}
         </ul>
       )}
@@ -68,7 +69,7 @@ export function IntentPanel({ intent }: { intent: IntentVerification }) {
             <li key={i} className={c.passed ? 'pass' : 'fail'}>
               <span className="check-icon">{c.passed ? '✓' : c.severity === 'warning' ? '!' : '✕'}</span>
               <span className="check-method">{c.name}</span>
-              {c.detail && <span className="check-detail">{c.detail}</span>}
+              {c.detail && <span className="check-detail">{prettyMath(c.detail)}</span>}
             </li>
           ))}
       </ul>

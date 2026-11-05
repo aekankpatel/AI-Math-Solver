@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { prettyMath } from '../prettyMath'
 import type { PlotlyFigure } from '../types'
 
 type PlotlyModule = typeof import('plotly.js')
@@ -20,20 +21,6 @@ const INKS: Record<string, string> = {
   'rgba(245,158,11': 'rgba(181,51,42',
   'rgba(16,185,129': 'rgba(46,107,63',
 }
-/** SymPy text in legends ("x**2 - 5*x") -> readable maths ("x² − 5x"). */
-function prettyMath(text: string): string {
-  const sup: Record<string, string> = {
-    '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹', '-': '⁻',
-  }
-  return text
-    .replace(/\*\*\(?(-?\d+)\)?/g, (_, n: string) => [...n].map((c) => sup[c] ?? c).join(''))
-    .replace(/(\d)\*(?=[a-zA-Z(])/g, '$1')
-    .replace(/\*/g, '·')
-    .replace(/ - /g, ' − ')
-    .replace(/\bsqrt\(/g, '√(')
-    .replace(/\bpi\b/g, 'π')
-}
-
 function recolour<T>(value: T): T {
   if (typeof value === 'string') {
     const hit = Object.keys(INKS).find((k) => value.toLowerCase().startsWith(k))
@@ -42,7 +29,7 @@ function recolour<T>(value: T): T {
   if (Array.isArray(value)) return value.map(recolour) as T
   if (value && typeof value === 'object')
     return Object.fromEntries(
-      Object.entries(value).map(([k, v]) => [k, k === 'name' && typeof v === 'string' ? prettyMath(v) : recolour(v)]),
+      Object.entries(value).map(([k, v]) => [k, (k === 'name' || k === 'text') && typeof v === 'string' ? prettyMath(v) : recolour(v)]),
     ) as T
   return value
 }
@@ -69,8 +56,10 @@ export function Plot({ figure }: { figure: PlotlyFigure }) {
     if (!el) return
     const layout = figure.layout as Record<string, Record<string, unknown>>
     const narrow = el.clientWidth < 480
+    const title = layout.title as { text?: string } | undefined
     const merged = {
       ...layout,
+      ...(title?.text ? { title: { ...title, text: prettyMath(title.text) } } : {}),
       ...THEME,
       // on phones: smaller title placed left of the toolbar, which only appears on tap
       ...(narrow
