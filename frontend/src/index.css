@@ -169,3 +169,11 @@ button:focus-visible, .example:focus-visible, summary:focus-visible { outline: 2
   .followup button { padding: 0 16px; }
   .composer textarea { min-height: 76px; }
 }
+
+/* ---- multi-part answers ---- */
+.parts { list-style: none; padding: 0; margin: 14px 0 0; display: flex; flex-direction: column; gap: 14px; }
+.part-label { display: inline-block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent);
+  margin: 0 0 6px 2px; font-weight: 600; }
+.card.nested { padding: 16px; background: #0e1530; animation: none; }
+.card.nested .problem { font-size: 1rem; }
+@media (max-width: 600px) { .card.nested { padding: 12px 10px; } }

@@ -173,6 +173,10 @@ class SolveResponse(BaseModel):
     ] = "disabled"
     planner_notice: str | None = None  # user-facing note when the offline planner answered instead
     error_code: Literal["timeout", "memory", "too_large", "busy"] | None = None
+    # Multi-part questions: each part is solved, intent-checked and verified on its own.
+    # The top-level overall_status is the weakest part's, so a partly answered question is never "verified".
+    parts: list[SolveResponse] | None = None
+    split_by: Literal["rules", "llm"] | None = None  # who split the question into parts
 
 
 class HealthResponse(BaseModel):
@@ -181,3 +185,6 @@ class HealthResponse(BaseModel):
     model: str
     llm_available: bool = False  # configured and not paused / out of budget right now
     llm_state: Literal["available", "disabled", "budget", "cooldown"] = "disabled"
+
+
+SolveResponse.model_rebuild()

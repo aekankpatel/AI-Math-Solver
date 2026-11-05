@@ -84,6 +84,8 @@ export interface SolveResponse {
   llm_status?: LlmStatus
   planner_notice?: string | null
   error_code?: 'timeout' | 'memory' | 'too_large' | 'busy' | null
+  parts?: SolveResponse[] | null
+  split_by?: 'rules' | 'llm' | null
 }
 
 export type LlmStatus =

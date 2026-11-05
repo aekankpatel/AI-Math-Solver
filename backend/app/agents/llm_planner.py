@@ -23,7 +23,7 @@ from app.config import get_settings
 from app.math_engine.tools import TOOLS
 from app.schemas import ProblemCategory, ToolCall
 
-PROMPT_VERSION = "2026-11-05.p4"  # p4: matrix_spectrum tool, multi-part queries (p3b: tool/category optional)
+PROMPT_VERSION = "2026-11-05.p5"  # p5: multi-part questions via `parts` (p4: matrix_spectrum)
 
 PLANNER_SYSTEM_PROMPT = """You are the planning component of Mathenza, a math solver.
 Your ONLY job is to translate the user's question into a call to exactly one whitelisted tool.
@@ -85,8 +85,11 @@ Examples:
 - "Normal distribution with mean 10, P(X < 12)?" -> supported=false,
   clarification="What is the standard deviation?"
 
-A question with several parts is supported when one tool can answer all of them (matrix_spectrum takes
-several queries); otherwise set supported=false and ask the user to send the parts separately.
+A question with several parts: if one tool answers all of them (matrix_spectrum takes several queries),
+plan that tool. If the parts need different tools, set supported=true, tool="none" and list each part in
+`parts` as a complete, self-contained question (repeat the definitions and expressions it needs; copy every
+number exactly as written; do not solve anything), e.g. "Let f(x) = x^2. Find f'(x) and integrate f from 0 to 1"
+-> parts=["Find the derivative of x^2", "Integrate x^2 from 0 to 1"].
 
 If the problem is not mathematics, is outside these tools (e.g. proofs, geometry constructions,
 differential equations, inequalities), or is too ambiguous to translate faithfully, set
@@ -160,10 +163,21 @@ class PlannerOutput(BaseModel):
     determinant: str | float | None = None
     real: bool | None = None
     queries: list[str] | None = None
+    parts: list[str] | None = Field(
+        default=None, description="Self-contained sub-questions when the parts need different tools."
+    )
 
 
 class LLMPlanUnsupported(ValueError):
     """The LLM judged the problem unsupported or ambiguous."""
+
+
+class LLMPlanParts(ValueError):
+    """The LLM split a multi-part question into self-contained parts (each is planned separately)."""
+
+    def __init__(self, parts: list[str]) -> None:
+        super().__init__(f"{len(parts)} parts")
+        self.parts = parts
 
 
 class LLMPlanError(RuntimeError):
@@ -198,6 +212,8 @@ def _category_for(out: PlannerOutput) -> str:
 
 
 def plan_output_to_tool_call(out: PlannerOutput) -> ToolCall:
+    if out.parts and len([p for p in out.parts if p.strip()]) >= 2 and out.tool == "none":
+        raise LLMPlanParts([p.strip() for p in out.parts if p.strip()])
     if not out.supported:
         raise LLMPlanUnsupported(out.clarification or "The problem is not supported.")
     if out.tool == "none":  # claims to be supported but names no tool: not a usable plan

@@ -271,3 +271,39 @@ describe('RichText', () => {
     expect(container.querySelector('strong')?.textContent).toBe('12')
   })
 })
+
+describe('multi-part answers', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('shows every part with its own answer and the weakest status overall', async () => {
+    const part1 = { ...solved, problem: 'Solve x^2 - 5x + 6 = 0', overall_status: 'verified' as const }
+    const part2 = {
+      ...solved,
+      problem: 'Find the limit of sin(x)/x as x -> 0',
+      answer_text: '1',
+      answer_latex: '1',
+      overall_status: 'approximate' as const,
+    }
+    vi.stubGlobal(
+      'fetch',
+      mockFetch({
+        '/api/solve': {
+          ...solved,
+          problem: 'Solve x^2 - 5x + 6 = 0 and find the limit of sin(x)/x as x -> 0',
+          answer_text: '1. x = 2, x = 3; 2. 1',
+          overall_status: 'approximate',
+          parts: [part1, part2],
+          split_by: 'rules',
+        },
+      }),
+    )
+    render(<App />)
+    fireEvent.change(screen.getByLabelText('Math problem'), { target: { value: 'two parts' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Solve' }))
+    const card = await screen.findByTestId('multipart-card')
+    expect(card).toHaveTextContent('2 parts')
+    expect(screen.getAllByTestId('part')).toHaveLength(2)
+    expect(screen.getAllByTestId('overall-badge')[0]).toHaveTextContent('Approximate')
+    expect(card).toHaveTextContent('Find the limit of sin(x)/x')
+  })
+})

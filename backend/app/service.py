@@ -26,14 +26,16 @@ from functools import lru_cache
 from typing import Any
 
 from app.agents import llm as llm_mod
-from app.agents.llm_planner import LLMPlanUnsupported, plan_with_llm
+from app.agents.llm_planner import LLMPlanParts, LLMPlanUnsupported, plan_with_llm
+from app.agents.multipart import MAX_PARTS, numbers_grounded, split_parts
+from app.agents.spectral_planner import is_spectral_question
 from app.agents.tutor import answer_followup, explain
 from app.budget import get_budget
 from app.config import get_settings
 from app.math_engine.latex import normalize_latex
 from app.ratelimit import ClientLimits
 from app.sandbox import SandboxBusy, SandboxCrashed, SandboxTimeout, get_runner
-from app.schemas import ProblemCategory, SolveResponse
+from app.schemas import OverallStatus, ProblemCategory, SolveResponse
 
 log = logging.getLogger(__name__)
 
@@ -159,6 +161,9 @@ def _plan_remote(problem: str, context: str | None, client: str | None) -> tuple
     except LLMPlanUnsupported as exc:
         _after_llm_call()
         return {"call": None, "unsupported": str(exc)}, "unsupported"
+    except LLMPlanParts as exc:  # a multi-part question: the parts are planned separately
+        _after_llm_call()
+        return {"call": None, "parts": exc.parts}, "used"
     except Exception as exc:  # provider/network/validation: offline planners take over
         _after_llm_call()
         message = f"{type(exc).__name__}: {exc}"
@@ -186,8 +191,86 @@ _TIMEOUT_MESSAGE = (
 
 
 def _compute(problem: str, context: str | None, client: str | None) -> tuple[SolveResponse, str | None, str | None]:
-    """Plan (Groq, if allowed), then compute in the sandbox. Returns (response, focus, original)."""
-    llm_result, llm_status = _plan_remote(normalize_latex(problem), context, client)
+    """Solve a question; a question with several parts is split and every part is solved and
+    verified on its own. Returns (response, focus, original)."""
+    text = normalize_latex(problem)
+    if not is_spectral_question(text):  # spectral multi-part questions are answered by one tool
+        parts = split_parts(text)
+        if parts:
+            return _compute_parts(problem, parts, "rules", context, client)
+    llm_result, llm_status = _plan_remote(text, context, client)
+    if llm_result.get("parts"):
+        parts = [normalize_latex(p) for p in llm_result["parts"]]
+        if 2 <= len(parts) <= MAX_PARTS and numbers_grounded(parts, text):
+            return _compute_parts(problem, parts, "llm", context, client)
+        log.info("Ignoring an LLM split whose parts are not grounded in the question")
+        llm_result, llm_status = {"call": None, "error": "the proposed split changed the question"}, "rejected"
+    return _compute_single(problem, context, client, llm_result, llm_status)
+
+
+_TRUST = ["failed", "needs_clarification", "unverified", "approximate", "verified_with_assumptions", "verified"]
+
+
+def _compute_parts(
+    problem: str, parts: list[str], split_by: str, context: str | None, client: str | None
+) -> tuple[SolveResponse, str | None, str | None]:
+    """Solve every part through the full pipeline and combine the results."""
+    results: list[tuple[SolveResponse, str | None, str | None]] = []
+    for part in parts:
+        llm_result, llm_status = _plan_remote(part, context, client)
+        if llm_result.get("parts"):  # no recursive splitting: plan the part offline
+            llm_result, llm_status = {"call": None, "error": "nested split"}, "rejected"
+        results.append(_compute_single(part, context, client, llm_result, llm_status))
+    responses = [r for r, _, _ in results]
+    solved = [r for r in responses if r.status == "solved"]
+
+    def trust(r: SolveResponse) -> int:
+        if r.status != "solved":
+            return _TRUST.index("needs_clarification")
+        return _TRUST.index(r.overall_status.value) if r.overall_status else _TRUST.index("unverified")
+
+    worst = min(responses, key=trust)
+    overall = OverallStatus(_TRUST[trust(worst)])
+    if len(solved) == len(responses):
+        status = "solved"
+    elif solved:
+        status = "solved"  # partly answered: the overall badge (weakest part) says so
+    elif any(r.status == "needs_clarification" for r in responses):
+        status = "needs_clarification"
+    else:
+        status = "error"
+    lines = []
+    for i, r in enumerate(responses, 1):
+        if r.status == "solved":
+            lines.append(f"{i}. {r.answer_text}")
+        else:
+            lines.append(f"{i}. not answered ({(r.error or r.status)[:120]})")
+    unanswered = [i for i, r in enumerate(responses, 1) if r.status != "solved"]
+    planners = {r.planner for r in responses}
+    notices = [r.planner_notice for r in responses if r.planner_notice]
+    combined = SolveResponse(
+        session_id="",
+        problem=problem,
+        status=status,  # type: ignore[arg-type]
+        category=(solved[0] if solved else responses[0]).category,
+        answer_text="; ".join(lines),
+        overall_status=overall,
+        error=(f"Part {', '.join(map(str, unanswered))} could not be answered; see below.") if unanswered else None,
+        llm_used=any(r.llm_used for r in responses),
+        planner="llm" if "llm" in planners else responses[0].planner,
+        llm_status="used" if any(r.llm_status == "used" for r in responses) else responses[0].llm_status,
+        planner_notice=notices[0] if notices else None,
+        parts=responses,
+        split_by=split_by,  # type: ignore[arg-type]
+    )
+    last = next(((f, o) for r, f, o in reversed(results) if r.status == "solved"), (None, None))
+    return combined, last[0], last[1]
+
+
+def _compute_single(
+    problem: str, context: str | None, client: str | None, llm_result: dict[str, Any], llm_status: str
+) -> tuple[SolveResponse, str | None, str | None]:
+    """Compute one planned question in the sandbox (the Groq plan, if any, was made already)."""
     s = get_settings()
     try:
         result = get_runner().run("solve", {"problem": problem, "context": context, "llm_result": llm_result})

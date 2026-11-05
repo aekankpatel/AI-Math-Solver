@@ -14,10 +14,52 @@ const CATEGORY_LABEL: Record<string, string> = {
   unsupported: 'Unsupported',
 }
 
-export function SolutionCard({ result, isFollowUp }: { result: SolveResponse; isFollowUp?: boolean }) {
+function MultiPartCard({ result, isFollowUp }: { result: SolveResponse; isFollowUp?: boolean }) {
+  const parts = result.parts ?? []
+  const answered = parts.filter((p) => p.status === 'solved').length
+  return (
+    <article className="card multi-card" data-testid="multipart-card">
+      <header className="card-head">
+        <span className="chip">
+          {isFollowUp ? 'Follow-up · ' : ''}
+          {parts.length} parts
+        </span>
+        {result.overall_status && <OverallBadge status={result.overall_status} />}
+        <h3 className="problem">
+          <RichText text={result.problem} />
+        </h3>
+      </header>
+      <p className="muted small">
+        {result.split_by === 'llm' ? 'The AI planner split this question into parts' : 'This question was split into parts'};
+        each part was planned, checked against its wording and verified on its own.
+        {answered < parts.length ? ` ${parts.length - answered} of ${parts.length} could not be answered.` : ''}
+      </p>
+      <ol className="parts">
+        {parts.map((part, i) => (
+          <li key={i} className="part" data-testid="part">
+            <span className="part-label">Part {i + 1}</span>
+            <SolutionCard result={part} nested />
+          </li>
+        ))}
+      </ol>
+    </article>
+  )
+}
+
+export function SolutionCard({
+  result,
+  isFollowUp,
+  nested,
+}: {
+  result: SolveResponse
+  isFollowUp?: boolean
+  nested?: boolean
+}) {
+  if (result.parts && result.parts.length > 0) return <MultiPartCard result={result} isFollowUp={isFollowUp} />
+  const cls = nested ? ' nested' : ''
   if (result.status === 'answered') {
     return (
-      <article className="card answer-card" data-testid="followup-answer">
+      <article className={`card answer-card${cls}`} data-testid="followup-answer">
         <header className="card-head">
           <span className="chip">Tutor</span>
           <h3 className="problem">
@@ -33,7 +75,7 @@ export function SolutionCard({ result, isFollowUp }: { result: SolveResponse; is
 
   if (result.status === 'needs_clarification') {
     return (
-      <article className="card clarify-card" role="alert" data-testid="clarify-card">
+      <article className={`card clarify-card${cls}`} role="alert" data-testid="clarify-card">
         <header className="card-head">
           <span className="chip chip-warn">Needs clarification</span>
           <h3 className="problem">
@@ -65,7 +107,7 @@ export function SolutionCard({ result, isFollowUp }: { result: SolveResponse; is
             ? 'Too large to compute'
             : 'Could not solve'
     return (
-      <article className="card error-card" role="alert" data-testid="error-card">
+      <article className={`card error-card${cls}`} role="alert" data-testid="error-card">
         <header className="card-head">
           <span className="chip chip-warn">{label}</span>
           <h3 className="problem">
@@ -84,7 +126,7 @@ export function SolutionCard({ result, isFollowUp }: { result: SolveResponse; is
   }
 
   return (
-    <article className="card" data-testid="solution-card">
+    <article className={`card${cls}`} data-testid="solution-card">
       <header className="card-head">
         <span className="chip">{isFollowUp ? 'Follow-up · ' : ''}{CATEGORY_LABEL[result.category]}</span>
         {result.overall_status ? (

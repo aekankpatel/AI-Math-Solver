@@ -27,6 +27,11 @@ Every solution includes:
 - a **planner badge** showing whether the Groq LLM or the offline planner turned the question into a computation, with a
   notice whenever the app had to fall back to the offline planner (daily budget used, Groq rate limit, failed or rejected plan)
 - an **explanation**: from a template by default, or written by the LLM when `LLM_EXPLANATIONS=true`
+- **multi-part questions**, including parts that need different tools ("Let f(x) = x² sin x. (a) Find f′(x).
+  (b) Integrate f from 0 to π.", "Solve x² − 5x + 6 = 0 and find the determinant of [[1,2],[3,4]]"). The question is split
+  into self-contained parts (offline, or by the LLM if every number in its split appears in the question). Each part is
+  planned, intent-checked and verified on its own, and the overall badge is the weakest part's, so a partly answered
+  question is never shown as fully verified
 - **follow-up questions** in the same session (`now integrate it`, `explain the steps`, `how was this verified?`)
 
 ## Architecture
