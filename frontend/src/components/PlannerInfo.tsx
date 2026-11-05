@@ -19,7 +19,7 @@ export function PlannerBadge({ result }: { result: SolveResponse }) {
           : 'A deterministic offline planner chose the tool and arguments; the math was checked independently.'
       }
     >
-      <span aria-hidden>{llm ? '✦' : '⚙'}</span> Planned by {OFFLINE_LABEL[result.planner]}
+      Planned by {OFFLINE_LABEL[result.planner]}
     </span>
   )
 }
@@ -28,7 +28,7 @@ export function PlannerNotice({ result }: { result: SolveResponse }) {
   if (!result.planner_notice) return null
   return (
     <p className="notice" role="status" data-testid="planner-notice">
-      <span aria-hidden>ⓘ</span> {result.planner_notice}
+      {result.planner_notice}
     </p>
   )
 }

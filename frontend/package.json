@@ -12,6 +12,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource/instrument-serif": "^5.3.0",
+    "@fontsource/newsreader": "^5.3.0",
     "katex": "^0.19.1",
     "plotly.js-cartesian-dist-min": "^4.2.0",
     "react": "^19.3.1",

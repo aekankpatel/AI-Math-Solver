@@ -32,8 +32,8 @@ const OVERALL: Record<OverallStatus, { label: string; icon: string; cls: string;
 export function OverallBadge({ status, testId = 'overall-badge' }: { status: OverallStatus; testId?: string }) {
   const meta = OVERALL[status]
   return (
-    <span className={`badge badge-${meta.cls}`} title={meta.hint} data-testid={testId}>
-      <span aria-hidden>{meta.icon}</span> {meta.label}
+    <span className={`stamp stamp-${meta.cls}`} title={meta.hint} data-testid={testId}>
+      {meta.label}
     </span>
   )
 }
@@ -49,12 +49,10 @@ const INTENT_LABEL: Record<string, string> = {
 export function IntentPanel({ intent }: { intent: IntentVerification }) {
   const failed = intent.checks.filter((c) => !c.passed)
   return (
-    <details className="panel intent" open={intent.status !== 'confirmed'} data-testid="intent-panel">
+    <details className="fold intent" open={intent.status !== 'confirmed'} data-testid="intent-panel">
       <summary>
-        <span className={`badge badge-${intent.status === 'confirmed' ? 'verified' : 'assumed'}`}>
-          {INTENT_LABEL[intent.status]}
-        </span>
-        <span className="muted">{intent.interpretation}</span>
+        <span className="fold-title">{intent.interpretation}</span>
+        <span className={`tag tag-${intent.status === 'confirmed' ? 'ok' : 'note'}`}>{INTENT_LABEL[intent.status]}</span>
       </summary>
       {intent.assumptions.length > 0 && (
         <ul className="assumptions">

@@ -6,9 +6,29 @@ type PlotlyModule = typeof import('plotly.js')
 const THEME = {
   paper_bgcolor: 'rgba(0,0,0,0)',
   plot_bgcolor: 'rgba(0,0,0,0)',
-  font: { color: '#cbd5e1', family: 'Inter, system-ui, sans-serif' },
-  xaxis: { gridcolor: '#1e293b', zerolinecolor: '#475569' },
-  yaxis: { gridcolor: '#1e293b', zerolinecolor: '#475569' },
+  font: { color: '#3b3a36', family: '"IBM Plex Mono", ui-monospace, monospace', size: 11 },
+  xaxis: { gridcolor: '#e6dfcf', zerolinecolor: '#a69f8f', linecolor: '#a69f8f' },
+  yaxis: { gridcolor: '#e6dfcf', zerolinecolor: '#a69f8f', linecolor: '#a69f8f' },
+}
+
+// The API draws in a neutral palette; recolour it to the page's inks.
+const INKS: Record<string, string> = {
+  '#6366f1': '#1d3557',
+  '#f59e0b': '#b5332a',
+  '#10b981': '#2e6b3f',
+  'rgba(99,102,241': 'rgba(29,53,87',
+  'rgba(245,158,11': 'rgba(181,51,42',
+  'rgba(16,185,129': 'rgba(46,107,63',
+}
+function recolour<T>(value: T): T {
+  if (typeof value === 'string') {
+    const hit = Object.keys(INKS).find((k) => value.toLowerCase().startsWith(k))
+    return (hit ? INKS[hit] + value.slice(hit.length) : value) as T
+  }
+  if (Array.isArray(value)) return value.map(recolour) as T
+  if (value && typeof value === 'object')
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, recolour(v)])) as T
+  return value
 }
 
 // plotly.js is large: load it lazily, once, and share the module.
@@ -50,7 +70,7 @@ export function Plot({ figure }: { figure: PlotlyFigure }) {
     loadPlotly()
       .then((Plotly) => {
         if (!active) return
-        return Plotly.react(el, figure.data as Plotly.Data[], merged as Partial<Plotly.Layout>, {
+        return Plotly.react(el, recolour(figure.data) as Plotly.Data[], merged as Partial<Plotly.Layout>, {
           responsive: true,
           displaylogo: false,
           displayModeBar: narrow ? false : 'hover',

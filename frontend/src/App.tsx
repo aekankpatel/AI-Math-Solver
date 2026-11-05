@@ -116,59 +116,67 @@ export default function App() {
 
   return (
     <div className="app">
-      <header className="hero">
-        <div className="brand">
-          <span className="logo" aria-hidden>
-            ∑
-          </span>
-          <div>
-            <h1>Mathenza</h1>
-            <p className="tagline">Solve · Verify · Explain — every answer is independently checked.</p>
-          </div>
+      <header className="masthead">
+        <div>
+          <h1 className="wordmark">Mathenza</h1>
+          <p className="tagline">A calculator that shows its working, and then checks it.</p>
         </div>
         <HealthPill health={health} reachable={reachable} />
       </header>
 
       <main>
-        <form className="composer" onSubmit={submitProblem}>
+        <form className="ask" onSubmit={submitProblem}>
           <label htmlFor="problem" className="sr-only">
             Math problem
           </label>
-          <textarea
-            id="problem"
-            value={problem}
-            onChange={(e) => setProblem(e.target.value)}
-            onKeyDown={onKeyDown}
-            placeholder="Type a problem, e.g. “integrate x·sin(x) from 0 to pi” or “eigenvalues of [[2,1],[1,2]]”"
-            rows={2}
-            maxLength={MAX_PROBLEM_CHARS}
-            aria-describedby="problem-hint"
-          />
-          <button type="submit" disabled={loading || !problem.trim()}>
-            {loading && !sessionId ? 'Solving…' : 'Solve'}
-          </button>
+          <span className="eyebrow" aria-hidden>
+            Problem
+          </span>
+          <div className="ask-row">
+            <textarea
+              id="problem"
+              value={problem}
+              onChange={(e) => setProblem(e.target.value)}
+              onKeyDown={onKeyDown}
+              placeholder="integrate x·sin(x) from 0 to pi"
+              rows={2}
+              maxLength={MAX_PROBLEM_CHARS}
+              aria-describedby="problem-hint"
+              spellCheck={false}
+            />
+            <button type="submit" disabled={loading || !problem.trim()}>
+              {loading && !sessionId ? 'Solving…' : 'Solve'}
+            </button>
+          </div>
+          <div className="ask-hint" id="problem-hint">
+            <span>Plain text or LaTeX. Enter solves, Shift+Enter adds a line.</span>
+            {problem.length > MAX_PROBLEM_CHARS * 0.8 && (
+              <span>
+                {problem.length}/{MAX_PROBLEM_CHARS}
+              </span>
+            )}
+          </div>
         </form>
-        <div className="composer-hint" id="problem-hint">
-          <span>Enter to solve · Shift+Enter for a new line</span>
-          {problem.length > MAX_PROBLEM_CHARS * 0.8 && (
-            <span>
-              {problem.length}/{MAX_PROBLEM_CHARS}
-            </span>
-          )}
-        </div>
 
-        <section className="examples" aria-label="Examples">
-          {Object.entries(examples).map(([cat, items]) => (
-            <div key={cat} className="example-group">
-              <span className="example-cat">{cat}</span>
-              {items.map((ex) => (
-                <button key={ex} type="button" className="example" onClick={() => void submitProblem(undefined, ex)}>
-                  {ex}
-                </button>
+        {turns.length === 0 && !loading && (
+          <section className="examples" aria-label="Examples">
+            <h2 className="eyebrow">Or try one of these</h2>
+            <dl>
+              {Object.entries(examples).map(([cat, items]) => (
+                <div key={cat} className="example-group">
+                  <dt>{cat}</dt>
+                  <dd>
+                    {items.map((ex) => (
+                      <button key={ex} type="button" className="example" onClick={() => void submitProblem(undefined, ex)}>
+                        {ex}
+                      </button>
+                    ))}
+                  </dd>
+                </div>
               ))}
-            </div>
-          ))}
-        </section>
+            </dl>
+          </section>
+        )}
 
         {error && (
           <div className="banner" role="alert">
@@ -185,32 +193,42 @@ export default function App() {
           {turns.map((t) => (
             <SolutionCard key={t.id} result={t.result} isFollowUp={t.followUp} />
           ))}
-          {loading && <div className="card skeleton" aria-busy="true" aria-label="Working" />}
+          {loading && (
+            <p className="working" aria-busy="true" aria-label="Working">
+              Working it out<span className="dots" aria-hidden>…</span>
+            </p>
+          )}
           <div ref={bottom} />
         </div>
 
         {sessionId && turns.length > 0 && (
-          <form className="composer followup" onSubmit={submitFollowUp}>
+          <form className="ask followup" onSubmit={submitFollowUp}>
             <label htmlFor="followup" className="sr-only">
               Follow-up question
             </label>
-            <input
-              id="followup"
-              value={followUp}
-              onChange={(e) => setFollowUp(e.target.value)}
-              placeholder="Ask a follow-up: “now integrate it”, “explain the steps”, “how was this verified?”"
-              maxLength={MAX_PROBLEM_CHARS}
-            />
-            <button type="submit" disabled={loading || !followUp.trim()}>
-              Ask
-            </button>
+            <div className="ask-row">
+              <input
+                id="followup"
+                value={followUp}
+                onChange={(e) => setFollowUp(e.target.value)}
+                placeholder="Ask about it: now integrate it · explain the steps · how was this checked?"
+                maxLength={MAX_PROBLEM_CHARS}
+              />
+              <button type="submit" disabled={loading || !followUp.trim()}>
+                Ask
+              </button>
+            </div>
           </form>
         )}
       </main>
 
-      <footer className="foot">
-        Computation by SymPy, NumPy &amp; SciPy · orchestration by LangGraph · the LLM only plans, it never does
-        the arithmetic. Every answer is checked independently; please still double-check important results.
+      <footer className="colophon">
+        <p>
+          The arithmetic is done by SymPy, NumPy and SciPy. A language model may read your question, but it never
+          computes the answer, and every result is checked a second, independent way. Still, double-check anything
+          that matters.
+        </p>
+        <p className="colophon-sign">Built by Aekank Patel.</p>
       </footer>
     </div>
   )

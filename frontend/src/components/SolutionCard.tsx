@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { SolveResponse } from '../types'
 import { IntentPanel, OverallBadge } from './IntentPanel'
 import { PlannerBadge, PlannerNotice } from './PlannerInfo'
@@ -18,31 +19,55 @@ function MultiPartCard({ result, isFollowUp }: { result: SolveResponse; isFollow
   const parts = result.parts ?? []
   const answered = parts.filter((p) => p.status === 'solved').length
   return (
-    <article className="card multi-card" data-testid="multipart-card">
-      <header className="card-head">
-        <span className="chip">
-          {isFollowUp ? 'Follow-up · ' : ''}
-          {parts.length} parts
-        </span>
-        {result.overall_status && <OverallBadge status={result.overall_status} />}
+    <article className="sheet multi-card" data-testid="multipart-card">
+      <header className="sheet-head">
+        <p className="sheet-meta">
+          <span>
+            {isFollowUp ? 'Follow-up · ' : ''}
+            {parts.length} parts
+          </span>
+        </p>
         <h3 className="problem">
           <RichText text={result.problem} />
         </h3>
+        {result.overall_status && <OverallBadge status={result.overall_status} />}
       </header>
-      <p className="muted small">
-        {result.split_by === 'llm' ? 'The AI planner split this question into parts' : 'This question was split into parts'};
-        each part was planned, checked against its wording and verified on its own.
+      <p className="sheet-note">
+        {result.split_by === 'llm' ? 'The AI planner split this into parts' : 'Split into parts'}; each one was read,
+        checked and verified on its own, and the mark above is the weakest of them.
         {answered < parts.length ? ` ${parts.length - answered} of ${parts.length} could not be answered.` : ''}
       </p>
       <ol className="parts">
         {parts.map((part, i) => (
           <li key={i} className="part" data-testid="part">
-            <span className="part-label">Part {i + 1}</span>
+            <span className="part-label">({String.fromCharCode(97 + i)})</span>
             <SolutionCard result={part} nested />
           </li>
         ))}
       </ol>
     </article>
+  )
+}
+
+function Row({ label, children, wide }: { label: string; children: ReactNode; wide?: boolean }) {
+  return (
+    <section className={`row${wide ? ' row-wide' : ''}`} aria-label={label}>
+      <h4 className="margin">{label}</h4>
+      <div className="row-body">{children}</div>
+    </section>
+  )
+}
+
+function Head({ result, kind }: { result: SolveResponse; kind?: string }) {
+  return (
+    <header className="sheet-head">
+      <p className="sheet-meta">
+        <span>{kind ?? CATEGORY_LABEL[result.category]}</span>
+      </p>
+      <h3 className="problem">
+        <RichText text={result.problem} />
+      </h3>
+    </header>
   )
 }
 
@@ -59,13 +84,8 @@ export function SolutionCard({
   const cls = nested ? ' nested' : ''
   if (result.status === 'answered') {
     return (
-      <article className={`card answer-card${cls}`} data-testid="followup-answer">
-        <header className="card-head">
-          <span className="chip">Tutor</span>
-          <h3 className="problem">
-            <RichText text={result.problem} />
-          </h3>
-        </header>
+      <article className={`sheet answer-card${cls}`} data-testid="followup-answer">
+        <Head result={result} kind="Tutor" />
         <p className="explanation">
           <RichText text={result.explanation ?? ''} />
         </p>
@@ -75,16 +95,9 @@ export function SolutionCard({
 
   if (result.status === 'needs_clarification') {
     return (
-      <article className={`card clarify-card${cls}`} role="alert" data-testid="clarify-card">
-        <header className="card-head">
-          <span className="chip chip-warn">Needs clarification</span>
-          <h3 className="problem">
-            <RichText text={result.problem} />
-          </h3>
-        </header>
-        <p>
-          <strong>{result.error}</strong>
-        </p>
+      <article className={`sheet clarify-card${cls}`} role="alert" data-testid="clarify-card">
+        <Head result={result} kind="Needs clarification" />
+        <p className="lead">{result.error}</p>
         <PlannerNotice result={result} />
         {result.intent?.interpretation && (
           <p className="muted">
@@ -107,18 +120,13 @@ export function SolutionCard({
             ? 'Too large to compute'
             : 'Could not solve'
     return (
-      <article className={`card error-card${cls}`} role="alert" data-testid="error-card">
-        <header className="card-head">
-          <span className="chip chip-warn">{label}</span>
-          <h3 className="problem">
-            <RichText text={result.problem} />
-          </h3>
-        </header>
-        <p>{result.error}</p>
+      <article className={`sheet error-card${cls}`} role="alert" data-testid="error-card">
+        <Head result={result} kind={label} />
+        <p className="lead">{result.error}</p>
         {result.status === 'unsupported' && (
           <p className="muted small">
-            Supported: equations and systems, simplify/factor/expand, derivatives, integrals, limits, matrices,
-            statistics, probability distributions and counting.
+            It can do equations and systems, simplifying, factoring and expanding, derivatives, integrals, limits,
+            matrices, statistics, probability distributions and counting.
           </p>
         )}
       </article>
@@ -126,34 +134,47 @@ export function SolutionCard({
   }
 
   return (
-    <article className={`card${cls}`} data-testid="solution-card">
-      <header className="card-head">
-        <span className="chip">{isFollowUp ? 'Follow-up · ' : ''}{CATEGORY_LABEL[result.category]}</span>
+    <article className={`sheet${cls}`} data-testid="solution-card">
+      <header className="sheet-head">
+        <p className="sheet-meta">
+          <span>
+            {isFollowUp ? 'Follow-up · ' : ''}
+            {CATEGORY_LABEL[result.category]}
+          </span>
+          <PlannerBadge result={result} />
+        </p>
+        <h3 className="problem">
+          <RichText text={result.problem} />
+        </h3>
         {result.overall_status ? (
           <OverallBadge status={result.overall_status} />
         ) : (
           result.verification && <VerificationBadge status={result.verification.status} />
         )}
-        <PlannerBadge result={result} />
-        <h3 className="problem">
-            <RichText text={result.problem} />
-          </h3>
       </header>
 
       <PlannerNotice result={result} />
 
-      <section className="answer" aria-label="Answer">
-        <span className="answer-label">Answer</span>
-        {result.answer_latex ? <Tex math={result.answer_latex} display /> : <code>{result.answer_text}</code>}
-      </section>
+      <Row label="Answer">
+        <div className="answer">
+          {result.answer_latex ? <Tex math={result.answer_latex} display /> : <code>{result.answer_text}</code>}
+        </div>
+      </Row>
 
-      {result.intent && <IntentPanel intent={result.intent} />}
-      {result.verification && <VerificationPanel verification={result.verification} />}
+      {result.intent && (
+        <Row label="Reading">
+          <IntentPanel intent={result.intent} />
+        </Row>
+      )}
+      {result.verification && (
+        <Row label="Check">
+          <VerificationPanel verification={result.verification} />
+        </Row>
+      )}
 
-      <div className="grid">
-        <section className="panel steps" aria-label="Solution steps">
-          <h4>Step-by-step</h4>
-          <ol>
+      {result.steps.length > 0 && (
+        <Row label="Working">
+          <ol className="steps">
             {result.steps.map((s, i) => (
               <li key={i}>
                 <div className="step-title">{s.title}</div>
@@ -166,38 +187,35 @@ export function SolutionCard({
               </li>
             ))}
           </ol>
-        </section>
+        </Row>
+      )}
 
-        {result.visualization && (
-          <section className="panel viz" aria-label="Visualization">
-            <h4>Visualization</h4>
-            <Plot figure={result.visualization} />
-          </section>
-        )}
-      </div>
+      {result.visualization && (
+        <Row label="Graph">
+          <Plot figure={result.visualization} />
+        </Row>
+      )}
 
       {result.explanation && (
-        <section className="panel">
-          <h4>Explanation</h4>
+        <Row label="In words">
           <p className="explanation">
             <RichText text={result.explanation} />
           </p>
-        </section>
+        </Row>
       )}
 
       <footer className="meta">
         <span>
-          Tool: <code>{result.tool_call?.tool}</code>
+          tool <code>{result.tool_call?.tool}</code>
         </span>
         <span>
-          Planner:{' '}
+          planner{' '}
           {result.planner === 'llm'
-            ? 'Groq LLM (plan only — it never computes)'
+            ? 'Groq LLM (it plans, it never computes)'
             : result.planner === 'nl'
               ? 'offline language analysis'
-              : 'offline deterministic rules'}
+              : 'offline rules'}
         </span>
-        {result.tool_call?.rationale && <span className="muted">{result.tool_call.rationale}</span>}
       </footer>
     </article>
   )

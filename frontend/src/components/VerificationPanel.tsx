@@ -10,18 +10,18 @@ const LABELS: Record<VerificationStatus, { label: string; icon: string; hint: st
 export function VerificationBadge({ status }: { status: VerificationStatus }) {
   const meta = LABELS[status]
   return (
-    <span className={`badge badge-${status}`} title={meta.hint} data-testid="verification-badge">
-      <span aria-hidden>{meta.icon}</span> {meta.label}
+    <span className={`tag tag-${status}`} title={meta.hint} data-testid="verification-badge">
+      {meta.label}
     </span>
   )
 }
 
 export function VerificationPanel({ verification }: { verification: Verification }) {
   return (
-    <details className="panel verification" open={verification.status === 'failed'}>
+    <details className="fold verification" open={verification.status === 'failed'}>
       <summary>
+        <span className="fold-title">{verification.summary}</span>
         <VerificationBadge status={verification.status} />
-        <span className="muted">{verification.summary}</span>
       </summary>
       <ul className="checks">
         {verification.checks.map((c, i) => (
