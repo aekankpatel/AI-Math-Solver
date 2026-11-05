@@ -179,6 +179,7 @@ button { font: inherit; color: inherit; }
 
 .plot { width: 100%; height: 340px; }
 .explanation { margin: 0; white-space: pre-wrap; }
+.explanation .katex { font-size: 1.04em; }
 .meta { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--rule);
   font-family: var(--mono); font-size: 0.72rem; color: var(--ink-3); }
 .meta code { font-size: 1em; }

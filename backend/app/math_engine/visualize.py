@@ -375,9 +375,12 @@ def _distribution(out: ToolOutput) -> dict[str, Any] | None:
             return v >= x
         return x <= v <= (x2 if x2 is not None else x)
 
-    if name in ("binomial", "poisson"):
+    if name in ("binomial", "poisson", "hypergeometric"):
         if name == "binomial":
             rv, ks = stats.binom(int(p["n"]), p["p"]), np.arange(0, int(p["n"]) + 1)
+        elif name == "hypergeometric":
+            good, bad, draws = int(p["success"]), int(p["failure"]), int(p["draws"])
+            rv, ks = stats.hypergeom(good + bad, good, draws), np.arange(0, draws + 1)
         else:
             lam = p.get("lambda", p.get("lam", p.get("mean")))
             rv, ks = stats.poisson(lam), np.arange(0, int(lam + 5 * np.sqrt(lam) + 5))
@@ -431,7 +434,56 @@ def _distribution(out: ToolOutput) -> dict[str, Any] | None:
     return {"data": traces, "layout": _layout(f"{name.title()} distribution", "x", "density")}
 
 
+def _critical(out: ToolOutput) -> dict[str, Any] | None:
+    expr, var, points = out.data["expr"], out.data["var"], out.data["points"]
+    if not _plottable(expr, var):
+        return None
+    xs = [float(sp.N(c)) for c, _, _ in points]
+    lo, hi = _window(xs, (-5.0, 5.0))
+    traces = [_fn_trace(expr, var, lo, hi, f"f({var})", PRIMARY)]
+    if points:
+        traces.append(
+            {
+                "type": "scatter",
+                "mode": "markers+text",
+                "x": xs,
+                "y": [float(sp.N(v)) for _, _, v in points],
+                "text": [k.replace("local ", "") for _, k, _ in points],
+                "textposition": "top center",
+                "marker": {"size": 10, "color": SECONDARY},
+                "name": "critical points",
+            }
+        )
+    return {"data": traces, "layout": _layout("Critical points", str(var), f"f({var})")}
+
+
+def _sequence(out: ToolOutput) -> dict[str, Any] | None:
+    d = out.data
+    n = min(d["n"], 40)
+    step = (lambda a: a + d["d"]) if d["kind"] == "arithmetic" else (lambda a: a * d["r"])
+    vals, a = [], d["a1"]
+    for _ in range(n):
+        vals.append(float(sp.N(a)))
+        a = step(a)
+    return {
+        "data": [
+            {
+                "type": "scatter",
+                "mode": "markers+lines",
+                "x": list(range(1, n + 1)),
+                "y": vals,
+                "marker": {"color": PRIMARY},
+                "line": {"color": PRIMARY, "width": 1},
+                "name": "aₙ",
+            }
+        ],
+        "layout": {**_layout(f"First {n} terms ({d['kind']})", "n", "aₙ"), "hovermode": "closest"},
+    }
+
+
 _BUILDERS = {
+    "critical_points": _critical,
+    "sequence": _sequence,
     "solve_equation": _equation,
     "solve_system": _system,
     "simplify_expression": _equivalence,

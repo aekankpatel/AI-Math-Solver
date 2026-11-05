@@ -113,6 +113,10 @@ _MATRIX_OPS: list[tuple[str, str]] = [
     ("solve", r"\bsolve|\bsystem\b|\bax\s*=\s*b\b"),
 ]
 _DISTRIBUTIONS: list[tuple[str, str]] = [
+    (
+        "hypergeometric",
+        r"hypergeometric|without replacement|(?:drawn|picked|chosen|selected|taken) (?:at random )?from",
+    ),
     ("binomial", r"binomial|\btrials?\b|\bcoin|\bflip|\btoss|\bindependent(?:ly)?\b|free throws|\bshots?\b"),
     ("poisson", r"poisson|arrive|per (?:minute|hour|day|second|week)|average rate"),
     ("normal", r"\bnormal|gaussian|bell[- ]curve|\bz-score|\bstandard normal"),
@@ -193,6 +197,28 @@ def extract_intent(problem: str) -> Intent:
         it.task = f"matrix:{it.task}" if it.task else "matrix"
     elif _spectral_question(problem):
         it.task = "spectrum"
+    elif re.search(
+        r"\b(?:arithmetic|geometric)\s+(?:sequence|progression|series)\b|\b\d+(?:st|nd|rd|th)\s+term\b"
+        r"|\bsum\s+of\s+the\s+first\s+\d+\s+terms\b",
+        low,
+    ):
+        it.task = "sequence"
+    elif re.search(r"\bsum\s+of\b|\bsummation\b|σ|∑|\bseries\b", low) and not re.search(r"\bprobabilit|\bmatri", low):
+        it.task = "sum"
+    elif re.search(
+        r"\b(?:critical|stationary|turning)\s+points?\b|\blocal\s+(?:max|min|extrem)|\brelative\s+(?:max|min|extrem)"
+        r"|\bextrem(?:a|um)\b|\bextreme\s+values\b|\bmaxima\s+and\s+minima\b",
+        low,
+    ):
+        it.task = "critical"
+    elif (
+        re.search(r"\d\s*%|\bper\s?cent", low)
+        and not re.search(r"\bnumber\s+[a-z]\b|\bfind\s+[a-z]\b|\bsolve\b|=", low)
+        and not re.search(
+            r"probabilit|chance|\bp\s*\(|binomial|normal|poisson|distribution|trials?|\bshots?\b|\bsucceed|success", low
+        )
+    ):
+        it.task = "percent"
     elif re.search(
         r"\b[pc]\s*\(\s*\d+\s*,\s*\d+\s*\)|permutations?\s*\(|combinations?\s*\(|\d\s*!|\bfactorial\b", low
     ) or re.search(
@@ -294,11 +320,17 @@ def extract_intent(problem: str) -> Intent:
         rel_text = low
         if it.distribution == "uniform":  # the support "between a and b" is not the event
             rel_text = re.sub(rf"(?:between|from)\s+{_NUM}\s+(?:and|to)\s+{_NUM}", " ", low, count=1)
+        words = {"one": "1", "two": "2", "three": "3", "four": "4", "five": "5", "zero": "0", "a": "1", "an": "1"}
+        rel_text = re.sub(
+            r"\b(at least|at most|exactly|more than|fewer than|less than)\s+(one|two|three|four|five|zero|a|an)\b",
+            lambda m: f"{m.group(1)} {words[m.group(2)]}",
+            rel_text,
+        )
         it.relation = _relation(rel_text)
         for slot, pat in {
             "std": r"standard deviation|\bsd\b|\bstd\b|sigma|σ|variance|standard normal|\bz\b",
             "mean": r"\bmean\b|\baverage\b|\bmu\b|μ|standard normal|\bz\b|expected",
-            "n": r"\btrials?\b|\btimes\b|\bflips?\b|\btosses\b|\bshots?\b|\bn\s*=|\bof \d+\b|\d+\s+\w+\s+(?:fail|are|each)|\beach of\b|\btakes \d+",
+            "n": r"\btrials?\b|\btimes\b|\bflips?\b|\btosses\b|\brolls\b|\bthrows\b|\bshots?\b|\bn\s*=|\bof \d+\b|\d+\s+\w+\s+(?:fail|are|each)|\beach of\b|\btakes \d+",
             "p": r"\bp\s*=|probability (?:of )?\d|probability \d|with probability|\d+\s*%|\bfair\b|chance",
             "lambda": r"lambda|λ|\brate\b|\bmean\b|\baverage\b|per (?:minute|hour|day|second|week)",
             "bounds": r"between|from \d|\[",
@@ -324,6 +356,12 @@ def extract_intent(problem: str) -> Intent:
     allowed |= {float(v) for w, v in _WORD_NUMBERS.items() if re.search(rf"\b{w}\b", low)}
     if re.search(r"\bfair\b|\bcoin\b", low):
         allowed.add(0.5)
+    if re.search(r"\b(?:no|none of the|zero)\s+(?:sixes|heads|tails|\w+s)\b|\bnone\b", low):  # "no sixes" = 0
+        allowed.add(0.0)
+    if re.search(r"\bfirst\s+\d+|\bpositive\s+integers\b|\bnatural\s+numbers\b", low):  # sums start at 1
+        allowed.add(1.0)
+    if re.search(r"\bdie\b|\bdice\b", low):  # a fair six-sided die
+        allowed |= {6.0, 1 / 6}
     if re.search(r"standard normal|\bz\b", low):
         allowed |= {0.0, 1.0}
     if count_roles(low) >= 2:
@@ -382,6 +420,10 @@ _TOOL_TASK = {
     "combinatorics": "counting",
     "matrix_spectrum": "spectrum",
     "evaluate_expression": "evaluate",
+    "summation": "sum",
+    "sequence": "sequence",
+    "critical_points": "critical",
+    "percentage": "percent",
 }
 
 
@@ -429,10 +471,28 @@ def describe(call: ToolCall) -> str:
             "pmf": f"P(X = {x})",
             "pdf": f"density at {x}",
             "cdf": f"P(X ≤ {x})",
-            "greater": f"P(X ≥ {x})" if a.get("distribution") in ("binomial", "poisson") else f"P(X > {x})",
+            "greater": f"P(X ≥ {x})"
+            if a.get("distribution") in ("binomial", "poisson", "hypergeometric")
+            else f"P(X > {x})",
             "between": f"P({x} ≤ X ≤ {x2})",
         }.get(q, str(q))
         return f"{event} for X ~ {str(a.get('distribution')).capitalize()}({params})."
+    if t == "summation":
+        return f"Sum of {a.get('expression')} for {a.get('variable') or 'k'} = {a.get('lower')} to {a.get('upper')}."
+    if t == "sequence":
+        what = "term number" if a.get("find", "term") == "term" else "sum of the first terms up to"
+        return f"The {what} {a.get('n')} of the sequence {', '.join(str(v) for v in a.get('terms') or [])}, …"
+    if t == "critical_points":
+        return f"Critical points of {a.get('expression')} (where the derivative is zero), with their type."
+    if t == "percentage":
+        v, w = a.get("value"), a.get("whole")
+        return {
+            "of": f"{v}% of {w}.",
+            "what_percent": f"{v} as a percentage of {w}.",
+            "change": f"Percentage change from {w} to {v}.",
+            "increase": f"{w} increased by {v}%.",
+            "decrease": f"{w} decreased by {v}%.",
+        }.get(str(a.get("operation")), "A percentage.")
     if t == "evaluate_expression":
         return f"Value of {a.get('expression')} at {a.get('variable') or 'x'} = {a.get('value')}."
     if t == "matrix_spectrum":
@@ -635,13 +695,19 @@ _TOOL_CATEGORY = {
     "combinatorics": "probability_statistics",
     "matrix_spectrum": "linear_algebra",
     "evaluate_expression": "algebra",
+    "summation": "algebra",
+    "sequence": "algebra",
+    "critical_points": "calculus",
+    "percentage": "algebra",
 }
 _ENUMS = {
     "operation": {
         "matrix_operation": ("determinant", "inverse", "eigenvalues", "rank", "transpose", "multiply", "solve", "rref"),
         "combinatorics": ("combinations", "permutations", "factorial"),
+        "percentage": ("of", "what_percent", "change", "increase", "decrease"),
     },
-    "distribution": ("binomial", "poisson", "normal", "uniform", "exponential"),
+    "find": ("term", "sum"),
+    "distribution": ("binomial", "poisson", "hypergeometric", "normal", "uniform", "exponential"),
     "query": ("pmf", "pdf", "cdf", "greater", "between"),
     "direction": ("+", "-", "+-"),
     "domain": ("complex", "real", "positive"),
@@ -725,6 +791,10 @@ def validate_plan(call: ToolCall) -> list[str]:
                 errors.append(f"{key} = {a[key]!r} is not one of {', '.join(options)}")
     if call.tool == "matrix_spectrum":
         errors += _validate_spectrum(a)
+    if "terms" in a and not (
+        isinstance(a["terms"], list) and len(a["terms"]) >= 3 and all(_is_number_like(t) for t in a["terms"])
+    ):
+        errors.append("'terms' must be a list of at least three numbers")
     for (tool, value), needed in _REQUIRED_EXTRA.items():
         if call.tool == tool and value in (a.get("operation"), a.get("query")):
             errors += [f"'{value}' needs argument '{n}'" for n in needed if a.get(n) in (None, [], "")]
@@ -887,6 +957,7 @@ def _check_alignment(
         "integrate",
         "limit",
         "evaluate_expression",
+        "critical_points",
     ):
         if not _check_area_between(problem, call, ctx):  # area between curves: checked against both curves
             _check_expression(problem, it, call, ctx)
@@ -901,6 +972,12 @@ def _check_alignment(
         _check_data(problem, call, ctx)
     elif call.tool == "matrix_spectrum":
         _check_spectrum(problem, call, ctx)
+    elif call.tool == "summation":
+        _check_summation(problem, it, call, ctx)
+    elif call.tool == "sequence":
+        _check_sequence(problem, call, ctx)
+    elif call.tool == "percentage":
+        _check_percentage(problem, call, ctx)
 
     _check_unused(it, call, ctx)
 
@@ -944,6 +1021,13 @@ def _arg_scalars(call: ToolCall) -> list[tuple[str, Any]]:
             out.append((key, a[key]))
     for key, value in (a.get("params") or {}).items():
         out.append((f"params.{key}", value))
+    if call.tool == "percentage":
+        for key in ("value", "whole"):
+            if a.get(key) is not None:
+                out.append((key, a[key]))
+    if call.tool == "sequence":
+        for v in a.get("terms") or []:
+            out.append(("terms", v))
     if call.tool == "matrix_spectrum":
         for key in ("size", "trace", "determinant"):
             if a.get(key) is not None:
@@ -957,7 +1041,7 @@ def _arg_scalars(call: ToolCall) -> list[tuple[str, Any]]:
 
 def _check_numbers(problem: str, it: Intent, call: ToolCall, ctx: _Ctx) -> None:
     allowed = set(it.allowed_numbers)
-    discrete = call.args.get("distribution") in ("binomial", "poisson")
+    discrete = call.args.get("distribution") in ("binomial", "poisson", "hypergeometric")
     if discrete:  # strict inequalities on integers shift the threshold by one
         allowed |= {n + 1 for n in it.numbers} | {n - 1 for n in it.numbers if n >= 1}
     if call.args.get("distribution") == "normal" and "variance" in problem.lower():
@@ -1031,7 +1115,13 @@ def _check_unused(it: Intent, call: ToolCall, ctx: _Ctx) -> None:
         used |= set(_numbers_in(str(q)))
     if call.tool == "differentiate":
         used.add(float(call.args.get("order") or 1))
-    if call.tool == "probability_distribution" and call.args.get("distribution") in ("binomial", "poisson"):
+    if call.tool == "percentage":  # "15%" is read as both 15 and 0.15
+        used |= {u / 100 for u in used}
+    if call.tool == "probability_distribution" and call.args.get("distribution") in (
+        "binomial",
+        "poisson",
+        "hypergeometric",
+    ):
         used |= {u + 1 for u in used} | {u - 1 for u in used}
     unused = [n for n in it.numbers if not any(_num_close(n, u) for u in used)]
     if unused:
@@ -1428,7 +1518,7 @@ def _check_probability(it: Intent, call: ToolCall, ctx: _Ctx) -> None:
         ctx.assumptions.append("The probability event was inferred: " + describe(call))
         return
     q, thr, thr2 = it.relation
-    discrete = dist in ("binomial", "poisson")
+    discrete = dist in ("binomial", "poisson", "hypergeometric")
     want: tuple[str, float | None, float | None]
     t = float(thr)
     if q == "between":
@@ -1674,3 +1764,111 @@ def _defined(ex: Any) -> list[str]:
 def _proportional(p: sp.Expr, q: sp.Expr) -> bool:
     ratio = sp.cancel(p / q)
     return bool(ratio.is_number and ratio != 0)
+
+
+# --------------------------------------------------------------------------- sums, sequences, percentages
+
+_SUM_WORDS = [
+    (r"\bodd\s+(?:positive\s+|natural\s+)?(?:integers|numbers)\b|\bpositive\s+odd\b", "2*k - 1"),
+    (r"\beven\s+(?:positive\s+|natural\s+)?(?:integers|numbers)\b|\bpositive\s+even\b", "2*k"),
+    (r"\b(?:perfect\s+)?squares\b", "k^2"),
+    (r"\b(?:perfect\s+)?cubes\b", "k^3"),
+    (r"\b(?:positive\s+integers|natural\s+numbers|counting\s+numbers|whole\s+numbers|integers|numbers)\b", "k"),
+]
+
+
+def sum_template(problem: str) -> tuple[str, str] | None:
+    """'sum of the first 100 positive integers' -> ('k', '100'): the terms named in words, from 1 to N."""
+    low = _normalise(problem).lower()
+    m = re.search(r"\bsum\s+of\s+the\s+first\s+(\d+)\s+(.+?)(?:[.?]|$)", low)
+    if not m:
+        return None
+    for pat, expr in _SUM_WORDS:
+        if re.search(pat, m.group(2)):
+            return expr, m.group(1)
+    return None
+
+
+def _check_summation(problem: str, it: Intent, call: ToolCall, ctx: _Ctx) -> None:
+    a = call.args
+    var = sp.Symbol(str(a.get("variable") or "k"))
+    tpl = sum_template(problem)
+    try:
+        e = parse_expression(str(a.get("expression", "")))
+    except ExpressionError:
+        return
+    if tpl is not None:  # terms described in words: must be exactly those terms, from 1 to N
+        expected = parse_expression(tpl[0]).subs(sp.Symbol("k"), var)
+        bounds_ok = _same_value(a.get("lower"), "1") and _same_value(a.get("upper"), tpl[1])
+        ok = sp.simplify(e - expected) == 0 and bounds_ok
+        ctx.add(
+            "terms and range as described",
+            ok,
+            f"terms {expected}, {var} = 1 … {tpl[1]}"
+            if ok
+            else f"The question describes the terms {expected} for {var} = 1 … {tpl[1]}.",
+            fix={}
+            if ok
+            else {"expression": str(expected).replace("**", "^"), "lower": "1", "upper": tpl[1], "variable": str(var)},
+        )
+        ctx.matched_numbers.add(float(tpl[1]))
+        return
+    # written sum: the summand must be the expression in the question (the index symbol is part of the notation)
+    spans = [s for s in _math_spans(problem, strip_definitions=True) if "=" not in s and _substantial(s)]
+    cands = [c for c in (_expr_of(s) for s in spans) if c is not None]
+    ok = any(_equivalent(e, c) for c in cands)
+    if not ok:  # e.g. "Σ_(k=1)^10 k^2": compare after removing the bound notation
+        ok = any(
+            sp.simplify(e - c.subs(s_, var)) == 0 for c in cands for s_ in c.free_symbols if len(c.free_symbols) == 1
+        )
+    ctx.add(
+        "summand matches question",
+        ok,
+        str(a.get("expression")) if ok else f"'{a.get('expression')}' is not the sum in the question.",
+    )
+    if ok:
+        ctx.matched_numbers |= set(_numbers_in(str(a.get("expression"))))
+
+
+def _check_sequence(problem: str, call: ToolCall, ctx: _Ctx) -> None:
+    low = _normalise(problem).lower()
+    want = "sum" if re.search(r"\bsum\b|\btotal\b", low) else "term"
+    got = call.args.get("find", "term")
+    ctx.add(
+        "term or sum as asked",
+        got == want,
+        f"The question asks for the {want}.",
+        fix={"find": want} if got != want else None,
+    )
+    nums = [float(x) for x in re.findall(r"-?\d+(?:\.\d+)?", low)]
+    terms = [_scalar(t) for t in call.args.get("terms") or []]
+    ok = all(t is not None and any(_num_close(t, n) for n in nums) for t in terms)
+    ctx.add(
+        "terms from the question",
+        ok,
+        "every term is written in the question" if ok else "Some terms are not in the question.",
+    )
+
+
+def _check_percentage(problem: str, call: ToolCall, ctx: _Ctx) -> None:
+    low = _normalise(problem).lower()
+    op = call.args.get("operation")
+    want = (
+        "increase"
+        if re.search(r"\bincreas|\braised?\b|\bgrows?\b|\bmark(?:ed)?\s+up", low)
+        and not re.search(r"percent(?:age)?\s+(?:change|increase)|by what percent", low)
+        else "decrease"
+        if re.search(r"\bdecreas|\breduc|\bdiscount|\boff\b|\bfalls?\b|\bdrops?\b", low)
+        and not re.search(r"percent(?:age)?\s+(?:change|decrease)|by what percent", low)
+        else "change"
+        if re.search(r"percent(?:age)?\s+(?:change|increase|decrease)|by what percent|\bchanged?\s+from\b", low)
+        else "what_percent"
+        if re.search(r"what\s+percent|as\s+a\s+percent|what\s+percentage|\bis\s+what\b", low)
+        else "of"
+    )
+    ctx.add(
+        "percentage question type",
+        op == want,
+        op if op == want else f"The question asks for '{want}', the plan computes '{op}'.",
+        fix={"operation": want} if op != want else None,
+    )

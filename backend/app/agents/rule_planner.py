@@ -92,8 +92,18 @@ def plan_with_rules(problem: str) -> ToolCall:
     spectral = plan_spectrum(text)
     if spectral is not None:
         return spectral
+    from app.agents.word_probability import plan_draws, plan_trials
+
+    for word_plan in (plan_draws, plan_trials):
+        call = word_plan(text)
+        if call is not None:
+            return call
     for planner in (
         _plan_area_between,
+        _plan_sequence,
+        _plan_summation,
+        _plan_critical,
+        _plan_percentage,
         _plan_matrix,
         _plan_probability,
         _plan_combinatorics,
@@ -160,6 +170,132 @@ def _plan_area_between(text: str, low: str) -> ToolCall | None:
         },
         rationale="Area between two curves: integrate the absolute difference.",
     )
+
+
+_ORD = r"(\d+)(?:st|nd|rd|th)"
+_TERMS = r"((?:-?\d+(?:\.\d+)?(?:/\d+)?\s*,\s*){2,}-?\d+(?:\.\d+)?(?:/\d+)?)"
+
+
+def _plan_sequence(text: str, low: str) -> ToolCall | None:
+    """'10th term of the arithmetic sequence 3, 7, 11, ...' / 'sum of the first 20 terms of 2, 6, 18, ...'."""
+    m = re.search(rf"\b{_ORD}\s+term\b.*?{_TERMS}", low) or re.search(rf"{_TERMS}.*?\b{_ORD}\s+term\b", low)
+    find = "term"
+    if m and not re.search(rf"\b{_ORD}\s+term\b", m.group(0)[: m.group(0).find(m.groups()[0]) + 8]):
+        pass
+    if not m:
+        m = re.search(rf"\bsum\s+of\s+the\s+first\s+(\d+)\s+terms\b.*?{_TERMS}", low)
+        find = "sum"
+    if not m:
+        return None
+    groups = m.groups()
+    n, terms_text = (groups[0], groups[1]) if groups[0] and "," not in groups[0] else (groups[1], groups[0])
+    terms = [t.strip() for t in terms_text.split(",") if t.strip()]
+    return ToolCall(
+        tool="sequence",
+        category=ProblemCategory.ALGEBRA,
+        args={"terms": terms, "n": int(n), "find": find},
+        rationale=f"{'Term' if find == 'term' else 'Sum'} of an arithmetic or geometric sequence.",
+    )
+
+
+def _plan_summation(text: str, low: str) -> ToolCall | None:
+    from app.agents.intent import sum_template
+
+    tpl = sum_template(text)
+    if tpl is not None:
+        return ToolCall(
+            tool="summation",
+            category=ProblemCategory.ALGEBRA,
+            args={"expression": tpl[0].replace("*", ""), "variable": "k", "lower": "1", "upper": tpl[1]},
+            rationale="Sum of the first terms of a standard sequence.",
+        )
+    m = re.search(
+        rf"\bsum\s+(?:of\s+)?(?P<expr>.+?)\s+(?:for|from)\s+(?P<var>[a-z])\s*=\s*(?P<lo>{_NUM})\s+to\s+(?P<hi>{_NUM}|oo|infinity|n)\b",
+        low,
+    ) or re.search(
+        rf"[σ∑]\s*_?\s*\(?\s*(?P<var>[a-z])\s*=\s*(?P<lo>{_NUM})\s*\)?\s*\^\s*\(?\s*(?P<hi>{_NUM}|oo|infinity|n)\s*\)?\s*(?P<expr>.+?)\s*[.?]?\s*$",
+        low,
+    )
+    if not m:
+        return None
+    hi = "oo" if m.group("hi") in ("oo", "infinity") else m.group("hi")
+    return ToolCall(
+        tool="summation",
+        category=ProblemCategory.ALGEBRA,
+        args={
+            "expression": _unwrap(m.group("expr")),
+            "variable": m.group("var"),
+            "lower": m.group("lo"),
+            "upper": hi,
+        },
+        rationale="A sum written with explicit limits.",
+    )
+
+
+def _unwrap(expr: str) -> str:
+    """Remove one pair of brackets only if it wraps the whole expression: '(k^2)' -> 'k^2', '(1/2)^k' unchanged."""
+    e = expr.strip()
+    if e.startswith("(") and e.endswith(")"):
+        depth = 0
+        for i, ch in enumerate(e):
+            depth += ch == "("
+            depth -= ch == ")"
+            if depth == 0 and i < len(e) - 1:
+                return e
+        return e[1:-1].strip()
+    return e
+
+
+_CRIT = re.compile(
+    r"\b(?:critical|stationary|turning)\s+points?|\blocal\s+(?:maxima|minima|max(?:imum)?|min(?:imum)?|extrema)"
+    r"|\brelative\s+(?:maxima|minima|extrema)|\bextrem(?:a|um)\b|\bmaxima\s+and\s+minima\b",
+    re.I,
+)
+
+
+def _plan_critical(text: str, low: str) -> ToolCall | None:
+    if not _CRIT.search(text):
+        return None
+    m = re.search(r"\b(?:[fgh]\s*\(\s*([a-z])\s*\)|y)\s*=\s*(.+?)\s*[.?]?\s*$", text) or re.search(
+        r"\bof\s+(.+?)\s*[.?]?\s*$", text
+    )
+    if not m:
+        return None
+    expr = m.group(m.lastindex).strip()
+    var = m.group(1) if m.lastindex == 2 else None
+    args = {"expression": expr}
+    if var:
+        args["variable"] = var
+    return ToolCall(
+        tool="critical_points",
+        category=ProblemCategory.CALCULUS,
+        args=args,
+        rationale="Critical points: solve f'(x) = 0 and classify.",
+    )
+
+
+def _plan_percentage(text: str, low: str) -> ToolCall | None:
+    n = rf"({_NUM})"
+    pats = [
+        (rf"^\s*(?:what\s+is|what's|find|calculate|compute)?\s*{n}\s*%\s*of\s*{n}\s*\??\s*$", "of", 1, 2),
+        (rf"\bwhat\s+percent(?:age)?\s+of\s+{n}\s+is\s+{n}", "what_percent", 2, 1),
+        (rf"^\s*{n}\s+is\s+what\s+percent(?:age)?\s+of\s+{n}", "what_percent", 1, 2),
+        (rf"\bpercent(?:age)?\s+(?:change|increase|decrease)\s+from\s+{n}\s+to\s+{n}", "change", 2, 1),
+        (rf"\bincrease\s+{n}\s+by\s+{n}\s*%", "increase", 2, 1),
+        (rf"\bdecrease\s+{n}\s+by\s+{n}\s*%", "decrease", 2, 1),
+        (rf"\b{n}\s+(?:is\s+)?increased\s+by\s+{n}\s*%", "increase", 2, 1),
+        (rf"\b{n}\s+(?:is\s+)?decreased\s+by\s+{n}\s*%", "decrease", 2, 1),
+    ]
+    for pat, op, vi, wi in pats:
+        m = re.search(pat, low)
+        if m:
+            return ToolCall(
+                tool="percentage",
+                category=ProblemCategory.ALGEBRA,
+                args={"operation": op, "value": m.group(vi), "whole": m.group(wi)},
+                rationale="A percentage calculation.",
+            )
+    return None
 
 
 def _plan_matrix(text: str, low: str) -> ToolCall | None:
@@ -310,7 +446,7 @@ def _plan_probability(text: str, low: str) -> ToolCall | None:
         else:
             raise PlanningError("What probability should be computed? e.g. P(X <= 3) or P(1 < X < 2).")
     query, x, x2 = q
-    discrete = dist in ("binomial", "poisson")
+    discrete = dist in ("binomial", "poisson", "hypergeometric")
     if query == "cdf_strict":
         query, x = ("cdf", str(int(float(x)) - 1)) if discrete else ("cdf", x)
     if query == "greater_strict":

@@ -293,7 +293,7 @@ def _compute_single(
             text, used = explain(
                 problem,
                 response.tool_call.tool if response.tool_call else "",
-                response.answer_text,
+                f"${response.answer_latex}$" if response.answer_latex else response.answer_text,
                 response.steps,
                 response.verification,
                 response.intent,

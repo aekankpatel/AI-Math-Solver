@@ -114,6 +114,14 @@ def template_explanation(
         "descriptive_statistics": "We computed the standard summary statistics of the data set.",
         "probability_distribution": "We used the distribution's probability function to compute the requested probability.",
         "combinatorics": "We applied the standard counting formula.",
+        "summation": "We found a closed form for the sum (or added the terms) and checked it independently.",
+        "sequence": "We identified the common difference or ratio and applied the formula for the n-th term or the sum.",
+        "critical_points": "We set the derivative to zero, solved, and classified each point with the second "
+        "derivative (or the sign of the first derivative).",
+        "percentage": "A percentage is a fraction of 100, so we converted it and multiplied.",
+        "evaluate_expression": "We substituted the value into the expression exactly.",
+        "matrix_spectrum": "We used the eigenvalues: for a function of the matrix, they are the function of the "
+        "eigenvalues, so the trace is their sum and the determinant their product.",
     }.get(tool, "We computed the result with a computer algebra system.")
     parts = []
     if intent and intent.interpretation:

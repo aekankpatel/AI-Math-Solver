@@ -15,6 +15,10 @@ is always done by **SymPy, NumPy and SciPy**, and a separate verifier checks eve
 | Calculus | `derivative of x^3 sin(x)`, `second derivative of exp(x^2)`, `derivative of x^2 at x = 3`, `limit of sin(x)/x as x -> 0` |
 | Integrals | `Integrate x^2 from 0 to 3`, `integral of x e^x dx`, `integrate exp(-x^2) from -oo to oo` |
 | Linear algebra | `determinant / inverse / eigenvalues / rank / rref / transpose of [[…]]`, `solve [[2,1],[1,3]] x = [3,5]`, matrix products |
+| Sums and sequences | `sum of the first 100 positive integers`, `sum of k^2 for k = 1 to 10`, `sum of (1/2)^k from k = 1 to infinity`, `10th term of the arithmetic sequence 3, 7, 11, ...`, `sum of the first 6 terms of 2, 6, 18, ...` |
+| Extrema and evaluation | `critical points of f(x) = x^3 - 3x` (classified as maximum / minimum), `evaluate x^3 - 3x at x = 2`, `area between y = x^2 and y = x from 0 to 1` |
+| Percentages | `15% of 240`, `12 is what percent of 48?`, `decrease 400 by 15%`, `percentage change from 80 to 120` |
+| Probability word problems | `at least one six in 4 rolls of a fair die`, `5 red and 3 blue balls, two drawn without replacement, probability both are red` |
 | Matrices described by facts | `A is 3×3 with eigenvalues 1, -2, 3: find det(A³ − 2A) and tr((A + I)⁻¹)`, `a 4×4 real matrix with trace 2, det 1 and A⁴ − 2A³ + 3A² − 2A + I = 0: find its eigenvalues and tr(A⁵)` (several results in one answer) |
 | Probability & statistics | `mean and standard deviation of 2, 4, 4, 5`, `Binomial n=10 p=0.5, P(X <= 3)`, `normal mean 100 std 15, P(X > 130)`, Poisson / uniform / exponential, `10 choose 3`, `P(5,2)`, `6!` |
 
@@ -84,7 +88,11 @@ misread or information is missing, nothing is computed and the user is asked for
 | Integrals | Differentiate the antiderivative back to the integrand; definite integrals also checked with `scipy.integrate.quad` |
 | Limits | Evaluate numerically while approaching the point from each side |
 | Matrices | NumPy recomputation, `A·A⁻¹ = I`, eigenvalues as roots of the characteristic polynomial, `A·x = b` residual, Berkowitz determinant |
-| Statistics / probability | NumPy / `scipy.stats` recomputation; Python integer arithmetic for combinatorics |
+| Statistics / probability | NumPy / `scipy.stats` recomputation (including the hypergeometric distribution); Python integer arithmetic for combinatorics |
+| Sums | Direct exact addition of every term (finite sums), S(n) − S(n−1) = term plus small cases (sums up to n), `mpmath.nsum` (infinite series) |
+| Sequences | The rule must reproduce every given term; the sequence is then generated term by term up to n |
+| Critical points | f′(c) = 0 by exact substitution, the sign of f′ on each side (classification), and a numeric scan of f′ on [−50, 50] so no critical point is missed |
+| Percentages and evaluation | Exact fraction arithmetic in Python; 40-digit numeric evaluation |
 | Matrices described by facts | For every possible spectrum, build a concrete non-diagonal matrix with it (P·B·P⁻¹, real blocks for conjugate pairs). Recompute every stated condition (the matrix equation, trace, determinant, characteristic polynomial, real entries) and every answer by direct matrix arithmetic. Re-enumerate the possible spectra numerically with `numpy.roots`. |
 
 **Status meanings**

@@ -298,7 +298,7 @@ def _plan_probability(problem: str, it: Intent) -> ToolCall:
     if rel is None:
         raise ClarificationNeeded("Which probability should be computed, e.g. P(X ≤ k) or P(X > k)?")
     q, thr, thr2 = rel
-    discrete = dist in ("binomial", "poisson")
+    discrete = dist in ("binomial", "poisson", "hypergeometric")
     t = float(thr)
     if q == "between":
         query, x, x2 = "between", thr, thr2

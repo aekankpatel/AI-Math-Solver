@@ -40,6 +40,10 @@ ToolName = Literal[
     "combinatorics",
     "matrix_spectrum",
     "evaluate_expression",
+    "summation",
+    "sequence",
+    "critical_points",
+    "percentage",
 ]
 
 

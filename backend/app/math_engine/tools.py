@@ -897,7 +897,7 @@ def descriptive_statistics(data: list[Any]) -> ToolOutput:
     )
 
 
-DISTRIBUTIONS = ("binomial", "poisson", "normal", "uniform", "exponential")
+DISTRIBUTIONS = ("binomial", "poisson", "hypergeometric", "normal", "uniform", "exponential")
 QUERIES = ("pmf", "pdf", "cdf", "greater", "between")
 
 
@@ -935,7 +935,7 @@ def probability_distribution(
     k = sp.Symbol("k", integer=True)
     t = sp.Symbol("t", real=True)
     steps: list[Step] = []
-    discrete = distribution in ("binomial", "poisson")
+    discrete = distribution in ("binomial", "poisson", "hypergeometric")
 
     if distribution == "binomial":
         n, p = _p(params.get("n"), "n"), _p(params.get("p"), "p")
@@ -947,6 +947,20 @@ def probability_distribution(
             Step(
                 title="Binomial PMF",
                 latex=rf"P(X=k) = \binom{{{n}}}{{k}} ({sp.latex(p)})^k ({sp.latex(1 - p)})^{{{n}-k}}",
+            )
+        )
+    elif distribution == "hypergeometric":
+        good, bad = _p(params.get("success"), "success"), _p(params.get("failure"), "failure")
+        draws = _p(params.get("draws"), "draws")
+        if not all(v.is_integer and v >= 0 for v in (good, bad, draws)) or draws > good + bad:
+            raise ToolError("Drawing without replacement needs whole numbers, and no more draws than items.")
+        pmf = sp.binomial(good, k) * sp.binomial(bad, draws - k) / sp.binomial(good + bad, draws)
+        support = (sp.Max(0, draws - bad), sp.Min(draws, good))
+        steps.append(
+            Step(
+                title="Drawing without replacement (hypergeometric)",
+                detail=f"{good} items of the kind asked for, {bad} others, {draws} drawn.",
+                latex=rf"P(X=k) = \frac{{\binom{{{good}}}{{k}}\binom{{{bad}}}{{{draws}-k}}}}{{\binom{{{good + bad}}}{{{draws}}}}}",
             )
         )
     elif distribution == "poisson":
@@ -1092,6 +1106,231 @@ def evaluate_expression(expression: str, value: str, variable: str | None = None
     )
 
 
+# --------------------------------------------------------------------------- sums, sequences, extrema, percentages
+
+
+def summation(expression: str, lower: str, upper: str, variable: str | None = None) -> ToolOutput:
+    """Σ expression for variable = lower..upper (upper may be oo or a symbol such as n)."""
+    expr = parse_expression(expression)
+    var = sp.Symbol(variable) if variable else _pick_variable(expr, None)
+    lo, hi = parse_expression(str(lower)), parse_expression(str(upper))
+    if lo.free_symbols or (hi.free_symbols and hi.free_symbols != {sp.Symbol(str(next(iter(hi.free_symbols))))}):
+        raise ToolError("The lower limit must be a number.")
+    if hi.free_symbols & {var}:
+        raise ToolError("The upper limit cannot be the summation variable.")
+    if not expr.free_symbols <= {var}:
+        raise ToolError("The terms may only depend on the summation variable.")
+    if hi.is_number and hi.is_finite and (hi - lo) > 10**6:
+        raise ToolError("Too many terms.")
+    value = _with_timeout(lambda: sp.simplify(sp.summation(expr, (var, lo, hi))), "Summation")
+    if value.has(sp.Sum):
+        raise ToolError("No closed form was found for this sum.")
+    sigma = rf"\sum_{{{sp.latex(var)}={sp.latex(lo)}}}^{{{sp.latex(hi)}}} {sp.latex(expr)}"
+    steps = [Step(title="The sum", latex=sigma)]
+    if hi.free_symbols:
+        steps.append(
+            Step(title="Closed form", detail="Standard sum formulas (or telescoping) in terms of the upper limit.")
+        )
+    elif hi.is_infinite:
+        steps.append(
+            Step(
+                title="Infinite series",
+                detail="Converges to a closed form." if value.is_finite else "The series diverges.",
+            )
+        )
+    steps.append(
+        Step(
+            title="Value",
+            latex=f"{sigma} = {sp.latex(sp.factor(value) if hi.free_symbols else value)}",
+            detail=_numeric_note([value]) if value.is_number and value.is_finite else "",
+        )
+    )
+    if value.is_infinite:
+        text = "diverges (∞)"
+    else:
+        text = _fmt(sp.factor(value) if hi.free_symbols else value)
+    return ToolOutput(
+        answer_text=text,
+        answer_latex=sp.latex(sp.factor(value) if hi.free_symbols else value),
+        steps=steps,
+        data={"expr": expr, "var": var, "lower": lo, "upper": hi, "value": value},
+    )
+
+
+def sequence(terms: list[Any], n: Any, find: str = "term") -> ToolOutput:
+    """nth term or sum of the first n terms of an arithmetic or geometric sequence given by its first terms."""
+    if find not in ("term", "sum"):
+        raise ToolError("find must be 'term' or 'sum'.")
+    vals = [parse_expression(str(t)) for t in terms]
+    if len(vals) < 3 or any(v.free_symbols for v in vals):
+        raise ToolError("Give at least three numeric terms of the sequence.")
+    N = parse_expression(str(n))
+    if not (N.is_integer and N >= 1):
+        raise ToolError("n must be a positive whole number.")
+    diffs = [sp.nsimplify(b - a) for a, b in zip(vals, vals[1:], strict=False)]
+    a1 = sp.nsimplify(vals[0])
+    steps = [Step(title="Given terms", latex=", ".join(sp.latex(v) for v in vals) + r", \dots")]
+    if all(d == diffs[0] for d in diffs):
+        kind, d = "arithmetic", diffs[0]
+        steps.append(Step(title="Common difference", latex=f"d = {sp.latex(d)}"))
+        if find == "term":
+            value = a1 + (N - 1) * d
+            steps.append(
+                Step(
+                    title="nth term",
+                    latex=rf"a_n = a_1 + (n-1)d = {sp.latex(a1)} + ({N}-1)\cdot {sp.latex(d)} = {sp.latex(value)}",
+                )
+            )
+        else:
+            value = N * (2 * a1 + (N - 1) * d) / 2
+            steps.append(
+                Step(
+                    title="Sum of n terms",
+                    latex=rf"S_n = \frac{{n}}{{2}}\left(2a_1 + (n-1)d\right) = {sp.latex(value)}",
+                )
+            )
+        info = {"kind": kind, "a1": a1, "d": d}
+    elif all(v != 0 for v in vals) and len({sp.nsimplify(b / a) for a, b in zip(vals, vals[1:], strict=False)}) == 1:
+        kind, r = "geometric", sp.nsimplify(vals[1] / vals[0])
+        steps.append(Step(title="Common ratio", latex=f"r = {sp.latex(r)}"))
+        if find == "term":
+            value = a1 * r ** (N - 1)
+            steps.append(
+                Step(
+                    title="nth term",
+                    latex=rf"a_n = a_1 r^{{n-1}} = {sp.latex(a1)}\cdot {sp.latex(r)}^{{{N}-1}} = {sp.latex(value)}",
+                )
+            )
+        else:
+            value = N * a1 if r == 1 else a1 * (1 - r**N) / (1 - r)
+            steps.append(Step(title="Sum of n terms", latex=rf"S_n = a_1\frac{{1-r^n}}{{1-r}} = {sp.latex(value)}"))
+        info = {"kind": kind, "a1": a1, "r": r}
+    else:
+        raise ToolError("The terms are neither arithmetic (constant difference) nor geometric (constant ratio).")
+    value = sp.nsimplify(sp.simplify(value))
+    label = f"a_{N}" if find == "term" else f"S_{N}"
+    return ToolOutput(
+        answer_text=f"{label} = {_fmt(value)} ({kind})",
+        answer_latex=f"{label.replace('_', '_{') + '}'} = {sp.latex(value)}",
+        steps=steps,
+        data={"terms": vals, "n": int(N), "find": find, "value": value, **info},
+    )
+
+
+def critical_points(expression: str, variable: str | None = None) -> ToolOutput:
+    """Real critical points (f' = 0) with their classification and function values."""
+    expr = parse_expression(expression)
+    var = _pick_variable(expr, variable)
+    expr, var = _as_real(expr, var)
+    d1 = sp.diff(expr, var)
+    d2 = sp.diff(d1, var)
+    sols = _with_timeout(lambda: sp.solveset(d1, var, sp.S.Reals), "Solving f'(x) = 0")
+    if not isinstance(sols, sp.FiniteSet) and sols != sp.S.EmptySet:
+        raise ToolError("f'(x) = 0 has infinitely many or no closed-form solutions; this case is not supported.")
+    points = sorted(sols, key=lambda c: float(sp.N(c))) if sols != sp.S.EmptySet else []
+    steps = [
+        Step(title="Differentiate", latex=f"f'({sp.latex(var)}) = {sp.latex(sp.factor(d1))}"),
+        Step(
+            title="Solve f'(x) = 0",
+            latex=(r",\ ".join(f"{sp.latex(var)} = {sp.latex(c)}" for c in points)) or r"\text{no real solutions}",
+        ),
+    ]
+    found = []
+    for c in points:
+        curv = sp.simplify(d2.subs(var, c))
+        if curv.is_positive:
+            kind = "local minimum"
+        elif curv.is_negative:
+            kind = "local maximum"
+        else:  # second-derivative test inconclusive: first-derivative sign test
+            h = sp.Rational(1, 10**4)
+            left, right = sp.N(d1.subs(var, c - h)), sp.N(d1.subs(var, c + h))
+            kind = (
+                "local minimum" if left < 0 < right else "local maximum" if left > 0 > right else "neither (inflection)"
+            )
+        fval = sp.simplify(expr.subs(var, c))
+        found.append((c, kind, fval))
+        steps.append(
+            Step(
+                title=f"Classify {var} = {_fmt(c)}",
+                detail=f"f''({_fmt(c)}) = {_fmt(curv)}: {kind}; f({_fmt(c)}) = {_fmt(fval)}",
+            )
+        )
+    if not found:
+        text, latex = "no real critical points", r"\text{no real critical points}"
+    else:
+        text = "; ".join(f"{var} = {_fmt(c)}: {k}, f = {_fmt(v)}" for c, k, v in found)
+        latex = r",\quad ".join(
+            rf"{sp.latex(var)} = {sp.latex(c)}\ \text{{({k}}},\ f = {sp.latex(v)}\text{{)}}" for c, k, v in found
+        )
+    return ToolOutput(
+        answer_text=text,
+        answer_latex=latex,
+        steps=steps,
+        data={"expr": expr, "var": var, "d1": d1, "points": found},
+    )
+
+
+PERCENT_OPERATIONS = ("of", "what_percent", "change", "increase", "decrease")
+
+
+def percentage(operation: str, value: Any, whole: Any) -> ToolOutput:
+    """of: value% of whole · what_percent: value is what % of whole · change: % change from whole to value ·
+    increase / decrease: whole changed by value%."""
+    if operation not in PERCENT_OPERATIONS:
+        raise ToolError(f"Unsupported percentage operation {operation!r}.")
+    v, w = sp.nsimplify(parse_expression(str(value))), sp.nsimplify(parse_expression(str(whole)))
+    if v.free_symbols or w.free_symbols:
+        raise ToolError("Percentages need numbers.")
+    if operation in ("what_percent", "change") and w == 0:
+        raise ToolError("The reference value cannot be zero.")
+    if operation == "of":
+        result, latex, text = (
+            v / 100 * w,
+            rf"\frac{{{sp.latex(v)}}}{{100}}\times {sp.latex(w)}",
+            f"{_fmt(v)}% of {_fmt(w)}",
+        )
+    elif operation == "what_percent":
+        result, latex, text = (
+            v / w * 100,
+            rf"\frac{{{sp.latex(v)}}}{{{sp.latex(w)}}}\times 100\%",
+            f"{_fmt(v)} as a percentage of {_fmt(w)}",
+        )
+    elif operation == "change":
+        result = (v - w) / w * 100
+        latex, text = (
+            rf"\frac{{{sp.latex(v)} - {sp.latex(w)}}}{{{sp.latex(w)}}}\times 100\%",
+            f"percentage change from {_fmt(w)} to {_fmt(v)}",
+        )
+    elif operation == "increase":
+        result, latex, text = (
+            w * (1 + v / 100),
+            rf"{sp.latex(w)}\times\left(1 + \frac{{{sp.latex(v)}}}{{100}}\right)",
+            f"{_fmt(w)} increased by {_fmt(v)}%",
+        )
+    else:
+        result, latex, text = (
+            w * (1 - v / 100),
+            rf"{sp.latex(w)}\times\left(1 - \frac{{{sp.latex(v)}}}{{100}}\right)",
+            f"{_fmt(w)} decreased by {_fmt(v)}%",
+        )
+    result = sp.nsimplify(result)
+    unit = "%" if operation in ("what_percent", "change") else ""
+    steps = [
+        Step(
+            title=text[:1].upper() + text[1:],
+            latex=f"{latex} = {sp.latex(result)}{r'\%' if unit else ''}",
+            detail=_numeric_note([result]),
+        )
+    ]
+    return ToolOutput(
+        answer_text=f"{_fmt(result)}{unit}",
+        answer_latex=f"{sp.latex(result)}{r'\%' if unit else ''}",
+        steps=steps,
+        data={"operation": operation, "value": v, "whole": w, "result": result},
+    )
+
+
 # --------------------------------------------------------------------------- spectral facts
 
 
@@ -1141,6 +1380,10 @@ TOOLS: dict[str, Callable[..., ToolOutput]] = {
     "combinatorics": combinatorics,
     "matrix_spectrum": matrix_spectrum,
     "evaluate_expression": evaluate_expression,
+    "summation": summation,
+    "sequence": sequence,
+    "critical_points": critical_points,
+    "percentage": percentage,
 }
 
 

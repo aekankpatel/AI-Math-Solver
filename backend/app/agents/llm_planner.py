@@ -23,7 +23,7 @@ from app.config import get_settings
 from app.math_engine.tools import TOOLS
 from app.schemas import ProblemCategory, ToolCall
 
-PROMPT_VERSION = "2026-11-05.p6"  # p6: evaluate_expression (p5: parts, p4: matrix_spectrum)
+PROMPT_VERSION = "2026-11-05.p7"  # p7: summation, sequence, critical_points, percentage, hypergeometric
 
 PLANNER_SYSTEM_PROMPT = """You are the planning component of Mathenza, a math solver.
 Your ONLY job is to translate the user's question into a call to exactly one whitelisted tool.
@@ -45,10 +45,18 @@ Tools and the fields they use:
   matrix (list of rows), other (second matrix, for multiply), vector (b for solve Ax=b)
 - descriptive_statistics: data (list of numbers)
 - probability_distribution: distribution (binomial|poisson|normal|uniform|exponential),
-  params (binomial: n, p; poisson: lambda; normal: mean, std; uniform: a, b; exponential: rate),
+  params (binomial: n, p; hypergeometric (drawing WITHOUT replacement): success (count of the kind asked about),
+  failure (count of the other items), draws; poisson: lambda; normal: mean, std; uniform: a, b; exponential: rate),
   query (pmf: P(X=x), pdf: density, cdf: P(X<=x), greater: P(X>x) for continuous and P(X>=x) for
   discrete, between: P(x<=X<=x2)), x, x2.
 - combinatorics: operation (combinations|permutations|factorial), n, k
+- summation: expression (the k-th term), variable (index), lower, upper (a number, "oo" or "n"); e.g. "sum of the
+  first 100 positive integers" -> expression="k", variable="k", lower="1", upper="100"
+- sequence: terms (the given first terms, at least 3, copied exactly), n, find ("term" for the n-th term, "sum" for
+  the sum of the first n terms); arithmetic and geometric sequences
+- critical_points: expression, variable (critical points / local maxima and minima / stationary points)
+- percentage: operation (of: value% of whole | what_percent: value is what percent of whole | change: percentage
+  change from whole to value | increase / decrease: whole changed by value%), value, whole
 - evaluate_expression: expression, variable, value (the value of an expression at a point, e.g. "f(2)"
   for f(x) = x^3 - 3x -> expression="x^3 - 3x", variable="x", value="2"; never use solve_equation for this)
 - matrix_spectrum: for a matrix A that is NOT written out but described by facts. Fields: size (n for n×n),
@@ -126,6 +134,10 @@ class PlannerOutput(BaseModel):
         "combinatorics",
         "matrix_spectrum",
         "evaluate_expression",
+        "summation",
+        "sequence",
+        "critical_points",
+        "percentage",
         "none",
     ] = Field(
         default="none",
@@ -159,6 +171,9 @@ class PlannerOutput(BaseModel):
     n: int | str | None = None
     k: int | str | None = None
     value: str | float | None = None
+    whole: str | float | None = None
+    terms: list[str | float] | None = None
+    find: str | None = None
     size: int | None = None
     eigenvalues: list[str | float] | None = None
     annihilating: str | None = None
@@ -203,6 +218,10 @@ _TOOL_CATEGORY = {
     "combinatorics": "probability_statistics",
     "matrix_spectrum": "linear_algebra",
     "evaluate_expression": "algebra",
+    "summation": "algebra",
+    "sequence": "algebra",
+    "critical_points": "calculus",
+    "percentage": "algebra",
 }
 
 

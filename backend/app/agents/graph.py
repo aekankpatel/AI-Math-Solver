@@ -222,16 +222,25 @@ def verify_node(state: SolverState) -> SolverState:
     return {"verification": verification, "overall": overall_status(verification, state.get("intent"))}
 
 
+def _readable(out: ToolOutput) -> str:
+    """The answer as rendered maths for the written explanation ($…$ is typeset by the UI), not SymPy text."""
+    if not out.answer_latex:
+        return out.answer_text
+    if "\\begin{aligned}" in out.answer_latex:
+        return "$$" + out.answer_latex + "$$"
+    return "$" + out.answer_latex + "$"
+
+
 def explain_node(state: SolverState) -> SolverState:
     call, out = state["tool_call"], state["tool_output"]
     assert call is not None and out is not None
     if state.get("explain_with_llm", True):
         text, used = explain(
-            state["problem"], call.tool, out.answer_text, out.steps, state.get("verification"), state.get("intent")
+            state["problem"], call.tool, _readable(out), out.steps, state.get("verification"), state.get("intent")
         )
     else:  # the API service may add an LLM explanation outside the sandbox
         text, used = (
-            template_explanation(call.tool, out.answer_text, state.get("verification"), state.get("intent")),
+            template_explanation(call.tool, _readable(out), state.get("verification"), state.get("intent")),
             False,
         )
     return {"explanation": text, "llm_used": state.get("llm_used", False) or used}

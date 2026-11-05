@@ -677,6 +677,9 @@ def _verify_distribution(out: ToolOutput) -> Verification:
     dist_name = d["distribution"]
     if dist_name == "binomial":
         rv: Any = stats.binom(int(p["n"]), p["p"])
+    elif dist_name == "hypergeometric":
+        good, bad, draws = int(p["success"]), int(p["failure"]), int(p["draws"])
+        rv = stats.hypergeom(good + bad, good, draws)
     elif dist_name == "poisson":
         rv = stats.poisson(p.get("lambda", p.get("lam", p.get("mean"))))
     elif dist_name == "normal":
@@ -686,7 +689,7 @@ def _verify_distribution(out: ToolOutput) -> Verification:
         rv = stats.uniform(a, b - a)
     else:
         rv = stats.expon(scale=1 / p.get("rate", p.get("lambda", 1.0)))
-    discrete = dist_name in ("binomial", "poisson")
+    discrete = dist_name in ("binomial", "poisson", "hypergeometric")
     if q in ("pmf", "pdf"):
         ref = rv.pmf(x) if discrete else rv.pdf(x)
     elif q == "cdf":
@@ -732,6 +735,10 @@ VERIFIERS: dict[str, Callable[[ToolOutput], Verification]] = {
     "probability_distribution": _verify_distribution,
     "combinatorics": _verify_combinatorics,
     "evaluate_expression": lambda out: _verify_evaluation(out),
+    "summation": lambda out: _verify_summation(out),
+    "sequence": lambda out: _verify_sequence(out),
+    "critical_points": lambda out: _verify_critical(out),
+    "percentage": lambda out: _verify_percentage(out),
     "matrix_spectrum": lambda out: _verify_spectrum(out),
 }
 
@@ -750,6 +757,147 @@ def _verify_evaluation(out: ToolOutput) -> Verification:
         checks = []
     checks.append(VerificationCheck(method="exact substitution", passed=exact))
     return _finish(checks, exact, False, "Exact substitution matches an independent 40-digit numeric evaluation.")
+
+
+def _verify_summation(out: ToolOutput) -> Verification:
+    d = out.data
+    expr, var, lo, hi, value = d["expr"], d["var"], d["lower"], d["upper"], d["value"]
+    checks: list[VerificationCheck] = []
+    exact = False
+    if hi.free_symbols:  # closed form in n: S(n) - S(n-1) must be the n-th term, and small cases must match
+        n = next(iter(hi.free_symbols))
+        tele = sp.simplify(value - value.subs(n, n - 1) - expr.subs(var, n)) == 0
+        start = sp.simplify(value.subs(n, lo) - expr.subs(var, lo)) == 0
+        exact = tele and start
+        checks.append(
+            VerificationCheck(
+                method="S(n) − S(n−1) equals the n-th term, and S(first) equals the first term", passed=exact
+            )
+        )
+        direct = all(
+            sp.simplify(value.subs(n, m) - sum(expr.subs(var, j) for j in range(int(lo), m + 1))) == 0
+            for m in range(int(lo), int(lo) + 8)
+        )
+        checks.append(VerificationCheck(method="direct sums for the first 8 values of n", passed=direct))
+    elif hi.is_infinite:
+        if value.is_infinite:
+            partial = [float(sum(sp.N(expr.subs(var, j)) for j in range(int(lo), int(lo) + m))) for m in (100, 1000)]
+            ok = abs(partial[1]) > abs(partial[0])
+            checks.append(VerificationCheck(method="partial sums keep growing", passed=ok))
+            return _finish(checks, False, True)
+        mp.mp.dps = 30
+        f = sp.lambdify(var, expr, modules="mpmath")
+        ref = mp.nsum(f, [int(lo), mp.inf])
+        checks.append(
+            VerificationCheck(
+                method="mpmath.nsum (series acceleration)",
+                passed=_close(complex(ref), complex(sp.N(value)), 1e-10, 1e-12),
+                detail=f"{float(ref.real):.12g}",
+            )
+        )
+    else:
+        total = (
+            sum(sp.nsimplify(expr.subs(var, j)) for j in range(int(lo), int(hi) + 1)) if (hi - lo) <= 20000 else None
+        )
+        if total is not None:
+            exact = sp.simplify(total - value) == 0
+            checks.append(
+                VerificationCheck(
+                    method="add every term directly (exact)", passed=exact, detail=f"{int(hi - lo + 1)} terms"
+                )
+            )
+        f = _lambdify(expr, var)
+        num = float(np.sum([f(float(j)).real for j in range(int(lo), int(hi) + 1)])) if (hi - lo) <= 10**6 else None
+        if num is not None:
+            checks.append(
+                VerificationCheck(
+                    method="floating-point sum (NumPy)", passed=_close(num, complex(sp.N(value)), 1e-9, 1e-9)
+                )
+            )
+    return _finish(checks, exact, False, "The closed form matches an independent direct computation.")
+
+
+def _verify_sequence(out: ToolOutput) -> Verification:
+    d = out.data
+    terms, n, find, value = d["terms"], d["n"], d["find"], d["value"]
+    step = (lambda a: a + d["d"]) if d["kind"] == "arithmetic" else (lambda a: a * d["r"])
+    seq, a = [], d["a1"]
+    for _ in range(max(n, len(terms))):
+        seq.append(a)
+        a = step(a)
+    fits = all(sp.simplify(seq[i] - terms[i]) == 0 for i in range(len(terms)))
+    checks = [VerificationCheck(method=f"the rule reproduces every given term ({d['kind']})", passed=fits)]
+    if n <= 100000:
+        ref = seq[n - 1] if find == "term" else sum(seq[:n])
+        ok = sp.simplify(ref - value) == 0
+        checks.append(
+            VerificationCheck(
+                method=f"generate the sequence term by term up to n = {n}", passed=ok, detail=str(ref)[:40]
+            )
+        )
+        return _finish(checks, fits and ok, False, "The formula matches the sequence generated term by term.")
+    return _finish(checks, False, True)
+
+
+def _verify_critical(out: ToolOutput) -> Verification:
+    d = out.data
+    var, d1, points = d["var"], d["d1"], d["points"]
+    checks = []
+    zero = all(sp.simplify(d1.subs(var, c)) == 0 for c, _, _ in points)
+    checks.append(VerificationCheck(method="f'(c) = 0 at every point (exact substitution)", passed=zero))
+    fd = _lambdify(d1, var)
+    ok_kind = True
+    for c, kind, _ in points:
+        cf, h = float(sp.N(c)), 1e-3
+        left, right = fd(cf - h).real, fd(cf + h).real
+        want = "local minimum" if left < 0 < right else "local maximum" if left > 0 > right else "neither (inflection)"
+        ok_kind &= want == kind
+    checks.append(
+        VerificationCheck(method="sign of f' just left and right of each point (classification)", passed=ok_kind)
+    )
+    # independent scan for sign changes of f' on [-50, 50]: none may be missing
+    xs = np.linspace(-50, 50, 20001)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        ys = np.array([fd(x).real for x in xs])
+    found = [float(xs[i]) for i in range(len(xs)) if ys[i] == 0]  # the grid can land exactly on a root
+    for i in range(len(xs) - 1):
+        if np.isfinite(ys[i]) and np.isfinite(ys[i + 1]) and ys[i] * ys[i + 1] < 0:
+            try:
+                found.append(optimize.brentq(lambda t: fd(t).real, xs[i], xs[i + 1]))
+            except ValueError:
+                pass
+    claimed = [float(sp.N(c)) for c, _, _ in points]
+    missing = [r for r in found if not any(abs(r - c) < 1e-6 for c in claimed)]
+    checks.append(
+        VerificationCheck(
+            method="numeric scan of f' on [-50, 50] (brentq)",
+            passed=not missing,
+            detail=f"missing: {missing[:3]}" if missing else f"{len(found)} sign change(s) found",
+        )
+    )
+    return _finish(checks, zero and ok_kind and not missing, False)
+
+
+def _verify_percentage(out: ToolOutput) -> Verification:
+    from fractions import Fraction
+
+    d = out.data
+    v, w = Fraction(str(d["value"])), Fraction(str(d["whole"]))
+    ref = {
+        "of": v / 100 * w,
+        "what_percent": v / w * 100 if w else None,
+        "change": (v - w) / w * 100 if w else None,
+        "increase": w + w * v / 100,
+        "decrease": w - w * v / 100,
+    }[d["operation"]]
+    ok = ref is not None and sp.Rational(ref.numerator, ref.denominator) == sp.nsimplify(d["result"])
+    return _finish(
+        [VerificationCheck(method="exact fraction arithmetic (Python fractions)", passed=ok, detail=str(ref))],
+        ok,
+        False,
+        "Matches independent exact fraction arithmetic.",
+    )
 
 
 def _verify_spectrum(out: ToolOutput) -> Verification:
