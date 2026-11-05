@@ -335,3 +335,9 @@ button { font: inherit; color: inherit; }
 .banner { margin-top: var(--line); padding: 0 16px; line-height: var(--line); align-items: center; }
 .banner-close { line-height: var(--line); }
 .notice { line-height: 1.6; }
+
+/* the header rule runs under the title and tagline only, ending where the tagline ends */
+.masthead { background: none; }
+.masthead > div:first-child { background: linear-gradient(var(--ink), var(--ink)) no-repeat left bottom 8px / 100% 2px; }
+.masthead > div:first-child { width: fit-content; max-width: 100%; }
+@media (max-width: 760px) { .tagline { font-size: 0.86rem; letter-spacing: -0.005em; } }
