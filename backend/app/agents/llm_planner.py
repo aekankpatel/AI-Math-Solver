@@ -23,7 +23,7 @@ from app.config import get_settings
 from app.math_engine.tools import TOOLS
 from app.schemas import ProblemCategory, ToolCall
 
-PROMPT_VERSION = "2026-11-05.p5"  # p5: multi-part questions via `parts` (p4: matrix_spectrum)
+PROMPT_VERSION = "2026-11-05.p6"  # p6: evaluate_expression (p5: parts, p4: matrix_spectrum)
 
 PLANNER_SYSTEM_PROMPT = """You are the planning component of Mathenza, a math solver.
 Your ONLY job is to translate the user's question into a call to exactly one whitelisted tool.
@@ -49,6 +49,8 @@ Tools and the fields they use:
   query (pmf: P(X=x), pdf: density, cdf: P(X<=x), greater: P(X>x) for continuous and P(X>=x) for
   discrete, between: P(x<=X<=x2)), x, x2.
 - combinatorics: operation (combinations|permutations|factorial), n, k
+- evaluate_expression: expression, variable, value (the value of an expression at a point, e.g. "f(2)"
+  for f(x) = x^3 - 3x -> expression="x^3 - 3x", variable="x", value="2"; never use solve_equation for this)
 - matrix_spectrum: for a matrix A that is NOT written out but described by facts. Fields: size (n for n×n),
   eigenvalues (list, with repetition), annihilating (a matrix equation A satisfies, e.g. "A^3 - 2A + I = 0"),
   charpoly (the characteristic polynomial as written, may contain unknown coefficients, e.g.
@@ -123,6 +125,7 @@ class PlannerOutput(BaseModel):
         "probability_distribution",
         "combinatorics",
         "matrix_spectrum",
+        "evaluate_expression",
         "none",
     ] = Field(
         default="none",
@@ -155,6 +158,7 @@ class PlannerOutput(BaseModel):
     x2: float | str | None = None
     n: int | str | None = None
     k: int | str | None = None
+    value: str | float | None = None
     size: int | None = None
     eigenvalues: list[str | float] | None = None
     annihilating: str | None = None
@@ -198,6 +202,7 @@ _TOOL_CATEGORY = {
     "probability_distribution": "probability_statistics",
     "combinatorics": "probability_statistics",
     "matrix_spectrum": "linear_algebra",
+    "evaluate_expression": "algebra",
 }
 
 

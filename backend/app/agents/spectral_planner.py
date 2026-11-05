@@ -216,7 +216,7 @@ def plan_spectrum(problem: str) -> ToolCall | None:
     if not is_spectral_question(problem):
         return None
     f = extract(problem)
-    if not f.queries or not (f.eigenvalues or f.annihilating or f.charpoly):
+    if not f.queries or not (f.eigenvalues or f.annihilating or f.charpoly or f.trace or f.determinant):
         return None
     args: dict[str, Any] = {"queries": f.queries}
     if f.size is not None:

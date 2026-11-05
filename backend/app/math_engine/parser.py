@@ -262,6 +262,8 @@ def validate_expression_text(text: str) -> str:
         .replace("π", "pi")
         .replace("√", "sqrt")
     )
+    for _ in range(3):  # absolute value bars, innermost first: |2x - 3| -> abs(2x - 3)
+        cleaned = re.sub(r"\|([^|]+)\|", r"abs(\1)", cleaned)
     if not _ALLOWED_CHARS.fullmatch(cleaned):
         bad = sorted({c for c in cleaned if not _ALLOWED_CHARS.fullmatch(c)})
         raise ExpressionError(f"Expression contains disallowed characters: {''.join(bad)!r}")

@@ -366,7 +366,40 @@ def _finite_difference(f: Callable[[float], complex], x0: float, order: int) -> 
     return total / h**order
 
 
+def _verify_abs_integral(out: ToolOutput) -> Verification:
+    d = out.data
+    expr, var, info, value = d["expr"], d["var"], d["abs_split"], d["value"]
+    g, G, points = info["inner"], info["antiderivative"], info["points"]
+    checks = []
+    exact = sp.simplify(sp.diff(G, var) - g) == 0
+    checks.append(VerificationCheck(method="differentiate the antiderivative of the inside (symbolic)", passed=exact))
+    roots_ok = all(sp.simplify(g.subs(var, p)) == 0 for p in points[1:-1])
+    checks.append(VerificationCheck(method="split points are roots of the inside (substitution)", passed=roots_ok))
+    fg = _lambdify(g, var)
+    sign_ok = True
+    for p, q in zip(points, points[1:], strict=False):
+        pf, qf = float(sp.N(p)), float(sp.N(q))
+        samples = [complex(fg(pf + (qf - pf) * t)).real for t in (0.1, 0.3, 0.5, 0.7, 0.9)]
+        if not (all(s >= -1e-12 for s in samples) or all(s <= 1e-12 for s in samples)):
+            sign_ok = False
+    checks.append(VerificationCheck(method="the inside keeps one sign on each piece (sampling)", passed=sign_ok))
+    a, b = d["lower"], d["upper"]
+    quad = _reliable_quadrature(_lambdify(expr, var), a, b, [float(sp.N(p)) for p in points[1:-1]])
+    if quad is not None:
+        numeric, method = quad
+        checks.append(
+            VerificationCheck(
+                method=f"numeric integration of |g| ({method})",
+                passed=_close(numeric, complex(sp.N(value)), 1e-7, 1e-9),
+                detail=f"{numeric:.10g}",
+            )
+        )
+    return _finish(checks, exact and roots_ok and sign_ok, False)
+
+
 def _verify_integral(out: ToolOutput) -> Verification:
+    if "abs_split" in out.data:
+        return _verify_abs_integral(out)
     expr, var = out.data["expr"], out.data["var"]
     antideriv = out.data["antiderivative"]
     checks: list[VerificationCheck] = []
@@ -698,8 +731,25 @@ VERIFIERS: dict[str, Callable[[ToolOutput], Verification]] = {
     "descriptive_statistics": _verify_stats,
     "probability_distribution": _verify_distribution,
     "combinatorics": _verify_combinatorics,
+    "evaluate_expression": lambda out: _verify_evaluation(out),
     "matrix_spectrum": lambda out: _verify_spectrum(out),
 }
+
+
+def _verify_evaluation(out: ToolOutput) -> Verification:
+    d = out.data
+    expr, var, point, result = d["expr"], d["var"], d["point"], d["result"]
+    exact = sp.simplify(expr.subs(var, point) - result) == 0
+    mp.mp.dps = 40
+    f = sp.lambdify(var, expr, modules="mpmath")
+    try:
+        ref = complex(f(mp.mpf(str(sp.N(point, 45))) if point.is_real else mp.mpc(complex(sp.N(point)))))
+        ok = _close(ref, complex(sp.N(result)), 1e-12, 1e-14)
+        checks = [VerificationCheck(method="mpmath evaluation (40 digits)", passed=ok, detail=f"{ref.real:.15g}")]
+    except Exception:
+        checks = []
+    checks.append(VerificationCheck(method="exact substitution", passed=exact))
+    return _finish(checks, exact, False, "Exact substitution matches an independent 40-digit numeric evaluation.")
 
 
 def _verify_spectrum(out: ToolOutput) -> Verification:

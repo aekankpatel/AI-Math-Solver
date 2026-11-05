@@ -83,6 +83,14 @@ def _clauses(text: str) -> list[str] | None:
         return None
     if not all(re.match(rf"\s*(?:then\s+|also\s+|next\s+|finally\s+)?{_VERB}\b", p, re.I) for p in pieces):
         return None
+    # a trailing "and simplify (it / the result)" is part of the same task, not a separate question
+    if any(
+        re.fullmatch(
+            r"\s*(?:then\s+)?(?:simplify|factor|expand)(?:\s+(?:it|this|the\s+(?:result|answer)))?\s*\.?\s*", p, re.I
+        )
+        for p in pieces[1:]
+    ):
+        return None
     return [p.strip(" .") for p in pieces if p.strip(" .")]
 
 
@@ -98,6 +106,40 @@ def _shared_object(text: str) -> list[str] | None:
         return None
     verb = (m.group("verb") or "Find").strip()
     return [f"{verb} the {m.group('n1')} {m.group('rest')}", f"{verb} the {m.group('n2')} {m.group('rest')}"]
+
+
+def _object_then_noun(text: str) -> list[str] | None:
+    """'Find the inverse of [[1,2],[3,4]] and its determinant' -> two questions about the same object."""
+    m = re.match(
+        rf"\s*(?P<verb>{_VERB})?\s*(?:the\s+)?(?P<n1>{_TASK_NOUN})\s+(?P<prep>of|for)\s+(?P<obj>.+?)\s+and\s+"
+        rf"(?:also\s+)?(?:its|their|the)\s+(?P<n2>{_TASK_NOUN})\s*[.?]?\s*$",
+        text,
+        re.I,
+    )
+    if not m or m.group("n1").lower() == m.group("n2").lower():
+        return None
+    verb = (m.group("verb") or "Find").strip()
+    obj = m.group("obj").strip()
+    return [
+        f"{verb} the {m.group('n1')} {m.group('prep')} {obj}",
+        f"{verb} the {m.group('n2')} {m.group('prep')} {obj}",
+    ]
+
+
+def _function_values(prefix: str, text: str) -> list[str] | None:
+    """'Let g(t) = t^2 e^t. Find g'(t) and g''(t).' -> one question per requested value."""
+    d = _DEF.search(prefix)
+    if not d:
+        return None
+    name = re.escape(d.group(1))
+    item = rf"{name}\s*'*\s*\([^()]*\)"
+    m = re.fullmatch(
+        rf"\s*(?P<verb>{_VERB})\s+(?P<items>{item}(?:\s*(?:,|and|,\s*and)\s*{item})+)\s*[.?]?\s*", text, re.I
+    )
+    if not m:
+        return None
+    items = re.findall(item, m.group("items"))
+    return [f"{m.group('verb')} {it}" for it in items] if len(items) >= 2 else None
 
 
 def _sentences(text: str) -> tuple[str, list[str]] | None:
@@ -161,18 +203,22 @@ def split_parts(problem: str) -> list[str] | None:
         if sent is not None:
             found = sent
     if found is None:
-        clauses = _clauses(text)
+        clauses = _clauses(text) or _shared_object(text) or _object_then_noun(text)
         if clauses is None:
-            shared = _shared_object(text)
-            if shared is None:
+            sentences = [s.strip() for s in re.split(r"(?<=[.?!])\s+(?=[A-Z])", text) if s.strip()]
+            if len(sentences) >= 2:
+                values = _function_values(" ".join(sentences[:-1]), sentences[-1])
+                if values:
+                    found = (" ".join(sentences[:-1]), values)
+            if found is None:
                 return None
-            clauses = shared
-        found = ("", clauses)
+        else:
+            found = ("", clauses)
     prefix, parts = found
     # a part that is itself "X and Y" with two task verbs is split further
     expanded: list[str] = []
     for p in parts:
-        sub = _clauses(p) or _shared_object(p)
+        sub = _clauses(p) or _shared_object(p) or _object_then_noun(p) or _function_values(prefix, p)
         expanded.extend(sub if sub else [p])
     if len(expanded) < 2 or len(expanded) > MAX_PARTS:
         return None

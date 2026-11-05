@@ -316,6 +316,8 @@ def matrix_spectrum(
         steps.append(
             Step(title="Eigenvalues are the roots of the characteristic polynomial", latex=sp.latex(sp.factor(cp)))
         )
+    elif T is not None or D is not None:
+        return _monomial_answers(queries, parsed, n, T, D, real, steps, facts)
     else:
         raise SpectrumError(
             "Not enough information to determine the eigenvalues: give them, a polynomial equation the matrix "
@@ -503,6 +505,88 @@ def matrix_spectrum(
     }
 
 
+def _monomial(f: sp.Expr) -> tuple[sp.Expr, int] | None:
+    """c·x^k -> (c, k) for an integer k (k may be negative)."""
+    c, k = sp.Mul(f).as_coeff_exponent(X)
+    if c.free_symbols or not (k.is_Integer):
+        return None
+    return sp.nsimplify(c), int(k)
+
+
+def _monomial_answers(queries, parsed, n, T, D, real, steps, facts) -> dict[str, Any]:  # noqa: ANN001
+    """Without the eigenvalues, det(c·A^k) = c^n·det(A)^k and tr(c·A) = c·tr(A) still follow from the given facts."""
+    lines, latex_lines, results = [], [], []
+    for raw, (kind, arg, f) in zip(queries, parsed, strict=True):
+        mono = _monomial(f)
+        if kind == "det" and mono and D is not None:
+            c, k = mono
+            if k < 0 and same(D, 0):
+                raise SpectrumError(f"{arg} does not exist: det(A) = 0, so A is not invertible.")
+            value = tidy(c**n * D**k)
+            steps.append(
+                Step(
+                    title=f"det({arg}) from det(A)",
+                    detail="det(cM) = cⁿ·det(M) for an n×n matrix, and det(Aᵏ) = det(A)ᵏ.",
+                    latex=rf"\det({arg_latex(arg)}) = {sp.latex(c)}^{{{n}}}\cdot ({sp.latex(D)})^{{{k}}} = {sp.latex(value)}",
+                )
+            )
+            label = f"det({_clean(arg)})"
+            lines.append(f"{label} = {txt(value)}")
+            latex_lines.append(rf"\det\left({arg_latex(arg)}\right) = {sp.latex(value)}")
+        elif kind == "trace" and mono and mono[1] in (0, 1) and (mono[1] == 0 or T is not None):
+            c, k = mono
+            value = tidy(c * (T if k == 1 else n))
+            steps.append(
+                Step(
+                    title=f"tr({arg})",
+                    detail="The trace is linear: tr(cA) = c·tr(A), and tr(I) = n.",
+                    latex=rf"\operatorname{{tr}}({arg_latex(arg)}) = {sp.latex(value)}",
+                )
+            )
+            lines.append(f"tr({_clean(arg)}) = {txt(value)}")
+            latex_lines.append(rf"\operatorname{{tr}}\left({arg_latex(arg)}\right) = {sp.latex(value)}")
+        else:
+            raise SpectrumError(
+                f"{raw} cannot be determined from the trace and determinant alone; the eigenvalues "
+                "(or a matrix equation) are needed."
+            )
+        results.append({"query": raw, "kind": kind, "arg": arg, "values": [value], "distinct": [value]})
+    return {
+        "lines": lines,
+        "latex_lines": latex_lines,
+        "steps": steps,
+        "spectra": [],
+        "roots": [],
+        "results": results,
+        "n": n,
+        "real": real,
+        "trace": T,
+        "det": D,
+        "annihilating": None,
+        "charpoly": None,
+        "unknowns": [],
+        "eigenvalues_given": False,
+        "facts": facts,
+        "monomial": True,
+    }
+
+
+def _example_spectra(n: int, T: sp.Expr | None, D: sp.Expr | None) -> list[list[sp.Expr]]:
+    """Two different spectra with the given trace and determinant (for checking identities on concrete matrices)."""
+    out = []
+    for fill in (sp.Integer(1), sp.Integer(2)):
+        if n == 1:
+            spec = [D if D is not None else (T if T is not None else fill)]
+        else:
+            rest = [fill] * (n - 2)
+            s = (T - sum(rest)) if T is not None else fill + 3
+            p = (D / sp.Mul(*rest)) if D is not None else fill * 3
+            r1 = (s + sp.sqrt(s**2 - 4 * p)) / 2
+            spec = [tidy(r1), tidy(s - r1), *rest]
+        out.append(spec)
+    return out
+
+
 # --------------------------------------------------------------------------- independent verification
 
 
@@ -587,7 +671,52 @@ def _numeric_candidates(data: dict[str, Any]) -> list[list[complex]] | None:
     return out
 
 
+def _verify_monomial(data: dict[str, Any]) -> Verification:
+    checks: list[VerificationCheck] = []
+    exact = True
+    for idx, spec in enumerate(_example_spectra(data["n"], data["trace"], data["det"])):
+        M = _realisation(spec, False)
+        if data["det"] is not None:
+            ok = is_zero(M.det(method="berkowitz") - data["det"])
+            checks.append(
+                VerificationCheck(
+                    method=f"example matrix {idx + 1}: det(M) = given determinant", passed=ok is not False
+                )
+            )
+        if data["trace"] is not None:
+            ok = is_zero(M.trace() - data["trace"])
+            checks.append(
+                VerificationCheck(method=f"example matrix {idx + 1}: tr(M) = given trace", passed=ok is not False)
+            )
+        for res in data["results"]:
+            F = _fn_at(matrix_function(res["arg"]), M)
+            got = F.det(method="berkowitz") if res["kind"] == "det" else F.trace()
+            z = is_zero(got - res["values"][0])
+            if z is None:
+                exact = False
+                z = abs(complex(sp.N(got - res["values"][0], 40))) < 1e-20
+            checks.append(
+                VerificationCheck(
+                    method=f"{res['kind']}({res['arg']}) recomputed on example matrix {idx + 1}", passed=bool(z)
+                )
+            )
+    if any(not c.passed for c in checks):
+        return Verification(
+            status=VerificationStatus.FAILED,
+            checks=checks,
+            summary="Independent check disagreed: " + ", ".join(c.method for c in checks if not c.passed),
+        )
+    status = VerificationStatus.VERIFIED if exact else VerificationStatus.APPROXIMATE
+    return Verification(
+        status=status,
+        checks=checks,
+        summary="The identity holds for every matrix with these facts; recomputed on two different concrete matrices.",
+    )
+
+
 def verify_spectrum(data: dict[str, Any]) -> Verification:
+    if data.get("monomial"):
+        return _verify_monomial(data)
     checks: list[VerificationCheck] = []
     exact = True
     spectra = data["spectra"]

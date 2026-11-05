@@ -528,6 +528,12 @@ def integrate(
 
     a, b = parse_expression(str(lower)), parse_expression(str(upper))
     data.update(lower=a, upper=b)
+    if isinstance(expr, sp.Abs) and a.is_finite and b.is_finite and not (a.free_symbols or b.free_symbols):
+        split = _integrate_abs(expr, var, a, b, steps)
+        if split is not None:
+            value, info = split
+            data.update(value=value, abs_split=info, antiderivative=sp.Integral(expr, var))
+            return ToolOutput(answer_text=_fmt(value), answer_latex=sp.latex(value), steps=steps, data=data)
     approximate = False
     if a.free_symbols or b.free_symbols:
         raise ToolError("Integration limits must be numbers.")
@@ -588,6 +594,46 @@ def integrate(
     text = f"diverges ({_fmt(value)})" if value.is_infinite else _fmt(value)
     latex = sp.latex(value) + (r"\ \text{(diverges)}" if value.is_infinite else "")
     return ToolOutput(answer_text=text, answer_latex=latex, steps=steps, data=data, approximate=approximate)
+
+
+def _integrate_abs(
+    expr: sp.Abs, var: sp.Symbol, a: sp.Expr, b: sp.Expr, steps: list[Step]
+) -> tuple[sp.Expr, dict[str, Any]] | None:
+    """∫_a^b |g| exactly: split [a, b] where g changes sign and add |∫ g| over each piece."""
+    g = expr.args[0]
+    lo, hi = (a, b) if (b - a).is_nonnegative else (b, a)
+    G = _with_timeout(lambda: sp.integrate(g, var), "Integration")
+    if G.has(sp.Integral):
+        return None
+    roots = _with_timeout(lambda: sp.solveset(g, var, sp.Interval.open(lo, hi)), "Sign changes")
+    if roots == sp.S.EmptySet:
+        inner: list[sp.Expr] = []
+    elif isinstance(roots, sp.FiniteSet) and len(roots) <= 20:
+        inner = sorted(roots, key=lambda r: float(sp.N(r)))
+    else:
+        return None
+    points = [lo, *inner, hi]
+    pieces = [sp.simplify(G.subs(var, q) - G.subs(var, p)) for p, q in zip(points, points[1:], strict=False)]
+    value = sp.simplify(sum(sp.Abs(v) for v in pieces))
+    if (b - a).is_negative:
+        value = -value
+    steps.append(
+        Step(
+            title="Split where the inside changes sign",
+            detail="|g| = g where g ≥ 0 and −g where g < 0, so integrate g on each piece and add the absolute values.",
+            latex=rf"g({sp.latex(var)}) = {sp.latex(g)} = 0 \Rightarrow {sp.latex(var)} \in \{{"
+            + ", ".join(sp.latex(r) for r in points[1:-1])
+            + r"\}",
+        )
+    )
+    steps.append(
+        Step(
+            title="Add the pieces",
+            latex=" + ".join(rf"\left|{sp.latex(v)}\right|" for v in pieces) + f" = {sp.latex(value)}",
+            detail=_numeric_note([value]),
+        )
+    )
+    return value, {"inner": g, "antiderivative": G, "points": points}
 
 
 def _interior_singularities(expr: sp.Expr, var: sp.Symbol, a: sp.Expr, b: sp.Expr) -> list[sp.Basic]:
@@ -1015,6 +1061,37 @@ def combinatorics(operation: str, n: Any, k: Any = None) -> ToolOutput:
     )
 
 
+# --------------------------------------------------------------------------- evaluation
+
+
+def evaluate_expression(expression: str, value: str, variable: str | None = None) -> ToolOutput:
+    """The exact value of an expression at a point, e.g. x^3 - 3x at x = 2."""
+    expr = parse_expression(expression)
+    var = _pick_variable(expr, variable)
+    if expr.free_symbols - {var}:
+        raise ToolError("The expression has more than one variable; give a value for each.")
+    point = parse_expression(str(value))
+    if point.free_symbols:
+        raise ToolError("The value must be a number.")
+    result = _with_timeout(lambda: sp.simplify(expr.subs(var, point)), "Evaluation")
+    if result.has(sp.zoo, sp.nan) or result.is_infinite:
+        raise ToolError(f"The expression is undefined at {var} = {_fmt(point)}.")
+    steps = [
+        Step(title="Expression", latex=f"f({sp.latex(var)}) = {sp.latex(expr)}"),
+        Step(
+            title=f"Substitute {var} = {_fmt(point)}",
+            latex=f"f({sp.latex(point)}) = {sp.latex(expr.subs(var, sp.UnevaluatedExpr(point)))}",
+        ),
+        Step(title="Simplify", latex=f"f({sp.latex(point)}) = {sp.latex(result)}", detail=_numeric_note([result])),
+    ]
+    return ToolOutput(
+        answer_text=_fmt(result),
+        answer_latex=sp.latex(result),
+        steps=steps,
+        data={"expr": expr, "var": var, "point": point, "result": result},
+    )
+
+
 # --------------------------------------------------------------------------- spectral facts
 
 
@@ -1063,6 +1140,7 @@ TOOLS: dict[str, Callable[..., ToolOutput]] = {
     "probability_distribution": probability_distribution,
     "combinatorics": combinatorics,
     "matrix_spectrum": matrix_spectrum,
+    "evaluate_expression": evaluate_expression,
 }
 
 

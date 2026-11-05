@@ -96,7 +96,7 @@ _TASK_CUES: list[tuple[str, str]] = [
         "derivative",
         r"(?<!anti)derivative|differentiat|\bd\s*/\s*d[a-z]\b|rate of change|\bslope\b|\bf\s*'+|how (?:fast|quickly|rapidly)",
     ),
-    ("integral", r"integra|antiderivative|area under|∫"),
+    ("integral", r"integra|antiderivative|area under|area between|area enclosed|area bounded|∫"),
     ("limit", r"\blim\b|\blim_|\blimit|\bapproach|\btends? to\b|\bgoes to\b"),
     ("factor", r"\bfactor(?:ise|ize|ization|isation)?\b"),
     ("expand", r"\bexpand|\bmultiply out\b"),
@@ -207,6 +207,15 @@ def extract_intent(problem: str) -> Intent:
         low,
     ):
         it.task = "probability"
+    elif re.search(
+        r"\b(?:evaluate|find|compute|calculate|what\s+is|what's|work\s+out)\b[^=]*?\b(?:at|when|for|if|where)\s+[a-z]\s*=\s*-?\d",
+        low,
+    ) and not re.search(
+        r"\bsolve\b|\broots?\b|\bzeros?\b|\bsolutions?\b|derivative|differentiat|integra|\blimit\b|slope|rate of change"
+        r"|\btangent\b|probabilit|\bp\s*\(",
+        low,
+    ):
+        it.task = "evaluate"
     else:
         hits = [name for name, pat in _TASK_CUES if re.search(pat, low)]
         calc = [h for h in hits if h in ("derivative", "integral", "limit")]
@@ -214,6 +223,14 @@ def extract_intent(problem: str) -> Intent:
             it.task_conflict = calc
         if hits:
             it.task = hits[0] if len(calc) <= 1 else None
+        elif re.search(
+            r"\b(?:find|what is|what's|determine|compute|calculate)\s+the\s+(?:value\s+of\s+the\s+)?"
+            r"(?:first|second|third|fourth|fifth|sixth|missing|remaining|other|last|unknown|new|next)\b"
+            r"|\b(?:mean|average)\s+of\s+(?:the\s+)?(?:\d+|two|three|four|five|six|seven|eight|nine|ten)\s+"
+            r"(?:numbers|values|scores|tests|items|marks)\s+(?:is|was|equals)\b",
+            low,
+        ):
+            it.task = "solve"  # a given summary statistic with a missing value: an equation, not a summary
         elif re.search(r"\bmean\b|\bmedian\b|\baverage\b|standard deviation|\bvariance\b|\bspread\b|statistics", low):
             it.task = "statistics"
         elif re.search(r"\bsolve|\broots?\b|\bzeros?\b|\bsolutions?\b|\bsatisf|=", low):
@@ -364,6 +381,7 @@ _TOOL_TASK = {
     "probability_distribution": "probability",
     "combinatorics": "counting",
     "matrix_spectrum": "spectrum",
+    "evaluate_expression": "evaluate",
 }
 
 
@@ -415,6 +433,8 @@ def describe(call: ToolCall) -> str:
             "between": f"P({x} ≤ X ≤ {x2})",
         }.get(q, str(q))
         return f"{event} for X ~ {str(a.get('distribution')).capitalize()}({params})."
+    if t == "evaluate_expression":
+        return f"Value of {a.get('expression')} at {a.get('variable') or 'x'} = {a.get('value')}."
     if t == "matrix_spectrum":
         facts = [f"{a['size']}×{a['size']}" if a.get("size") else "square"]
         facts[0] += " real matrix A" if a.get("real") else " matrix A"
@@ -614,6 +634,7 @@ _TOOL_CATEGORY = {
     "probability_distribution": "probability_statistics",
     "combinatorics": "probability_statistics",
     "matrix_spectrum": "linear_algebra",
+    "evaluate_expression": "algebra",
 }
 _ENUMS = {
     "operation": {
@@ -741,8 +762,10 @@ def _validate_spectrum(a: dict[str, Any]) -> list[str]:
             errors.append(f"'{key}' must be a number")
     if a.get("real") is not None and not isinstance(a["real"], bool):
         errors.append("'real' must be true or false")
-    if not (a.get("eigenvalues") or a.get("annihilating") or a.get("charpoly")):
-        errors.append("the plan gives no eigenvalues, matrix equation or characteristic polynomial")
+    if not (
+        a.get("eigenvalues") or a.get("annihilating") or a.get("charpoly") or a.get("trace") or a.get("determinant")
+    ):
+        errors.append("the plan gives no eigenvalues, matrix equation, characteristic polynomial, trace or determinant")
     return errors
 
 
@@ -863,8 +886,10 @@ def _check_alignment(
         "differentiate",
         "integrate",
         "limit",
+        "evaluate_expression",
     ):
-        _check_expression(problem, it, call, ctx)
+        if not _check_area_between(problem, call, ctx):  # area between curves: checked against both curves
+            _check_expression(problem, it, call, ctx)
         _check_calculus_slots(it, call, ctx)
     elif call.tool == "matrix_operation":
         _check_matrices(it, call, ctx)
@@ -912,7 +937,9 @@ def _check_alignment(
 
 def _arg_scalars(call: ToolCall) -> list[tuple[str, Any]]:
     a, out = call.args, []
-    for key in ("point", "lower", "upper", "x", "x2", "n", "k"):
+    for key in ("point", "lower", "upper", "x", "x2", "n", "k") + (
+        ("value",) if call.tool == "evaluate_expression" else ()
+    ):
         if a.get(key) is not None:
             out.append((key, a[key]))
     for key, value in (a.get("params") or {}).items():
@@ -1046,7 +1073,7 @@ def _check_solve(problem: str, it: Intent, call: ToolCall, ctx: _Ctx) -> None:
         spans = [s for s in all_spans if _substantial(s)]
     text_eqs = [e for e in (_expr_of(s) for s in spans) if e is not None]
     if not text_eqs:
-        if _check_reconstruction(problem, it, equations, ctx):
+        if _check_reconstruction(problem, it, equations, ctx, solve_for_unknowns=True):
             ctx.assumptions.append("The equation was reconstructed from words: " + "; ".join(equations))
     else:
         for eq_text, e in zip(equations, exprs, strict=True):
@@ -1132,10 +1159,25 @@ def _structural_constants(problem: str, it: Intent) -> set[float]:
         allowed.add(3.0)
     if re.search(r"percent|%", low):
         allowed.add(100.0)
+    if re.search(r"\bperimeter\b", low):  # 2(l + w) for a rectangle, 4s for a square
+        allowed |= {2.0, 4.0}
     return allowed
 
 
-def _check_reconstruction(problem: str, it: Intent, texts: list[str], ctx: _Ctx) -> bool:
+def _names_unknowns(problem: str, strangers: list[str]) -> bool:
+    """A word problem (no variables written in it) that asks for unknown values may name up to three unknowns."""
+    low = _normalise(problem).lower()
+    if len(strangers) > 3 or not all(len(n) == 1 for n in strangers):
+        return False
+    written_vars = re.findall(r"(?<![a-z])[a-z](?![a-z(])", re.sub(r"\b(?:a|i)\b", " ", low))
+    if written_vars:
+        return False
+    return bool(re.search(r"\b(find|what|which|how (?:long|wide|tall|many|much|old)|determine|dimensions?)\b", low))
+
+
+def _check_reconstruction(
+    problem: str, it: Intent, texts: list[str], ctx: _Ctx, solve_for_unknowns: bool = False
+) -> bool:
     """Provenance of math the plan wrote although the question contains no matching written math.
 
     A faithful translation from words may only use numbers stated in the question (as digits or
@@ -1163,7 +1205,18 @@ def _check_reconstruction(problem: str, it: Intent, texts: list[str], ctx: _Ctx)
                 for s_ in expr.free_symbols
                 if not re.search(rf"(?<![A-Za-z]){re.escape(s_.name)}(?![A-Za-z])", low_text)
             )
-            if strangers:
+            if strangers and solve_for_unknowns and _names_unknowns(problem, strangers):
+                # a word problem must name its unknowns; allowed (never as confirmed) when every number is traceable
+                note = f"The plan names the unknown(s) {', '.join(strangers)} for the value(s) the question asks for."
+                if any(c.detail == note for c in ctx.checks):
+                    continue
+                ctx.add(
+                    "unknowns named by the plan",
+                    False,
+                    f"The plan names the unknown(s) {', '.join(strangers)} for the value(s) the question asks for.",
+                    "warning",
+                )
+            elif strangers:
                 ctx.add(
                     "symbols traceable to the question",
                     False,
@@ -1218,6 +1271,38 @@ def _check_expression(problem: str, it: Intent, call: ToolCall, ctx: _Ctx) -> No
                 f"The expression has several variables ({', '.join(names)}); with respect to which one?",
                 "missing",
             )
+
+
+def _check_area_between(problem: str, call: ToolCall, ctx: _Ctx) -> bool:
+    """The area between two curves is ∫|f − g|: an integrand built from only one curve answers another question."""
+    from app.agents.rule_planner import _AREA, area_curves
+
+    text = _normalise(problem)
+    if call.tool != "integrate" or not _AREA.search(text):
+        return False
+    curves = area_curves(text)
+    if len(curves) != 2:
+        return False
+    try:
+        f, g = (parse_expression(c) for c in curves)
+        e = parse_expression(str(call.args.get("expression", "")))
+    except ExpressionError:
+        return False
+    x = sp.Symbol("x")
+    diff = sp.expand(f - g)
+    candidates = [diff, -diff, sp.Abs(diff)]
+    ok = any(_equivalent(e, c) for c in candidates[:2]) or _equivalent(sp.Abs(e), sp.Abs(diff))
+    if ok and not isinstance(e, sp.Abs) and e.free_symbols <= {x}:
+        ctx.assumptions.append("The integrand f − g is assumed not to change sign on the interval.")
+    ctx.add(
+        "area uses both curves",
+        ok,
+        "∫|f − g| over the interval"
+        if ok
+        else f"The area between {curves[0]} and {curves[1]} needs both curves (∫|f − g|).",
+    )
+    ctx.matched_numbers |= set(_numbers_in(" ".join(curves)))
+    return True
 
 
 def _check_calculus_slots(it: Intent, call: ToolCall, ctx: _Ctx) -> None:

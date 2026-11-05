@@ -91,8 +91,10 @@ def test_inconsistent_conditions_are_reported():
 
 
 def test_missing_information_is_reported():
-    with pytest.raises(ToolError, match="Not enough information"):
+    with pytest.raises(ToolError, match="cannot be determined from the trace and determinant alone"):
         run_tool("matrix_spectrum", {"size": 3, "trace": "2", "queries": ["det(A)"]})
+    with pytest.raises(ToolError, match="Not enough information"):
+        run_tool("matrix_spectrum", {"size": 3, "queries": ["det(A)"]})
 
 
 def test_only_a_and_i_are_allowed_in_expressions():

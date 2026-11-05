@@ -93,6 +93,7 @@ def plan_with_rules(problem: str) -> ToolCall:
     if spectral is not None:
         return spectral
     for planner in (
+        _plan_area_between,
         _plan_matrix,
         _plan_probability,
         _plan_combinatorics,
@@ -101,6 +102,7 @@ def plan_with_rules(problem: str) -> ToolCall:
         _plan_integral,
         _plan_derivative,
         _plan_transform,
+        _plan_evaluate,
         _plan_equation,
     ):
         call = planner(text, low)
@@ -113,6 +115,51 @@ def plan_with_rules(problem: str) -> ToolCall:
 
 
 # --------------------------------------------------------------------------- category planners
+
+
+_AREA = re.compile(r"\barea\s+(?:between|enclosed\s+by|bounded\s+by|of\s+the\s+region\s+between)\b", re.I)
+
+
+def area_curves(text: str) -> list[str]:
+    """The two curves of an 'area between' question: 'y = x^2 and y = x', 'y = sin(x) and y = cos(x)'."""
+    curves = re.findall(
+        r"\b(?:y|[fg]\s*\(\s*x\s*\))\s*=\s*(.+?)(?=\s*(?:,|;|\band\b|\bfrom\b|\bbetween\b|\bfor\b|\bon\b|\bover\b|$|\?|\.\s|\.$))",
+        text,
+    )
+    return [c.strip() for c in curves][:2]
+
+
+def area_bounds(text: str) -> tuple[str, str] | None:
+    m = (
+        re.search(rf"\bfrom\s+x\s*=\s*({_NUM}|pi|-?\w+)\s+to\s+x\s*=\s*({_NUM}|pi|-?\w+)", text)
+        or re.search(rf"\bfrom\s+({_NUM}|pi)\s+to\s+({_NUM}|pi)\b", text)
+        or re.search(rf"\bbetween\s+x\s*=\s*({_NUM}|pi)\s+and\s+x\s*=\s*({_NUM}|pi)", text)
+        or re.search(rf"\[\s*({_NUM}|pi)\s*,\s*({_NUM}|pi)\s*\]", text)
+    )
+    return (m.group(1), m.group(2)) if m else None
+
+
+def _plan_area_between(text: str, low: str) -> ToolCall | None:
+    """'area between y = f and y = g from a to b' -> ∫_a^b |f - g| dx (written from the question, nothing computed)."""
+    if not _AREA.search(text):
+        return None
+    curves = area_curves(text)
+    if len(curves) != 2:
+        return None
+    bounds = area_bounds(text)
+    if bounds is None:
+        raise PlanningError("Between which x-values? Please give the interval (e.g. 'from x = 0 to x = 1').")
+    return ToolCall(
+        tool="integrate",
+        category=ProblemCategory.INTEGRALS,
+        args={
+            "expression": f"abs(({curves[0]}) - ({curves[1]}))",
+            "variable": "x",
+            "lower": bounds[0],
+            "upper": bounds[1],
+        },
+        rationale="Area between two curves: integrate the absolute difference.",
+    )
 
 
 def _plan_matrix(text: str, low: str) -> ToolCall | None:
@@ -481,6 +528,31 @@ def _plan_transform(text: str, low: str) -> ToolCall | None:
                 tool=tool, category=ProblemCategory.ALGEBRA, args={"expression": expr}, rationale=f"{word} request."
             )
     return None
+
+
+_EVAL = re.compile(
+    rf"^\s*(?:evaluate|find|compute|calculate|what\s+is|what's|work\s+out)\s+(?:the\s+value\s+of\s+)?(?P<expr>.+?)\s+"
+    rf"(?:at|when|for|if|where)\s+(?P<var>[a-z])\s*=\s*(?P<val>{_NUM}|pi|e)\s*[.?]?\s*$",
+    re.I,
+)
+
+
+def _plan_evaluate(text: str, low: str) -> ToolCall | None:
+    """'Evaluate x^3 - 3x at x = 2' / 'What is x^2 + 1 when x = 3?' -> exact substitution."""
+    m = _EVAL.match(text)
+    if not m or "=" in m.group("expr"):
+        return None
+    expr = (
+        m.group("expr").strip().strip("()")
+        if m.group("expr").strip().startswith("(") and m.group("expr").strip().endswith(")")
+        else m.group("expr").strip()
+    )
+    return ToolCall(
+        tool="evaluate_expression",
+        category=ProblemCategory.ALGEBRA,
+        args={"expression": expr, "variable": m.group("var"), "value": m.group("val")},
+        rationale="Evaluate the expression at the given point.",
+    )
 
 
 def _plan_equation(text: str, low: str) -> ToolCall | None:

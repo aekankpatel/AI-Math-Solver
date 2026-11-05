@@ -39,6 +39,7 @@ ToolName = Literal[
     "probability_distribution",
     "combinatorics",
     "matrix_spectrum",
+    "evaluate_expression",
 ]
 
 
