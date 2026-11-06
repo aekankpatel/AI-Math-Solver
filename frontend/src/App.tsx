@@ -195,31 +195,29 @@ export default function App() {
           </div>
         </form>
 
-        {turns.length === 0 && !loading && (
-          <section className="examples" aria-label="Examples">
-            <h2 className="eyebrow">Or try one of these</h2>
-            <dl>
-              {Object.entries(examples).map(([cat, items]) => (
-                <div key={cat} className="example-group">
-                  <dt>{cat}</dt>
-                  <dd>
-                    {items.map((ex) => (
-                      <button
-                        key={ex}
-                        type="button"
-                        className="example"
-                        aria-label={ex}
-                        onClick={() => void submitProblem(undefined, ex)}
-                      >
-                        {EXAMPLE_LABELS[ex] ? <RichText text={EXAMPLE_LABELS[ex]} /> : ex}
-                      </button>
-                    ))}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          </section>
-        )}
+        <section className="examples" aria-label="Examples">
+          <h2 className="eyebrow">Or try one of these</h2>
+          <dl>
+            {Object.entries(examples).map(([cat, items]) => (
+              <div key={cat} className="example-group">
+                <dt>{cat}</dt>
+                <dd>
+                  {items.map((ex) => (
+                    <button
+                      key={ex}
+                      type="button"
+                      className="example"
+                      aria-label={ex}
+                      onClick={() => void submitProblem(undefined, ex)}
+                    >
+                      {EXAMPLE_LABELS[ex] ? <RichText text={EXAMPLE_LABELS[ex]} /> : ex}
+                    </button>
+                  ))}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </section>
 
         {error && (
           <div className="banner" role="alert">

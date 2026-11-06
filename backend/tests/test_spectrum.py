@@ -218,3 +218,15 @@ def test_latex_normalisation():
 def test_tutor_output_uses_renderable_delimiters():
     text = r"It equals \[ \frac{12}{4}\times 4 = 12, \] so \(x = 12\)."
     assert normalize_math_delimiters(text) == r"It equals $$\frac{12}{4}\times 4 = 12,$$ so $x = 12$."
+
+
+def test_bracketed_expression_after_of_is_not_dropped():
+    # found by the README sample check: "the trace of (A + I)^-1" was silently missing from the answer
+    state, out = _solve(
+        "Let A be a 3x3 matrix with eigenvalues 1, -2 and 3. 1. Find det(A^3 - 2A). 2. Find the trace of (A + I)^-1."
+    )
+    assert out.answer_text == "1. det(A^3 - 2A) = 84; 2. tr((A + I)^-1) = -1/4"
+    state, out = _solve(
+        "A 2x2 matrix A has eigenvalues 2 and 5. Find the determinant of (A - I)^2 and the trace of A^3."
+    )
+    assert out.answer_text == "1. det((A - I)^2) = 16; 2. tr(A^3) = 133"

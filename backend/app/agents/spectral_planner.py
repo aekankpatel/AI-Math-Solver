@@ -171,6 +171,13 @@ def extract(problem: str) -> SpectralFacts:
         b = _balanced(rest, len(rest) - len(rest.lstrip()))
         if b:
             return _trim(b[0])
+        # "the trace of (A + I)^-1": a bracketed expression (with an optional power) after "of"
+        pre = re.match(r"\s*of\s+(?:the\s+)?(?:matrix\s+)?", rest)
+        if pre and rest[pre.end() :].startswith("("):
+            grp = _balanced(rest, pre.end())
+            if grp and "A" in grp[0]:
+                power = re.match(r"\s*\^\s*\(?\s*(-?\d+)\s*\)?", rest[grp[1] :])
+                return f"({_trim(grp[0])})" + (f"^{power.group(1)}" if power else "")
         mm = re.match(r"\s*(?:of\s+)?(?:the\s+)?(?:matrix\s+)?([A-Z])(\s*\^\s*-?\d+)?\b", rest)
         if mm:
             name = mm.group(1)

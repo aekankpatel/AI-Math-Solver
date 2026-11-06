@@ -141,30 +141,85 @@ cd backend && pytest
 cd frontend && npm test
 ```
 
-474 backend tests and 20 frontend tests, all offline (no Groq calls). Besides correctness for every tool, they
+475 backend tests and 20 frontend tests, all offline (no Groq calls). Besides correctness for every tool, they
 deliberately corrupt results and plans to prove the verifier and the intent check catch them, and they cover the
 sandbox, rate limits, the Groq budget, secret redaction and the UI. CI runs linting, type checks, both test suites,
 the benchmark and a Docker smoke test on every push.
 
-## Benchmark
+## Evaluation
 
-`backend/eval/` holds 308 hand-checked problems (264 answerable, 44 that should be refused or clarified), including
-held-out paraphrases and an unseen set written before tuning, plus 34 tampered solutions and 36 tampered readings.
-Ground truth is confirmed independently with mpmath/SciPy (`python -m eval.ground_truth`). Reports are in
-`backend/eval/reports/`.
+### Dataset
 
-| | Offline planners | With Groq (`gpt-oss-120b`) |
+`backend/eval/` holds a hand-checked benchmark. Ground truth is written from closed forms and definitions, and
+`python -m eval.ground_truth` confirms every answer independently with mpmath, NumPy and SciPy, without importing
+any application code.
+
+| Split | Problems | Purpose |
 |---|---|---|
-| Correct answers | 261 / 264 | 262 / 264 |
-| Correct refusals / clarifications | 44 / 44 | 44 / 44 |
-| Wrong answers | **0** | **0** |
-| Fully verified ⇒ correct | 177 / 177 | 205 / 205 |
-| Tampered solutions caught | 34 / 34 | 34 / 34 |
-| Tampered readings caught (false alarms) | 36 / 36 (0 / 35) | 36 / 36 (0 / 35) |
+| Development | 150 answerable + 29 to refuse | Every tool, edge cases, ambiguous, unsupported and unsafe input |
+| Held-out paraphrases | 31 | Natural wording, written after the planner was frozen |
+| Unseen real-world | 45 answerable + 11 to clarify | Word problems, distractor numbers, missing information; written before any tuning on it |
+| NL tuning | 38 answerable + 4 to clarify | Used to develop the language handling |
+| Tampered solutions | 34 | Correct results corrupted (wrong root, missing root, wrong derivative, …): the verifier must fail them |
+| Tampered readings | 36 | Correct plans with one misreading (wrong operation, swapped bounds, invented parameter, …): the intent check must catch them |
+
+### Results
+
+| Split | Offline planners | With Groq (`gpt-oss-120b`) |
+|---|---|---|
+| Development: answers / refusals | 150/150 · 29/29 | 150/150 · 29/29 |
+| Held-out paraphrases | 30/31 | 30/31 |
+| Unseen real-world: answers / clarifications | 43/45 · 11/11 | 44/45 · 11/11 |
+| NL tuning: answers / clarifications | 38/38 · 4/4 | 38/38 · 4/4 |
+| **All 308 problems** | **261/264 answered correctly, 44/44 refusals** | **262/264 answered correctly, 44/44 refusals** |
+| **Wrong answers** | **0** | **0** |
+
+The few unanswered questions get a clarification request, never a guess.
+
+| Trust and robustness | Result |
+|---|---|
+| Marked *fully verified* ⇒ correct | 177/177 offline · 205/205 with Groq |
+| Maths marked *verified* ⇒ correct | 232/232 |
+| Tampered solutions marked failed | 34/34 (none marked verified) |
+| Tampered readings flagged / valid plans wrongly flagged | 36/36 / 0/35 |
+| Correct plans wrongly rejected by the intent check (oracle mode) | 0/264 |
+| Crashes | 0/308 |
+
+**Groq planner on its own:** 240 plans passed the intent check and all 232 that produced an answer were correct; it
+chose the right tool 244/245 times. 21 plans were rejected by the intent check, which is the check working: 10 added
+an unrequested "real numbers only", 7 filled in information the question did not give, 4 were misreadings. 28 calls
+(9.1%) returned malformed output with tool calling, which led to the switch to JSON-schema output; the offline
+planners answered those questions meanwhile.
+
+**Unseen stress tests** (questions written after development, in varied wording):
+
+| Test | Result |
+|---|---|
+| 30 mixed questions (word problems, absolute values, areas, series, eigen-facts, …) | 28 answered correctly offline, the other 2 need Groq to read the wording; 0 wrong |
+| 20 fresh questions on sums, sequences, extrema, percentages, probability | 19 answered correctly, 1 unusual phrasing asked for clarification; 0 wrong |
+
+Each stress test found real bugs (two answers to the wrong question, a missing root in a verifier, a dropped
+question part). They were fixed and turned into regression tests.
+
+**Speed:** offline, a typical problem takes 21 ms (p50) and 94 ms (p95). A Groq planning call adds about 1.2 s (p50) and
+1.9 s (p95). On the free 512 MB / 0.1 CPU Render instance it is 0.3 to 3.6 s per problem.
+
+Reproduce (the Groq column used a real API key; the committed reports are in `backend/eval/reports/`):
 
 ```bash
-cd backend && python -m eval.run --mode rules
+cd backend && python -m eval.ground_truth
 ```
+
+```bash
+python -m eval.run --mode rules
+```
+
+```bash
+python -m eval.run --mode oracle
+```
+
+The Groq results come from the full 308-question run, before the newest question types (sums, sequences, critical
+points, percentages, word-problem probability) were added. Those are covered by the stress tests and regression tests.
 
 ## Deployment
 
@@ -181,5 +236,3 @@ Free tiers only: the frontend on **Vercel**, the backend as a Docker web service
   assumptions", never as fully verified.
 - Infinite series and some limits are confirmed numerically, so they are marked approximate.
 - Sessions, rate limits and the token budget live in memory in one process and reset on restart.
-
-Built by Aekank Patel.
